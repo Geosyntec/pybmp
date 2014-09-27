@@ -19,6 +19,7 @@ from pybmp.bmp import dataAccess as da
 from pybmp.core import features
 
 skip_db = pyodbc is None
+datadir = os.path.join(sys.prefix, 'pybmp_data', 'testing')
 
 
 def test__process_screening_yes():
@@ -125,9 +126,9 @@ A,B,X
 class _base_database():
     @nottest
     def mainsetup(self):
-        self.known_dbfile = os.path.join('testing', 'data', 'testdata.accdb')
+        self.known_dbfile = os.path.join(datadir, 'testdata.accdb')
         self.known_dbtable = 'data_for_pybmp'
-        self.known_csvfile = os.path.join('testing', 'data', 'testdata.csv')
+        self.known_csvfile = os.path.join(datadir, 'testdata.csv')
         self.known_category_type = 'analysis'
         self.known_top_col_level = ['Inflow', 'Outflow']
         self.known_bottom_col_level = ['DL', 'res', 'qual']
@@ -299,7 +300,7 @@ class test_DatabaseFromDB(_base_database):
     @nptest.dec.skipif(skip_db)
     def test_convertTableToCSV(self):
         assert_true(hasattr(self.db, 'convertTableToCSV'))
-        outputfile = os.path.join('testing', 'data', 'testoutput.csv')
+        outputfile = os.path.join(datadir, 'testoutput.csv')
         self.db.convertTableToCSV('bmpcats', filepath=outputfile)
 
 
@@ -309,7 +310,7 @@ class test_DatabaseFromCSV(_base_database):
         self.known_driver = None
         self.known_fromdb = False
         self.known_file = self.known_csvfile
-        self.known_bmpcatsrc = os.path.join('testing', 'data', 'testbmpcats.csv')
+        self.known_bmpcatsrc = os.path.join(datadir, 'testbmpcats.csv')
         self.known_excludeGrabs = False
         self.known_catScreen = True
         self.db = da.Database(self.known_csvfile)
@@ -322,7 +323,7 @@ class test_DatabaseFromCSV(_base_database):
     @raises(NotImplementedError)
     def test_convertTableToCSV(self):
         assert_true(hasattr(self.db, 'convertTableToCSV'))
-        outputfile = os.path.join('testing', 'data', 'testoutput.csv')
+        outputfile = os.path.join(datadir, 'testoutput.csv')
         self.db.convertTableToCSV('bmpcats', filepath=outputfile)
 
     def test_file(self):
@@ -351,8 +352,8 @@ class _base_table:
             ('diff', ''),
             ('logdiff', '')
         ])
-        self.known_csvfile = os.path.join('testing', 'data', 'testdata.csv')
-        self.known_bmpcatsrc = os.path.join('testing', 'data', 'testbmpcats.csv')
+        self.known_csvfile = os.path.join(datadir, 'testdata.csv')
+        self.known_bmpcatsrc = os.path.join(datadir, 'testbmpcats.csv')
         self.known_index_names = [
             'category', 'epazone', 'state', 'site','bmp', 'station', 'storm',
             'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
