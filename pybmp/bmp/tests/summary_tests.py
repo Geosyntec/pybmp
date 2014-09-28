@@ -1,6 +1,8 @@
 import sys
 import os
-if sys.version_info.major == 3:
+
+pythonversion = sys.version_info.major
+if pythonversion == 3:
     from io import StringIO
 else:
     from StringIO import StringIO
@@ -442,6 +444,7 @@ class test_CategoricalSummary(object):
         assert_true(isinstance(self.csum.paramgroup, str))
         assert_equal(self.csum.paramgroup, self.known_paramgroup)
 
+    @nptest.dec.skipif(pythonversion == 2)
     def test__make_input_file_IO(self):
         with StringIO() as inputIO:
             self.csum._make_input_file_IO(inputIO)
@@ -458,6 +461,7 @@ class test_CategoricalSummary(object):
 
             raise
 
+    @nptest.dec.skipif(pythonversion == 2)
     def test__make_report_IO(self):
         with StringIO() as reportIO:
             with open(self.test_templatefile, 'r') as templateIO:
