@@ -1,0 +1,102 @@
+\documentclass[10pt,hyperref]{article}
+
+\usepackage{tocloft} % http://ctan.org/pkg/tocloft
+\setlength{\cftsubsecnumwidth}{4em} % Set length of number width in ToC for \subsection
+\usepackage{graphicx, color, amsmath, amssymb, latexsym, float}
+\usepackage{array, natbib, booktabs, multirow, rotating}
+
+%% for helvetica
+\usepackage{siunitx}
+\sisetup{detect-all}
+% \usepackage{helvet}
+% \usepackage{sansmath}
+% \sansmath
+
+%% other mathfonts
+\usepackage{fourier}
+%\usepackage[sc]{mathpazo}
+
+%%--UPDATE THE pdftitle, pdfauthor, pdfsubject, and pdfkeywords fields--%%
+\usepackage[
+	pdftex,colorlinks=true,
+	pdftitle={ Summary Report},
+	pdfauthor={Paul Hobson, Geosyntec Consultants (phobson@geosyntec.com)},
+	pdfkeywords={Stormwater, Stormwater monitoring, BMP, BMP monitoring, International BMP Database},
+	pdfsubject={Stormwater and BMP monitoring},
+	menucolor={black},
+	citecolor={black},
+	linkcolor={black},
+	pdfpagelabels, plainpages=false]
+	{hyperref}
+\usepackage{fancyhdr, setspace, perpage}
+%\usepackage[titles]{tocloft}
+\usepackage[margin=1.1in]{geometry}
+
+\graphicspath{{figures}{figures/statplot}{figures/scatterplot}}
+
+\definecolor{myblue}{RGB}{0,88,176}
+
+%\setlength{\cftbeforechapskip}{2ex}
+%\setlength{\cftbeforesecskip}{0.5ex}
+
+\pagestyle{fancy}
+\fancyhead{}
+\fancyfoot{}
+\headheight 24pt
+\textheight 8.5in
+\renewcommand{\headrulewidth}{0.25pt}
+\renewcommand{\footrulewidth}{0pt}
+%\fancyhead[C]{Geosyntec Consultants}
+
+%%--ADD AS SHORT TITLE FOR HEADER--%%
+%\fancyhead[L]{blah}
+
+%%--ADD YOUR OFFICE LOCATION--%%
+\fancyhead[R]{}
+\fancyfoot[R]{{\color{myblue}International Stormwater BMP Database}}
+%\fancyhead[L]{Performance Summary for __VARTITLE in Stormwater}
+\fancyhead[L]{__VARTITLE}
+\fancyfoot[L]{\thepage}
+%\fancyfoot[L]{\includegraphics[scale=0.3]{Geosyntec_logo_name.pdf}}
+%\fancyfoot[R]{\includegraphics[scale=0.7]{Geosyntec_logo_text.pdf}}
+
+\parindent=0in
+\parskip=12pt
+
+%%%% Document-specific commands
+\newcommand{\ssu}[1]{\ensuremath{^\textrm{#1}}} %% superscript command
+\newcommand{\ssd}[1]{\ensuremath{_\textrm{#1}}}%% subscript command
+
+%% redefine upright \othermu as \mu
+%%for when not using the fourier package
+%\newcommand{\othermu}[1]{\mu{#1}}
+
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+
+%%--ADD AUTHORS' NAMES AND COMPANY INFO--%%
+\author{Prepared For: \\
+		Water Environment Research Foundation \\ \vspace{4mm} \\
+		Prepared By: \\
+        Geosyntec Consultants, Inc. \\
+        and Wright Water Engineers, Inc.}
+
+%%--ADD DOCUMENT'S FULL TITLE--%%
+\title{Categorical Summary of BMP Performance for Stormwater __VARTITLE Data \\
+	   Contained in the International Stormwater BMP Database}% \\ \vspace{15mm}
+	   %Stormwater and BMP Performance Database \\ \vspace{15mm}
+	   % \\ \vspace{15mm}}
+
+%%--ADD DATE OF DOCUMENT--%%
+\date{\today}
+\pagenumbering{roman}
+\setcounter{page}{0}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+\clearpage
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+\input{chapter1.tex}
