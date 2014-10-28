@@ -174,9 +174,10 @@ class Database(object):
         self._bmpcatdesc_col = bmp_cols[category_type]['desc']
 
         # property initialization
+        self._raw_data = None
         self._all_data = None
 
-    def _get_all_data(self):
+    def _read_db(self):
         '''
         Get all of the data from the database.
 
@@ -262,9 +263,16 @@ class Database(object):
         data['sampledatetime'] = data.apply(make_datetimes, axis=1)
 
         # normalize the units
-        utils.normalize_units2(data, info.getNormalization, info.getConversion,
-                               info.getUnits, paramcol='parameter',
-                               rescol='res', unitcol='units', dlcol='DL')
+        data = utils.normalize_units2(data, info.getNormalization,
+                                      info.getConversion, info.getUnits,
+                                      paramcol='parameter', rescol='res',
+                                      unitcol='units', dlcol='DL')
+
+        return data
+
+    def _prep_data(self):
+        grabs = self.raw_data.query("sampletype == 'grab'")
+        comps = self.raw_data.query("sampletype == 'composite'")
 
         # columns to be the index
         row_headers = ['category', 'epazone', 'state', 'site', 'bmp',
@@ -273,14 +281,26 @@ class Database(object):
                        'bmpscreen', 'fraction', 'general_parameter']
 
         # group the data based on the index
-        agg_dict = {'res': 'max', 'qual': 'min', 'DL': 'min'}
+        comp_agg_rules = {'res': 'max',  'qual': 'min', 'DL': 'min'}
+        grab_agg_rules = {'res': 'mean', 'qual': 'min', 'DL': 'min'}
 
-        return data.groupby(by=row_headers).agg(agg_dict)
+        data = pandas.concat([
+            comps.groupby(by=row_headers).agg(comp_agg_rules),
+            grabs.groupby(by=row_headers).agg(grab_agg_rules),
+        ])
+
+        return data
+
+    @property
+    def raw_data(self):
+        if self._raw_data is None:
+            self._raw_data = self._read_db()
+        return self._raw_data
 
     @property
     def all_data(self):
         if self._all_data is None:
-            self._all_data = self._get_all_data()
+            self._all_data = self._prep_data()
         return self._all_data
 
     @property
