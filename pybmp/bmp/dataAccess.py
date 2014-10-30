@@ -82,78 +82,63 @@ def defaultFilter(dataframe, levelname='bmp', minElements=3, minGroups=3):
 
 
 class Database(object):
-    def __init__(self, filename, category_type='analysis',
-                 dbtable='pybmp_flatfile'):
-        '''
-        Top-level object/entry point for International BMP Database analysis
+    '''
+    Top-level object/entry point for International BMP Database analysis
 
-        Input:
-            filename : string
-                CSV file or MS Access database containing the data.
+    Parameters
+    ----------
 
-            category_type : optional string (default is "analysis")
-                Defines have different BMPs are categorized.
-                Valid values are:
-                    1) "raw type": BMP Types directly from tblBMPCODES in DB
-                    2) "raw category": broader BMP Categories directly from
-                        tblBMPCODES in DB
-                    3) "analysis": Slightly narrower categories than "raw category"
-                        as defined by Geosyntec
-                    4) "md": Only looks at Manufactured Devices.
+    filename : string
+        CSV file or MS Access database containing the data.
 
-            fromdb : optional bool (default is True)
-                Toggles if that data are being read from the database or the
-                flat CSV file. Set this to true if you're not on windows or
-                created your own CSV file.
+    dbtable : optional string (default = 'pybmp_flatfile')
+        Table in the MS Access database storing the data for analysis.
+        Only used if `fromdb` is True.
 
-            dbtable : optional string (default = 'pybmp_flatfile')
-                Table in the MS Access database storing the data for analysis.
-                Only used if `fromdb` is True.
+    bmpcatanalysis : optional bool (default = False)
+        Toggles the filtering for data that have been approved for BMP
+        Category-level analysis
 
-        Attributes:
-            self.dbfile : string
-                Full path to the database file.
+    wqanalysis : optional bool (default = False)
+        Toggles the filtering for data that have been approved for WQ
+        (indiviual BMP) analysis
 
-            self.driver : string
-                ODBC-compliant Microsoft Access driver string.
+    Attributes
+    ----------
 
-            self.category_type : string
-                See Input section.
+    self.dbfile : string
+        Full path to the database file.
 
-            self.fromdb : boot
-                See Input section.
+    self.driver : string
+        ODBC-compliant Microsoft Access driver string.
 
-            self.excluded_parameters : list of string or None
-                See `parametersToExclude` in Input section.
+    self.category_type : string
+        See Input section.
 
-            self.all_data : pandas DataFrame
-                DataFrame of all of the data found in the DB or CSV file.
-                If reading from the default DB queries or CSV file,
-                will create a MultiIndex from the following columns:
-                    Level - Name
-                        0 - category (determined by `category_type`)
-                        1 - epazone
-                        2 - state
-                        3 - site
-                        4 - bmp
-                        5 - storm
-                        6 - sampletype
-                        7 - paramgroup
-                        8 - units
-                        9 - parameter
-                Column-index will also be a MultiIndex:
-                    Level - Name
-                        0 - station (e.g., inflow, outflow)
-                        1 - quantity (e.g., res, qual).
+    self.fromdb : boot
+        See Input section.
 
-        Methods (see docstrings for more info):
-            connect
-            redefineBMPCategory
-            convertTablesToCSV
-            getAllData
-            getGroupData
-        '''
-        self.file = filename #os.path.join(os.getcwd(), r'..\other_docs\IBMP_DB_min.accdb')
+    self.excluded_parameters : list of string or None
+        See `parametersToExclude` in Input section.
+
+    self.all_data : pandas DataFrame
+        DataFrame of all of the data found in the DB or CSV file.
+
+    Methods
+    -------
+
+    (see individual docstrings for more info):
+    self.connect
+    self.redefineBMPCategory
+    self.convertTablesToCSV
+    self.getAllData
+    self.getGroupData
+
+    '''
+
+    def __init__(self, filename, dbtable='pybmp_flatfile',
+                 bmpcatanalysis=False, wqanalysis=False):
+        self.file = filename
         self.fromdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
         if self.fromdb:
             self.dbtable = dbtable
@@ -162,16 +147,15 @@ class Database(object):
             self.dbtable = None
             self.driver = None
 
-        self.category_type = category_type
-
         bmp_cols = {
             'raw type': {'cat': 'bmptype', 'desc': 'bmptype_desc'},
             'raw category': {'cat': 'bmpcategory', 'desc': 'bmpcategory_desc'},
             'analysis': {'cat': 'analysiscategory', 'desc': 'analysiscategory_desc'},
             'md': {'cat': 'mdcategory', 'desc': 'mdcategory_desc'}
         }
-        self._bmpcatname_col = bmp_cols[category_type]['cat']
-        self._bmpcatdesc_col = bmp_cols[category_type]['desc']
+
+        self.bmpcatanalysis = bmpcatanalysis
+        self.wqanalysis = wqanalysis
 
         # property initialization
         self._raw_data = None
@@ -207,6 +191,7 @@ class Database(object):
                     Level - Name
                         0 - station (e.g., inflow, outflow)
                         1 - quantity (e.g., res, qual)
+
         '''
         if self.fromdb:
             # SQL query text, execution, data retrieval
@@ -225,9 +210,6 @@ class Database(object):
         # find all of results with wq_value = 0 and set to DL, and set qual  'ND'
         data.wq_qual[data.wq_value <= 0] = 'ND'
         data.wq_value[data.wq_value <= 0] = data.wq_dl
-
-        # drop all rows where wq_value is NA
-
 
         # rename columns:
         rename_columns = {
@@ -250,17 +232,14 @@ class Database(object):
         data['bmpscreen'] = data['bmpscreen'].apply(_process_screening)
         data['station'] = data['station'].str.lower()
         data['sampletype'] = data['sampletype'].apply(_process_sampletype)
+        data['sampledatetime'] = data.apply(utils.makeTimestamp, axis=1)
 
-        def make_datetimes(row):
-            date = pandas.Timestamp(row['sampledate']).date() if row['sampledate'] is not None else '1900-01-01'
-            time = pandas.Timestamp(row['sampletime']).time() if row['sampletime'] is not None else '00:00'
-            try:
-                date = pandas.Timestamp('{} {}'.format(date, time))
-            except:
-                date = pandas.Timestamp('1900-01-02')
-            return date
+        # screen the data
+        if self.bmpcatanalysis:
+            data = data.query("bmpscreen == 'yes'")
 
-        data['sampledatetime'] = data.apply(make_datetimes, axis=1)
+        if self.wqanalysis:
+            data = data.query("wqscreen == 'yes'")
 
         # normalize the units
         data = utils.normalize_units2(data, info.getNormalization,
@@ -271,9 +250,6 @@ class Database(object):
         return data
 
     def _prep_data(self):
-        grabs = self.raw_data.query("sampletype == 'grab'")
-        comps = self.raw_data.query("sampletype == 'composite'")
-
         # columns to be the index
         row_headers = ['category', 'epazone', 'state', 'site', 'bmp',
                        'station', 'storm', 'sampletype', 'watertype',
@@ -281,15 +257,9 @@ class Database(object):
                        'bmpscreen', 'fraction', 'general_parameter']
 
         # group the data based on the index
-        comp_agg_rules = {'res': 'max',  'qual': 'min', 'DL': 'min'}
-        grab_agg_rules = {'res': 'mean', 'qual': 'min', 'DL': 'min'}
+        agg_rules = {'res': 'mean', 'qual': 'min', 'DL': 'min'}
 
-        data = pandas.concat([
-            comps.groupby(by=row_headers).agg(comp_agg_rules),
-            grabs.groupby(by=row_headers).agg(grab_agg_rules),
-        ])
-
-        return data
+        return self.raw_data.groupby(by=row_headers).agg(agg_rules)
 
     @property
     def raw_data(self):
@@ -489,60 +459,58 @@ class Database(object):
 
 
 class Table(object):
+    '''
+    Object representing a table in the BMP Database. You can, but
+    /shouldn't/ instantiate this yourself. Instead, it is recommended
+    to use one of the methods of the `Database` object to create your
+    `Table`.
+
+    Parameters
+    ----------
+
+    data : pandas.Dataframe
+        The subset of data created from the `all_data` attribute
+        of a `Database` object.
+    bmpcats : dict
+        A dictionary in the form of [bmp code]: [bmp description].
+        This is best taken directly from the `bmp_cats` attribute
+        of the source `Database` object.
+    name : optional string or None (default)
+        Name of the `Table`. Useful in summarization routines, but
+        not necessary.
+
+    Attributes
+    ----------
+
+    name : string
+        name of the table
+    data : pandas dataframe
+        pivot table of the inflow/outflow
+            results and quals
+    parameters : list of Parameters
+        Parameter objects for each
+            unique parameter-unit combination.
+    columns : array of strings
+        names of the columns in self.data
+    index : array of strings
+        names of the index levels in self.data
+    bmp_cats : array of strings
+        BMP Categories present in self.data
+
+    Methods
+    -------
+
+    getData
+    redefineIndexLevel
+    redefineBMPCategory
+    transformParameters
+    unionParamsWithPreference
+    getLocations
+    getDatasets
+
+    '''
+
     def __init__(self, dataframe, name=None, useTex=False):
-        '''
-        Object representing a table in the BMP Database. You can, but
-        /shouldn't/ instantiate this yourself. Instead, it is recommended
-        to use one of the methods of the `Database` object to create your
-        `Table`.
-
-        Input:
-            data : pandas.Dataframe
-                The subset of data created from the `all_data` attribute
-                of a `Database` object.
-
-            bmpcats : dict
-                A dictionary in the form of [bmp code]: [bmp description].
-                This is best taken directly from the `bmp_cats` attribute
-                of the source `Database` object.
-
-            name : optional string or None (default)
-                Name of the `Table`. Useful in summarization routines, but
-                not necessary.
-
-        Writes:
-            None
-
-        Attributes:
-            name : string
-                name of the table
-
-            data : pandas dataframe
-                pivot table of the inflow/outflow
-                    results and quals
-
-            parameters : list of Parameters
-                Parameter objects for each
-                    unique parameter-unit combination.
-
-            columns : array of strings
-                names of the columns in self.data
-
-            index : array of strings
-                names of the index levels in self.data
-
-            bmp_cats : array of strings
-                BMP Categories present in self.data
-
-        Methods:
-            getData
-            redefineIndexLevel
-            redefineBMPCategory
-            transformParameters
-            unionParamsWithPreference
-            getLocations
-            getDatasets
-        '''
         # basic stuff
         self.data = dataframe
         self.name = name

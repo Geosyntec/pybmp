@@ -129,7 +129,6 @@ class _base_database():
         self.known_dbfile = os.path.join(datadir, 'testdata.accdb')
         self.known_dbtable = 'data_for_pybmp'
         self.known_csvfile = os.path.join(datadir, 'testdata.csv')
-        self.known_category_type = 'analysis'
         self.known_top_col_level = ['Inflow', 'Outflow']
         self.known_bottom_col_level = ['DL', 'res', 'qual']
         self.known_col_names = ['station', 'quantity']
@@ -147,10 +146,6 @@ class _base_database():
         assert_true(hasattr(self.db, 'driver'))
         assert_equal(self.db.driver, self.known_driver)
 
-    def test_category_type(self):
-        assert_true(hasattr(self.db, 'category_type'))
-        assert_equal(self.db.category_type, self.known_category_type)
-
     def test_fromdb(self):
         assert_true(hasattr(self.db, 'fromdb'))
         assert_equal(self.db.fromdb, self.known_fromdb)
@@ -163,22 +158,6 @@ class _base_database():
         assert_true(hasattr(self.db, 'all_data'))
         assert_true(isinstance(self.db.all_data, pandas.DataFrame))
         assert_tuple_equal(self.db.all_data.shape, self.known_datashape)
-
-    @nptest.dec.skipif(True)
-    def test_all_data_form_index_type(self):
-        assert_true(isinstance(self.db.all_data.columns, pandas.MultiIndex))
-
-    @nptest.dec.skipif(True)
-    def test_all_data_form_top_column_level(self):
-        assert_list_equal(self.db.all_data.columns.levels[0].tolist(), self.known_top_col_level)
-
-    @nptest.dec.skipif(True)
-    def test_all_data_form_bottom_column_level(self):
-        assert_list_equal(sorted(self.db.all_data.columns.levels[1].tolist()), sorted(self.known_bottom_col_level))
-
-    @nptest.dec.skipif(True)
-    def test_all_data_form_all_column_level_names(self):
-        assert_list_equal(self.db.all_data.columns.names, self.known_col_names)
 
     def test_all_data_index(self):
         assert_true(isinstance(self.db.all_data.index, pandas.MultiIndex))
@@ -263,9 +242,7 @@ class test_DatabaseFromDB(_base_database):
         self.known_fromdb = True
         self.known_file = self.known_dbfile
         self.known_catScreen = False
-        self.db = da.Database(self.known_dbfile,
-                              dbtable=self.known_dbtable,
-                              category_type=self.known_category_type)
+        self.db = da.Database(self.known_dbfile, dbtable=self.known_dbtable)
 
     @nptest.dec.skipif(skip_db)
     def test_connect(self):
@@ -363,7 +340,6 @@ class _base_table:
             'epazone', 'state', 'site', 'bmp', 'storm',
             'sampletype', 'paramgroup', 'units', 'wqscreen', 'bmpcatscreen'
         ]
-        self.known_category_type = 'analysis'
         self.known_loc_subkeys_category = ['location', 'definition', 'name']
         self.known_loc_subkeys_siteid = ['location', 'definition', 'name']
         self.known_ds_subkeys_category = ['category', 'parameter']
@@ -378,21 +354,10 @@ class _base_table:
         assert_true(hasattr(self.table, 'data'))
         assert_true(isinstance(self.table.data, pandas.DataFrame))
 
-    @nptest.dec.skipif(True)
-    def test_data_columns(self):
-        assert_true(hasattr(self.table, 'data'))
-        assert_true(isinstance(self.table.data.columns, pandas.MultiIndex))
-        assert_equal(self.table.data.columns.tolist(), self.known_data_columns.tolist())
-
     def test_data_row_index(self):
         assert_true(hasattr(self.table, 'data'))
         assert_true(isinstance(self.table.data.index, pandas.MultiIndex))
         assert_list_equal(self.table.data.index.names, self.known_index_names)
-
-    @nptest.dec.skipif(True)
-    def test_bmp_cats(self):
-        assert_true(hasattr(self.table, 'bmp_categories'))
-        assert_list_equal(sorted(self.table.bmp_categories), sorted(self.known_bmp_cats))
 
     def test_parameters(self):
         assert_true(hasattr(self.table, 'parameters'))
@@ -626,7 +591,7 @@ class test_table_metals(_base_table):
             'Lead, Dissolved', 'Copper, Dissolved',
             'Copper, Total', 'Lead, Total'
         ]
-        self.db = da.Database(self.known_csvfile, category_type=self.known_category_type)
+        self.db = da.Database(self.known_csvfile)
         self.known_parametername = self.known_parameters[0]
         self.known_bmpcat_code = self.known_bmp_cats[1]
         self.table = da.Table(self.db.getGroupData(self.known_name),
