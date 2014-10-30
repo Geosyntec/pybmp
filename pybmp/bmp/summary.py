@@ -1,8 +1,10 @@
 import os
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import pandas
 import openpyxl
 
 from .. import utils
@@ -34,6 +36,121 @@ def filterlocation(location, count=5, column='bmp'):
     ) >= count
 
 
+def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
+                   astable=False, minstorms=3, minbmps=3, **tablekwds):
+    '''Select offical data from database.
+
+    Parameters
+    ----------
+    dbpath : string
+        File path to the BMP Database Access file.
+    bmpcatanalysis : optional bool (default = False)
+        Filters for data approved for BMP Category-level
+        analysis.
+    wqanalysis : optional bool (default = False)
+        Filters for data approvded for individual BMP
+        analysis.
+    minstorms : option int (default = 3)
+        The minimum number of storms each group defined
+        by BMP, station, and parameter should have.
+        Groups with too few storms will be filtered out.
+    minstorms : option int (default = 3)
+        The minimum number of BMPs each group defined
+        by category, station, and parameter should have.
+        Groups with too few BMPs will be filtered out.
+    astable : optional bool (default = False)
+        Toggles whether the database will be returned
+        as a pandas.DataFrame (default) or a bmp.Table
+        object.
+
+    Returns
+    -------
+    subset : pandas.DataFrame or bmpTable
+
+    '''
+
+
+    # main dataset
+    db = dataAccess.Database(dbpath, bmpcatanalysis=bmpcatanalysis,
+                             wqanalysis=wqanalysis, **tablekwds)
+
+    # all data should be compisite data, but grabs are allowed
+    # for bacteria at all BMPs, and all parameter groups at
+    # retention ponds and wetland basins. Samples of an unknown
+    # type are excluded
+    querytxt = (
+    '(sampletype == "composite") | ('
+        '(category == "Retention Pond") | '
+        '(category == "Wetland Basin") | '
+        '(paramgroup == "Biological") '
+    ') & (sampletype != "unknown")'
+    )
+    subset = db.all_data.query(querytxt)
+
+    # get BMP Name of pervious friction course (PFC) BMPs
+    bmpnamecol = 'BMPNAME'
+    bmptable = 'BMP INFO S02'
+    bmptypecol = 'TBMPT 2009'
+    query = """
+    select [{0}]
+    FROM [{1}]
+    WHERE [{2}] = 'PF';
+    """.format(bmpnamecol, bmptable, bmptypecol)
+
+    with db.connect() as cnn:
+        pfc_names = pandas.read_sql(query, cnn)[bmpnamecol].tolist()
+
+    # remove all of the PFCs from the dataset
+    pfc_query = "bmp not in {}".format(pfc_names)
+    subset = subset.query(pfc_query)
+
+    # remove manufactured devices from the dataset
+    subset = subset.query('category != "Manufactured Device"')
+
+    # filter out all monitoring stations with less than /N/ storms
+    stormlevels = ['category', 'parameter', 'station', 'bmp']
+    subset = subset.groupby(level=stormlevels).filter(
+        lambda g: g.count()['res'] >= minstorms
+    )
+
+    # filter out all groups with too few BMPs
+    bmplevels = ['category', 'parameter', 'station']
+    subset = subset.groupby(level=bmplevels).filter(
+        lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps
+    )
+
+    if astable:
+        return dataAccess.Table(subset, **tablekwds)
+    else:
+        return subset
+
+
+def setMPLStyle():
+    style_dict = {
+        'text.usetex': True,
+        'font.family': ['serif'],
+        'font.serif': ['Utopia', 'Palantino'],
+        'lines.linewidth': 0.5,
+        'patch.linewidth': 0.5,
+        'text.latex.preamble': [r'\usepackage{siunitx}', r'\sisetup{detect-all}', r'\usepackage{fourier}'],
+        'axes.linewidth': 0.5,
+        'axes.grid': True,
+        'axes.titlesize': 12,
+        'axes.labelsize': 10,
+        'xtick.labelsize': 10,
+        'xtick.direction': 'out',
+        'ytick.labelsize': 10,
+        'ytick.direction': 'out',
+        'grid.linewidth': 0.5,
+        'legend.fancybox': True,
+        'legend.numpoints': 1,
+        'legend.fontsize': 8,
+        'figure.figsize': (5, 3),
+        'savefig.dpi': 300
+    }
+    matplotlib.rcParams.update(style_dict)
+
+
 class DatasetSummary(object):
     def __init__(self, dataset, paramgroup, figpath):
         self.figpath = figpath
@@ -45,7 +162,9 @@ class DatasetSummary(object):
 
         # properties
         self._latex_file_name = None
+        self._scatter_fig_path = None
         self._scatter_fig_name = None
+        self._stat_fig_path = None
         self._stat_fig_name = None
 
     @property
@@ -60,20 +179,36 @@ class DatasetSummary(object):
         self._latex_file_name = value
 
     @property
+    def scatter_fig_path(self):
+        if self._scatter_fig_path is None:
+            self._scatter_fig_path = self.figpath + '/scatterplot'
+            if not os.path.exists(self._scatter_fig_path):
+                os.mkdir(self._scatter_fig_path)
+        return self._scatter_fig_path
+
+    @property
     def scatter_fig_name(self):
         if self._scatter_fig_name is None:
             figname = utils.processFilename('{}_scatter.pdf'.format(self.latex_file_name))
-            self._scatter_fig_name = self.figpath + '/scatterplot/' + figname
+            self._scatter_fig_name = self.scatter_fig_path + '/' + figname
         return self._scatter_fig_name
     @scatter_fig_name.setter
     def scatter_fig_name(self, value):
         self._scatter_fig_name = value
 
     @property
+    def stat_fig_path(self):
+        if self._stat_fig_path is None:
+            self._stat_fig_path = self.figpath + '/statplot'
+            if not os.path.exists(self._stat_fig_path):
+                os.mkdir(self._stat_fig_path)
+        return self._stat_fig_path
+
+    @property
     def stat_fig_name(self):
         if self._stat_fig_name is None:
             figname = utils.processFilename('{}_stats.pdf'.format(self.latex_file_name))
-            self._stat_fig_name = self.figpath + '/statplot/' + figname
+            self._stat_fig_name = self.stat_fig_path + '/' + figname
         return self._stat_fig_name
     @stat_fig_name.setter
     def stat_fig_name(self, value):
@@ -101,11 +236,10 @@ class DatasetSummary(object):
             else:
                 val = 'NA'
 
+            formatter = dict(ruler=thisrule, name=name, value=val)
             row = r"""
                 {ruler}
-                {name} & \multicolumn{{2}}{{c}} {{{value}}} \\""".format(
-                **dict(ruler=thisrule, name=name, value=val)
-            )
+                {name} & \multicolumn{{2}}{{c}} {{{value}}} \\"""
         else:
             valstrings = []
             for loc in [self.ds.influent, self.ds.effluent]:
@@ -125,23 +259,27 @@ class DatasetSummary(object):
 
                             if ci:
                                 thisstring = '({})'.format(thisstring)
-
                         else:
                             thisstring = utils.sigFigs(val, sigfigs, pval=pval, tex=tex)
+
+                    else:
+                        thisstring = 'NA'
                 else:
                     thisstring = 'NA'
 
                 valstrings.append(thisstring)
 
+            formatter = dict(
+                ruler=thisrule,
+                name=name,
+                val_in=valstrings[0],
+                val_out=valstrings[1]
+            )
             row = r"""
                 {ruler}
-                {name} & {val_in} & {val_out} \\""".format(
-                **dict(ruler=thisrule, name=name,
-                       val_in=valstrings[0],
-                       val_out=valstrings[1])
-            )
+                {name} & {val_in} & {val_out} \\"""
 
-        return row
+        return row.format(**formatter)
 
     def _make_tex_table(self, tabletitle):
         '''
@@ -346,7 +484,7 @@ class CategoricalSummary(object):
                  filtercount=5, filtercolumn='bmp'):
         self._cache = resettable_cache()
         self._applyfilters = applyfilters
-        self.filtercount= filtercount
+        self.filtercount = filtercount
         self.filtercolumn = filtercolumn
         self._raw_datasets = [ds for ds in filter(
             lambda x: x.effluent.include,
@@ -364,14 +502,16 @@ class CategoricalSummary(object):
         if self._applyfilters:
             filtered_datasets = []
             for ds in self._raw_datasets:
-                filterlocation(ds.influent, count=self.filtercount,
-                               column=self.filtercolumn)
                 filterlocation(ds.effluent, count=self.filtercount,
                                column=self.filtercolumn)
-                if ds.n_pairs is None or ds.paired_data is None or ds.n_pairs < 5:
-                    ds.include = False
-                else:
-                    ds.include = ds.effluent.include
+
+                filterlocation(ds.influent, count=self.filtercount,
+                               column=self.filtercolumn)
+
+                #if ds.n_pairs is None or ds.paired_data is None or ds.n_pairs < self.filtercount:
+                #    ds.include = False
+                #else:
+                ds.include = ds.effluent.include
 
                 if ds.include:
                     filtered_datasets.append(ds)

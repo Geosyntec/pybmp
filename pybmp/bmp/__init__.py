@@ -1,5 +1,5 @@
 from .dataAccess import Database, Table, defaultFilter
-from .summary import CategoricalSummary, DatasetSummary
+from .summary import CategoricalSummary, DatasetSummary, getSummaryData, setMPLStyle
 
 from ..testing import NoseWrapper
 test = NoseWrapper().test
