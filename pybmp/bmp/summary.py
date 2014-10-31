@@ -37,7 +37,8 @@ def filterlocation(location, count=5, column='bmp'):
 
 
 def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
-                   astable=False, minstorms=3, minbmps=3, **tablekwds):
+                   astable=False, minstorms=3, minbmps=3,
+                   name=None, useTex=False, **selection):
     '''Select offical data from database.
 
     Parameters
@@ -72,7 +73,10 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
 
     # main dataset
     db = dataAccess.Database(dbpath, bmpcatanalysis=bmpcatanalysis,
-                             wqanalysis=wqanalysis, **tablekwds)
+                             wqanalysis=wqanalysis)
+    # initial filtering
+    subset = db.selectData(**selection)
+
 
     # all data should be compisite data, but grabs are allowed
     # for bacteria at all BMPs, and all parameter groups at
@@ -85,7 +89,7 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
         '(paramgroup == "Biological") '
     ') & (sampletype != "unknown")'
     )
-    subset = db.all_data.query(querytxt)
+    subset = susbet.query(querytxt)
 
     # get BMP Name of pervious friction course (PFC) BMPs
     bmpnamecol = 'BMPNAME'
@@ -120,7 +124,7 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
     )
 
     if astable:
-        return dataAccess.Table(subset, **tablekwds)
+        return dataAccess.Table(subset, name=name, useTex=useTex)
     else:
         return subset
 
