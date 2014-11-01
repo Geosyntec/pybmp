@@ -7,20 +7,20 @@ if pythonversion == 3:
 else:
     from StringIO import StringIO
 
-from nose.tools import *
+import mock
+import nose.tools as nt
 import numpy as np
 import numpy.testing as nptest
+import matplotlib.pyplot as plt
 
 from pybmp import bmp
 from pybmp import utils
+from pybmp import testing
 
 
-@nottest
-class mock_figure(object):
-    def savefig(self, *args, **kwargs):
-        pass
+mock_figure = mock.Mock(spec=plt.Figure)
 
-@nottest
+@nt.nottest
 class mock_parameter(object):
     def __init__(self):
         self.name = 'Carbon Dioxide'
@@ -30,7 +30,7 @@ class mock_parameter(object):
     def paramunit(self, *args, **kwargs):
         return 'Carbon Dioxide (mg/L)'
 
-@nottest
+@nt.nottest
 class mock_location(object):
     def __init__(self, include):
         self.N = 20
@@ -56,7 +56,7 @@ class mock_location(object):
 
     pass
 
-@nottest
+@nt.nottest
 class mock_dataset(object):
     def __init__(self, infl_include, effl_include):
         self.influent = mock_location(infl_include)
@@ -78,6 +78,7 @@ class mock_dataset(object):
 
 
 class _base_DatasetSummary_Mixin(object):
+
     def main_setup(self):
         self.known_paramgroup = 'Metals'
         self.known_bmp = 'testbmp'
@@ -207,40 +208,40 @@ class _base_DatasetSummary_Mixin(object):
         \end{figure} \clearpage""" + '\n'
 
     def test_paramgroup(self):
-        assert_true(hasattr(self.ds_sum, 'paramgroup'))
-        assert_true(isinstance(self.ds_sum.paramgroup, str))
-        assert_equal(self.ds_sum.paramgroup, self.known_paramgroup)
+        nt.assert_true(hasattr(self.ds_sum, 'paramgroup'))
+        nt.assert_true(isinstance(self.ds_sum.paramgroup, str))
+        nt.assert_equal(self.ds_sum.paramgroup, self.known_paramgroup)
 
     def test_ds(self):
-        assert_true(hasattr(self.ds_sum, 'ds'))
-        assert_true(isinstance(self.ds_sum.ds, mock_dataset))
+        nt.assert_true(hasattr(self.ds_sum, 'ds'))
+        nt.assert_true(isinstance(self.ds_sum.ds, mock_dataset))
 
     def test_parameter(self):
-        assert_true(hasattr(self.ds_sum, 'parameter'))
-        assert_true(isinstance(self.ds_sum.parameter, mock_parameter))
+        nt.assert_true(hasattr(self.ds_sum, 'parameter'))
+        nt.assert_true(isinstance(self.ds_sum.parameter, mock_parameter))
 
     def test_bmp(self):
-        assert_true(hasattr(self.ds_sum, 'bmp'))
-        assert_true(isinstance(self.ds_sum.bmp, str))
-        assert_equal(self.ds_sum.bmp, self.known_bmp)
+        nt.assert_true(hasattr(self.ds_sum, 'bmp'))
+        nt.assert_true(isinstance(self.ds_sum.bmp, str))
+        nt.assert_equal(self.ds_sum.bmp, self.known_bmp)
 
     def test_latex_file_name(self):
-        assert_true(hasattr(self.ds_sum, 'latex_file_name'))
-        assert_true(isinstance(self.ds_sum.latex_file_name, str))
-        assert_equal(self.ds_sum.latex_file_name, self.known_latex_file_name)
+        nt.assert_true(hasattr(self.ds_sum, 'latex_file_name'))
+        nt.assert_true(isinstance(self.ds_sum.latex_file_name, str))
+        nt.assert_equal(self.ds_sum.latex_file_name, self.known_latex_file_name)
 
     def test__tex_table_row_basic(self):
         r = self.ds_sum._tex_table_row('The Medians', 'median')
-        assert_equal(r, self.known_r_basic)
+        nt.assert_equal(r, self.known_r_basic)
 
     def test__tex_table_row_advanced(self):
         r = self.ds_sum._tex_table_row('Mean CI', 'mean_conf_interval', rule='top',
                                    twoval=True, ci=True, sigfigs=2)
-        assert_equal(r, self.known_r_advanced)
+        nt.assert_equal(r, self.known_r_advanced)
 
     def test__text_table_row_twoattrs(self):
         r = self.ds_sum._tex_table_row('Quartiles', ['pctl25', 'pctl75'], twoval=True)
-        assert_equal(r, self.known_r_twoattrs)
+        nt.assert_equal(r, self.known_r_twoattrs)
 
     def test__make_tex_figure(self):
         fig = self.ds_sum._make_tex_figure('testfig.png', 'test caption')
@@ -250,7 +251,7 @@ class _base_DatasetSummary_Mixin(object):
             \includegraphics[scale=1.00]{testfig.png}
             \caption{test caption}
         \end{figure} \clearpage""" + '\n'
-        assert_equal(fig, known_fig)
+        nt.assert_equal(fig, known_fig)
 
     def test_makeTexInput(self):
         if self.scenario == 'TT':
@@ -263,7 +264,7 @@ class _base_DatasetSummary_Mixin(object):
         tstring = self.ds_sum.makeTexInput('test table title')
 
         try:
-            assert_equal(tstring, known_tstring)
+            nt.assert_equal(tstring, known_tstring)
         except:
             with open('{}_out_test.test'.format(self.scenario), 'w') as test:
                 test.write(tstring)
@@ -342,7 +343,7 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
             \end{tabular}
         \end{table}""" + '\n'
         try:
-            assert_equal(table, known_table)
+            nt.assert_equal(table, known_table)
         except:
             with open('make_tex_table_res.test', 'w') as f:
                 f.write(table)
@@ -417,7 +418,12 @@ class test_CategoricalSummary(object):
         self.datasets = [mock_dataset(*inc) for inc in includes]
         self.known_paramgroup = 'Metals'
         self.known_dataset_count = 3
-        self.csum = bmp.CategoricalSummary(self.datasets, self.known_paramgroup, 'basepath', 'testfigpath')
+        self.csum = bmp.CategoricalSummary(
+            self.datasets,
+            self.known_paramgroup,
+            'basepath',
+            'testfigpath'
+        )
         self.known_latex_input_content = input_file_string
         self.known_latex_report_content = (
             '\\begin{document}test report title\n'
@@ -431,18 +437,20 @@ class test_CategoricalSummary(object):
 
     def teardown(self):
         os.remove(self.test_templatefile)
+        #if os.path.exists(self.scatter_fig_path)
+        #    os.remove(self.csum())
 
     def test_datasets(self):
-        assert_true(hasattr(self.csum, 'datasets'))
+        nt.assert_true(hasattr(self.csum, 'datasets'))
         for ds in self.csum.datasets:
-            assert_true(isinstance(ds, mock_dataset))
+            nt.assert_true(isinstance(ds, mock_dataset))
 
-        assert_equal(self.known_dataset_count, len(self.csum.datasets))
+        nt.assert_equal(self.known_dataset_count, len(self.csum.datasets))
 
     def test_paramgroup(self):
-        assert_true(hasattr(self.csum, 'paramgroup'))
-        assert_true(isinstance(self.csum.paramgroup, str))
-        assert_equal(self.csum.paramgroup, self.known_paramgroup)
+        nt.assert_true(hasattr(self.csum, 'paramgroup'))
+        nt.assert_true(isinstance(self.csum.paramgroup, str))
+        nt.assert_equal(self.csum.paramgroup, self.known_paramgroup)
 
     @nptest.dec.skipif(pythonversion == 2)
     def test__make_input_file_IO(self):
@@ -450,16 +458,13 @@ class test_CategoricalSummary(object):
             self.csum._make_input_file_IO(inputIO)
             input_string = inputIO.getvalue()
 
-        try:
-            assert_equal(input_string, self.known_latex_input_content)
-        except:
-            with open('test__make_input_file_IO_res.test', 'w') as f:
-                f.write(input_string)
+        testing.assert_bigstring_equal(
+            input_string,
+            self.known_latex_input_content,
+            'test__make_input_file_IO_res.tex',
+            'test__make_input_file_IO_exp.test'
+        )
 
-            with open('test__make_input_file_IO_exp.test', 'w') as f:
-                f.write(self.known_latex_input_content)
-
-            raise
 
     @nptest.dec.skipif(pythonversion == 2)
     def test__make_report_IO(self):
@@ -469,8 +474,34 @@ class test_CategoricalSummary(object):
                     templateIO, 'testpath.tex', reportIO, 'test report title'
                 )
 
+                testing.assert_bigstring_equal(
+                    reportIO.getvalue(),
+                    self.known_latex_report_content,
+                    'test_reportIO.tex',
+                    'test_reportIO_expected.tex'
+                )
 
-                assert_equal(reportIO.getvalue(), self.known_latex_report_content)
+    @nptest.dec.skipif(pythonversion == 2)
+    def test_makeReport(self):
+        texdir = '{}/pybmp_data/bmp/tex'.format(sys.prefix)
+        templatepath = '{}/draft_template.tex'.format(texdir)
+        inputpath = '{}/inputs_{}.tex'.format(texdir, self.csum.paramgroup.lower())
+        reportpath = '{}/report_{}.tex'.format(texdir, self.csum.paramgroup.lower())
+        self.csum.makeReport(
+            self.test_templatefile,
+            'testpath.tex',
+            reportpath,
+            'test report title',
+            regenfigs=False
+        )
+
+        with open(reportpath, 'r') as rp:
+            testing.assert_bigstring_equal(
+                rp.read(),
+                self.known_latex_report_content,
+                'test_report.tex',
+                'test_report_expected.tex'
+            )
 
 
 
@@ -660,6 +691,35 @@ input_file_string = r'''\section{Carbon Dioxide}
 \clearpage
 '''
 
+class test_helpers(object):
+    def setup(self):
+        self.dbfile = os.path.join(
+            sys.prefix, 'pybmp_data', 'testing', 'testdata.accdb'
+        )
+        self.db = bmp.dataAccess.Database(self.dbfile)
+        self.known_pfcs = [
+            'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',
+            'AustinTX3PFC', 'AustinTX1PFC', 'AustinTX2PFC'
+        ]
+        self.known_shape = (11634, 3)
+        self.known_shape_excl = (11440, 3)
+
+    def test_getSummaryData_smoke(self):
+        df = bmp.summary.getSummaryData(self.dbfile)
+        nt.assert_tuple_equal(df.shape, self.known_shape)
+
+    def test_getSummaryDataExlucsive_smoke(self):
+        exbmps = [1708016921, 1782781956]
+        df = bmp.summary.getSummaryData(self.dbfile, excludedbmps=exbmps)
+        nt.assert_tuple_equal(df.shape, self.known_shape_excl)
+
+
+    def test_setMPLStyle_smoke(self):
+        bmp.summary.setMPLStyle()
+
+    def test_getPFCs(self):
+        pfcs = bmp.summary.getPFCs(self.db)
+        nt.assert_list_equal(pfcs, self.known_pfcs)
 
 
 def test_dataDump():
