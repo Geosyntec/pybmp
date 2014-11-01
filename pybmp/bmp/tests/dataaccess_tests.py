@@ -127,7 +127,7 @@ class _base_database():
     @nottest
     def mainsetup(self):
         self.known_dbfile = os.path.join(datadir, 'testdata.accdb')
-        self.known_dbtable = 'data_for_pybmp'
+        self.known_dbtable = 'pybmp_flatfile'
         self.known_csvfile = os.path.join(datadir, 'testdata.csv')
         self.known_top_col_level = ['Inflow', 'Outflow']
         self.known_bottom_col_level = ['DL', 'res', 'qual']

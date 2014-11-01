@@ -35,9 +35,27 @@ def filterlocation(location, count=5, column='bmp'):
                 .shape[0]
     ) >= count
 
+def getPFCs(db):
+    # get BMP Name of pervious friction course (PFC) BMPs
+    bmpnamecol = 'BMPNAME'
+    bmptable = 'BMP INFO S02'
+    bmptypecol = 'TBMPT 2009'
+    query = """
+    select [{0}]
+    FROM [{1}]
+    WHERE [{2}] = 'PF';
+    """.format(bmpnamecol, bmptable, bmptypecol)
+
+    with db.connect() as cnn:
+        pfc_names = pandas.read_sql(query, cnn)[bmpnamecol].tolist()
+
+    return pfc_names
+
 
 def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
-                   astable=False, minstorms=3, minbmps=3, **tablekwds):
+                   astable=False, minstorms=3, minbmps=3,
+                   excludedbmps=None, name=None, useTex=False,
+                   **selection):
     '''Select offical data from database.
 
     Parameters
@@ -62,6 +80,14 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
         Toggles whether the database will be returned
         as a pandas.DataFrame (default) or a bmp.Table
         object.
+    excludedbmps : optional list or None (default)
+        List of BMP Names to exclude form the result.
+    name : optional string or None (default)
+        Passed directly to the Table constuctor.
+    usetex : optional bool (default = False)
+        Passed directly to the Table constuctor.
+    **selection : optional keyword arguments
+        Selection criteria passed directly Database.selectData
 
     Returns
     -------
@@ -72,7 +98,10 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
 
     # main dataset
     db = dataAccess.Database(dbpath, bmpcatanalysis=bmpcatanalysis,
-                             wqanalysis=wqanalysis, **tablekwds)
+                             wqanalysis=wqanalysis)
+    # initial filtering
+    subset = db.selectData(**selection)
+
 
     # all data should be compisite data, but grabs are allowed
     # for bacteria at all BMPs, and all parameter groups at
@@ -85,24 +114,12 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
         '(paramgroup == "Biological") '
     ') & (sampletype != "unknown")'
     )
-    subset = db.all_data.query(querytxt)
+    subset = subset.query(querytxt)
 
-    # get BMP Name of pervious friction course (PFC) BMPs
-    bmpnamecol = 'BMPNAME'
-    bmptable = 'BMP INFO S02'
-    bmptypecol = 'TBMPT 2009'
-    query = """
-    select [{0}]
-    FROM [{1}]
-    WHERE [{2}] = 'PF';
-    """.format(bmpnamecol, bmptable, bmptypecol)
-
-    with db.connect() as cnn:
-        pfc_names = pandas.read_sql(query, cnn)[bmpnamecol].tolist()
-
-    # remove all of the PFCs from the dataset
-    pfc_query = "bmp not in {}".format(pfc_names)
-    subset = subset.query(pfc_query)
+    if excludedbmps is not None:
+        # remove all of the PFCs from the dataset
+        exclude_query = "bmp not in {}".format(excludedbmps)
+        subset = subset.query(exclude_query)
 
     # remove manufactured devices from the dataset
     subset = subset.query('category != "Manufactured Device"')
@@ -120,7 +137,7 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
     )
 
     if astable:
-        return dataAccess.Table(subset, **tablekwds)
+        return dataAccess.Table(subset, name=name, useTex=useTex)
     else:
         return subset
 
@@ -132,7 +149,10 @@ def setMPLStyle():
         'font.serif': ['Utopia', 'Palantino'],
         'lines.linewidth': 0.5,
         'patch.linewidth': 0.5,
-        'text.latex.preamble': [r'\usepackage{siunitx}', r'\sisetup{detect-all}', r'\usepackage{fourier}'],
+        'text.latex.preamble': [
+            r'\usepackage{siunitx}',
+            r'\sisetup{detect-all}',
+            r'\usepackage{fourier}'],
         'axes.linewidth': 0.5,
         'axes.grid': True,
         'axes.titlesize': 12,
@@ -152,7 +172,8 @@ def setMPLStyle():
 
 
 class DatasetSummary(object):
-    def __init__(self, dataset, paramgroup, figpath):
+    def __init__(self, dataset, paramgroup, figpath, forcepaths=False):
+        self.forcepaths = forcepaths
         self.figpath = figpath
         self.paramgroup = paramgroup
         self.ds = dataset
@@ -182,7 +203,7 @@ class DatasetSummary(object):
     def scatter_fig_path(self):
         if self._scatter_fig_path is None:
             self._scatter_fig_path = self.figpath + '/scatterplot'
-            if not os.path.exists(self._scatter_fig_path):
+            if not os.path.exists(self._scatter_fig_path) and self.forcepaths:
                 os.mkdir(self._scatter_fig_path)
         return self._scatter_fig_path
 
@@ -200,7 +221,7 @@ class DatasetSummary(object):
     def stat_fig_path(self):
         if self._stat_fig_path is None:
             self._stat_fig_path = self.figpath + '/statplot'
-            if not os.path.exists(self._stat_fig_path):
+            if not os.path.exists(self._stat_fig_path) and self.forcepaths:
                 os.mkdir(self._stat_fig_path)
         return self._stat_fig_path
 
@@ -581,4 +602,9 @@ class CategoricalSummary(object):
 
         with open(templatepath, 'r') as templateIO:
             with open(reportpath, 'w') as reportIO:
-                self._make_report_IO(templateIO, inputpath, reportIO, report_title)
+                self._make_report_IO(
+                    templateIO,
+                    inputpath,
+                    reportIO,
+                    report_title
+                )
