@@ -95,7 +95,7 @@ class Database(object):
         Table in the MS Access database storing the data for analysis.
         Only used if `fromdb` is True.
 
-    bmpcatanalysis : optional bool (default = False)
+    catanalysis : optional bool (default = False)
         Toggles the filtering for data that have been approved for BMP
         Category-level analysis
 
@@ -128,24 +128,19 @@ class Database(object):
     -------
 
     (see individual docstrings for more info):
-    self.connect
-    self.redefineBMPCategory
-    self.convertTablesToCSV
-    self.getAllData
-    self.getGroupData
+
+    - self.connect
+    - self.redefineBMPCategory
+    - self.convertTablesToCSV
+    - self.getAllData
+    - self.getGroupData
 
     '''
 
-    def __init__(self, filename, dbtable='pybmp_flatfile',
-                 bmpcatanalysis=False, wqanalysis=False):
+    def __init__(self, filename, dbtable=None, sqlquery=None,
+                 catanalysis=False, wqanalysis=False):
         self.file = filename
         self.fromdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
-        if self.fromdb:
-            self.dbtable = dbtable
-            self.driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
-        else:
-            self.dbtable = None
-            self.driver = None
 
         bmp_cols = {
             'raw type': {'cat': 'bmptype', 'desc': 'bmptype_desc'},
@@ -154,12 +149,76 @@ class Database(object):
             'md': {'cat': 'mdcategory', 'desc': 'mdcategory_desc'}
         }
 
-        self.bmpcatanalysis = bmpcatanalysis
+        self.catanalysis = catanalysis
         self.wqanalysis = wqanalysis
 
         # property initialization
         self._raw_data = None
         self._all_data = None
+        if self.fromdb:
+            self._sqlquery = sqlquery
+            self._dbtable = dbtable
+            self.driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
+        else:
+            self._sqlquery = None
+            self._dbtable = None
+            self.driver = None
+
+    @property
+    def dbtable(self):
+        return self._dbtable
+    @dbtable.setter
+    def dbtable(self, value):
+        self._dbtable = value
+
+    @property
+    def sqlquery(self):
+        if self.dbtable is not None:
+            self._sqlquery = "select * from [{}]".format(self.dbtable)
+        elif self._sqlquery is None:
+            self._sqlquery = (
+                "select\n"
+                "    [src].[Category] as [category],\n"
+                "    [src].[TBMPT 2009] as [bmptype],\n"
+                "    [src].[EPA Rain Zone] as [epazone],\n"
+                "    [src].[State] as [state],\n"
+                "    [src].[Country] as [country],\n"
+                "    [src].[SITENAME] as [site],\n"
+                "    [src].[BMPName] as [bmp],\n"
+                "    [src].[MSNAME] as [monitoringstation],\n"
+                "    [src].[Storm #] as [storm],\n"
+                "    [src].[SAMPLEDATE] as [sampledate],\n"
+                "    [src].[SAMPLETIME] as [sampletime],\n"
+                "    [src].[Group] as [paramgroup],\n"
+                "    [src].[Analysis Sample Fraction] as [fraction],\n"
+                "    [src].[WQX Parameter] as [raw_parameter],\n"
+                "    [src].[Common Name] as [parameter],\n"
+                "    [src].[WQ UNITS] as [wq_units],\n"
+                "    [src].[WQ Analysis Value] as [wq_value],\n"
+                "    [src].[QUAL] as [wq_qual],\n"
+                "    [src].[Monitoring Station Type] as [station],\n"
+                "    [src].[SGTCodeDescp] as [watertype],\n"
+                "    [src].[STCODEDescp] as [sampletype],\n"
+                "    [src].[Use in BMP WQ Analysis] as [wqscreen],\n"
+                "    [src].[Use in BMP Category Analysis] as [catscreen]\n"
+                "from [bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014] as [src]\n"
+                "where [src].[Common Name] is not null\n"
+                "order by\n"
+                "    [src].[TBMPT 2009],\n"
+                "    [src].[CATEGORY],\n"
+                "    [src].[SITENAME],\n"
+                "    [src].[BMPName],\n"
+                "    [src].[Storm #],\n"
+                "    [src].[SAMPLEDATE],\n"
+                "    [src].[Common Name],\n"
+                "    [src].[WQX Parameter],\n"
+                "    [src].[Analysis Sample Fraction],\n"
+                "    [src].[Monitoring Station Type];"
+            )
+        return self._sqlquery
+    @sqlquery.setter
+    def sqlquery(self, value):
+        self._sqlquery = value
 
     def _read_db(self):
         '''
@@ -185,7 +244,7 @@ class Database(object):
                         8 - units
                         9 - parameter
                        10 - wqscreen
-                       11 - bmpscreen
+                       11 - catscreen
 
                 The column-index will also be a MultiIndex:
                     Level - Name
@@ -197,28 +256,33 @@ class Database(object):
             # SQL query text, execution, data retrieval
             cmd = "select * from {0}".format(self.dbtable)
             with self.connect() as cnn:
-                data = sql.read_sql(cmd, cnn)
+                data = sql.read_sql(self.sqlquery, cnn)
 
         else:
             data = pandas.read_csv(self.file, encoding='utf-8')
 
-        # reset all of the non-detect flags to something universal ("ND")
-        flags = ['U', ' U', 'U ', 'UJ', ' UJ', 'UJ ', 'UA']
-        data.wq_qual[data.wq_qual.isin(flags)] = 'ND'
-        data.wq_qual[data.wq_qual != 'ND'] = '='
+        # WQ results need to be multiplied by 2 if the qual is a certain value
+        ND_quals = ['U', 'U ', 'UK']
+        ND_factors = data['wq_qual'].apply(lambda x: 2 if x in ND_quals else 1)
+        data['wq_value'] *= ND_factors
 
-        # find all of results with wq_value = 0 and set to DL, and set qual  'ND'
-        data.wq_qual[data.wq_value <= 0] = 'ND'
-        data.wq_value[data.wq_value <= 0] = data.wq_dl
+        # reset all of the non-detect flags to something universal ("ND")
+        flags = ['U', ' U', 'U ', 'UJ', ' UJ', 'UJ ', 'UA', 'UI', 'UC', 'UK']
+        nondetects = data['wq_qual'].isin(flags)
+        data.loc[nondetects, 'wq_qual'] = 'ND'
+
+        # reset all detect-flags to "="
+        detects = data['wq_qual'] != 'ND'
+        data.loc[detects, 'wq_qual'] = '='
 
         # rename columns:
         rename_columns = {
             'wq_qual': 'qual',
             'wq_value': 'res',
             'wq_units': 'units',
-            'wq_dl': 'DL',
-            'Sample Fraction': 'fraction',
-            'raw_parameter': 'general_parameter'
+            'Fraction': 'fraction',
+            'raw_parameter': 'general_parameter',
+            'Category': 'category'
         }
         drop_columns = ['monitoringstation']
         data = (
@@ -229,14 +293,14 @@ class Database(object):
 
         # process screening values:
         data['wqscreen'] = data['wqscreen'].apply(_process_screening)
-        data['bmpscreen'] = data['bmpscreen'].apply(_process_screening)
+        data['catscreen'] = data['catscreen'].apply(_process_screening)
         data['station'] = data['station'].str.lower()
         data['sampletype'] = data['sampletype'].apply(_process_sampletype)
         data['sampledatetime'] = data.apply(utils.makeTimestamp, axis=1)
 
         # screen the data
-        if self.bmpcatanalysis:
-            data = data.query("bmpscreen == 'yes'")
+        if self.catanalysis:
+            data = data.query("catscreen == 'yes'")
 
         if self.wqanalysis:
             data = data.query("wqscreen == 'yes'")
@@ -245,7 +309,7 @@ class Database(object):
         data = utils.normalize_units2(data, info.getNormalization,
                                       info.getConversion, info.getUnits,
                                       paramcol='parameter', rescol='res',
-                                      unitcol='units', dlcol='DL')
+                                      unitcol='units', dlcol=None)
 
         return data
 
@@ -254,10 +318,10 @@ class Database(object):
         row_headers = ['category', 'epazone', 'state', 'site', 'bmp',
                        'station', 'storm', 'sampletype', 'watertype',
                        'paramgroup', 'units', 'parameter', 'wqscreen',
-                       'bmpscreen', 'fraction', 'general_parameter']
+                       'catscreen', 'fraction', 'general_parameter']
 
         # group the data based on the index
-        agg_rules = {'res': 'mean', 'qual': 'min', 'DL': 'min'}
+        agg_rules = {'res': 'mean', 'qual': 'min'}
 
         return self.raw_data.groupby(by=row_headers).agg(agg_rules)
 
@@ -341,24 +405,6 @@ class Database(object):
 
         return cnn
 
-    def setupDB(self):
-        raise NotImplementedError
-        # with open('bmp/data/select_flatfile_data.asql', 'r') as f:
-        #     makequery = """
-        #     create view pybmp_data as (\n{}\n)
-        #     """.format(f.read())
-
-        # with open('bmp/data/select_flatfile_data.asql', 'r') as f:
-        #     maketable = f.read()
-
-        # with self.connect() as cnn:
-        #     cur = cnn.cursor()
-        #     cur.execute(makequery)
-        #     cur.execute(maketable)
-
-        #     cnn.close()
-        #     cnn.commit()
-
     def convertTableToCSV(self, tablename, filepath=None):
         '''
         Converts all relevant tables in the DB to CSV files
@@ -370,39 +416,6 @@ class Database(object):
         cmd = "select * from [{0}]".format(tablename)
         with self.connect() as cnn:
             sql.read_frame(cmd, cnn).to_csv(filepath, index=False, encoding='utf-8')
-
-    def getGroupData(self, paramgroup):
-        '''
-        Selects all of the data for a given parameter group (e.g., 'Nutrients')
-
-        Input:
-            paramgroup : string
-                Parameter group to be extracted. Valid values are:
-                    'General', 'Metals', 'Nutrients', 'Solids', 'Biological'
-
-        Returns:
-            pandas dataframe with:
-                DataFrame of all of the data found in the DB or CSV file.
-                If reading from the default DB queries or CSV file,
-                will create a MultiIndex from the following columns:
-                    Level - Name
-                        0 - category (determined by `category_type`)
-                        1 - epazone
-                        2 - state
-                        3 - site
-                        4 - bmp
-                        5 - storm
-                        6 - sampletype
-                        7 - paramgroup
-                        8 - units
-                        9 - parameter
-                Column-index will also be a MultiIndex:
-                    Level - Name
-                        0 - station (e.g., inflow, outflow)
-                        1 - quantity (e.g., res, qual)
-        '''
-        pg_idx = self.index['paramgroup']
-        return self.all_data.select(lambda x: x[pg_idx] == paramgroup)
 
     def selectData(self, astable=False, name=None, useTex=False, **kwargs):
         '''
@@ -423,7 +436,7 @@ class Database(object):
             Valid Keys are:
                 'category', 'site', 'bmp', 'storm', 'paramgroup',
                 'units', 'parameter', 'sampletype', 'epazone', 'state',
-                'wqscreen', and 'bmpscreen'
+                'wqscreen', and 'catscreen'
 
         Returns
         -------
@@ -441,7 +454,7 @@ class Database(object):
             'category', 'site', 'bmp', 'storm',
             'paramgroup', 'units', 'parameter',
             'sampletype', 'epazone', 'state',
-            'wqscreen', 'bmpscreen'
+            'wqscreen', 'catscreen'
         ]
         level_dict = {}
         for key in kwargs.keys():
@@ -806,7 +819,7 @@ class Table(object):
                 raise ValueError("Parameter %s is not in this dataset" % param)
 
         pindex = self.index['parameter']
-        selection = self.data.select(lambda row: row[pindex] in existingparams)
+        selection = self.data.query("parameter in {}".format(existingparams))
 
         # put the station into the row index and pivot the param into columns
         #selection = selection.stack(level='station')
@@ -817,7 +830,6 @@ class Table(object):
                                                   args=existingparams)
         selection[('res', newparam)] = selection.apply(resfxn, axis=1,
                                                  args=existingparams)
-        selection[('DL', newparam)] = selection[('DL', existingparams[0])]
 
         # keep only the combined data
         selection = selection.select(lambda col: col[1] == newparam, axis=1)
@@ -827,7 +839,7 @@ class Table(object):
         selection = selection.stack(level='parameter')
 
         selection.index = selection.index \
-                                   .swaplevel('parameter', 'bmpscreen') \
+                                   .swaplevel('parameter', 'catscreen') \
                                    .swaplevel('parameter', 'wqscreen')
 
         # get the column indices in the right order

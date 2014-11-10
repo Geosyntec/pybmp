@@ -600,11 +600,15 @@ parameters = {
         'units': 'ug/L'
     },
     'BOD': {
-        'tex': 'BOD',
+        'tex': 'Biological oxygen demand',
+        'units': 'mg/L'
+    },
+    'BOD, Dissolved': {
+        'tex': 'Biological oxygen demand (dissolved)',
         'units': 'mg/L'
     },
     'BOD, non-standard conditions': {
-        'tex': 'BOD, non-standard conditions',
+        'tex': 'Biological oxygen demand (non-standard conditions)',
         'units': 'mg/L'
     },
     'Barium, Dissolved': {
@@ -728,7 +732,7 @@ parameters = {
         'units': 'ug/L'
     },
     'CBOD': {
-        'tex': 'CBOD',
+        'tex': 'Chemical-biological oxygen demand',
         'units': 'mg/L'
     },
     'CFC-11': {
@@ -789,6 +793,22 @@ parameters = {
     },
     'Chemical oxygen demand': {
         'tex': 'Chemical oxygen demand',
+        'units': 'mg/L'
+    },
+    'Chemical oxygen demand, High Level': {
+        'tex': 'Chemical oxygen demand (high level)',
+        'units': 'mg/L'
+    },
+    'Chemical oxygen demand, Low Level': {
+        'tex': 'Chemical oxygen demand (low level)',
+        'units': 'mg/L'
+    },
+    'Chemical oxygen demand, Low Level, Filtered': {
+        'tex': 'Chemical oxygen demand (low level, filtered)',
+        'units': 'mg/L'
+    },
+    'Chemical oxygen demand, Soluble': {
+        'tex': 'Chemical oxygen demand (soluble)',
         'units': 'mg/L'
     },
     'Chlordane': {
@@ -1460,7 +1480,11 @@ parameters = {
         'units': 'ug/L'
     },
     'RELATIVE TOXICITY (I 25% REDUCTION)': {
-        'tex': 'RELATIVE TOXICITY (I 25% REDUCTION)',
+        'tex': 'RELATIVE TOXICITY (I 25\% REDUCTION)',
+        'units': '%'
+    },
+    'RELATIVE TOXICITY (I 25% REDUCTION), Filtered': {
+        'tex': 'RELATIVE TOXICITY (I 25\% REDUCTION, filtered)',
         'units': '%'
     },
     'SSC-Total Coarse Fraction (>63um)': {
@@ -1591,6 +1615,10 @@ parameters = {
         'tex': 'Total volatile solids',
         'units': 'mg/L'
     },
+    'Total volatile solids, filterable': {
+        'tex': 'Total volatile solids (filterable)',
+        'units': 'mg/L'
+    },
     'Toxaphene': {
         'tex': 'Toxaphene',
         'units': 'ug/L'
@@ -1627,8 +1655,20 @@ parameters = {
         'tex': 'True Color',
         'units': 'ADMI Value'
     },
+    'True color, filtered': {
+        'tex': 'True Color (filtered)',
+        'units': 'ADMI Value'
+    },
+    'True color, Filtered': {
+        'tex': 'True Color (filtered)',
+        'units': 'ADMI Value'
+    },
     'Turbidity': {
         'tex': 'Turbidity',
+        'units': 'NTU'
+    },
+    'Turbidity, Filtered': {
+        'tex': 'Turbidity (filtered)',
         'units': 'NTU'
     },
     'Vanadium, Total': {
