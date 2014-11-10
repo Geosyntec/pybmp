@@ -77,6 +77,7 @@ class test__filter_index:
     def test_lists_multi_false(self):
         assert_false(da._filter_index(self.row, [0, 1], [['BI'],['GA']]))
 
+
 class test_defaultFilter:
     def setup(self):
         self.testcsv = StringIO("""\
@@ -132,12 +133,12 @@ class _base_database():
         self.known_top_col_level = ['Inflow', 'Outflow']
         self.known_bottom_col_level = ['DL', 'res', 'qual']
         self.known_col_names = ['station', 'quantity']
-        self.known_datashape = (12384, 3)
+        self.known_datashape = (3980, 2)
 
         self.known_index_names = [
             'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
             'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
-            'wqscreen', 'bmpscreen', 'fraction', 'general_parameter'
+            'wqscreen', 'catscreen', 'fraction', 'general_parameter'
         ]
         self.known_bmpcats = ['BR', 'BS', 'MD']
         self.known_group = 'Metals'
@@ -166,16 +167,6 @@ class _base_database():
     def test_all_data_positive(self):
         assert_true(self.db.all_data['res'].min() > 0)
 
-    def test_getGroupData_Exists(self):
-        assert_true(hasattr(self.db, 'getGroupData'))
-        data = self.db.getGroupData(self.known_group)
-        assert_true(isinstance(data, pandas.DataFrame))
-
-    def test_getGroupData_Form(self):
-        data = self.db.getGroupData(self.known_group)
-        assert_true(data.index.names, self.known_index_names)
-        #assert_list_equal(self.db.all_data.columns.names, self.known_col_names)
-
     def test_selectData_exists(self):
         assert_true(hasattr(self.db, 'selectData'))
         data = self.db.selectData(paramgroup=self.known_group)
@@ -193,17 +184,17 @@ class _base_database():
         self.db.selectData(junk=False)
 
     def test_selectData_single_args(self):
-        parameter = 'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N'
-        siteid = -2130126227
-        bmpid = 1604339850
+        parameter = 'Zinc, Total'
+        siteid = '21st and Iris Rain Garden'
+        bmpid = 'UDFCD Rain Garden'
         data = self.db.selectData(parameter=parameter, site=siteid, bmp=bmpid)
         assert_true(isinstance(data, pandas.DataFrame))
         assert_equal(data.index.get_level_values('parameter').unique()[0],
-                          parameter)
+                     parameter)
         assert_equal(data.index.get_level_values('site').unique()[0],
-                          siteid)
+                     siteid)
         assert_equal(data.index.get_level_values('bmp').unique()[0],
-                          bmpid)
+                     bmpid)
 
         assert_tuple_equal(data.index.get_level_values('parameter').unique().shape, (1,))
         assert_tuple_equal(data.index.get_level_values('site').unique().shape, (1,))
@@ -211,9 +202,8 @@ class _base_database():
 
     def test_selectData_list_args(self):
         parameters = [
-            u'Lead, Total',
-            u'Copper, Dissolved',
             u'Lead, Dissolved',
+            u'Lead, Total',
         ]
         data = self.db.selectData(parameter=parameters)
         assert_true(isinstance(data, pandas.DataFrame))
@@ -222,9 +212,8 @@ class _base_database():
 
     def test_selectData_table(self):
         parameters = [
-            u'Lead, Total',
-            u'Copper, Dissolved',
             u'Lead, Dissolved',
+            u'Lead, Total',
         ]
         table = self.db.selectData(astable=True, parameter=parameters)
         assert_true(isinstance(table, da.Table))
@@ -334,11 +323,11 @@ class _base_table:
         self.known_index_names = [
             'category', 'epazone', 'state', 'site','bmp', 'station', 'storm',
             'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
-            'wqscreen', 'bmpscreen', 'fraction', 'general_parameter'
+            'wqscreen', 'catscreen', 'fraction', 'general_parameter'
         ]
         self.known_getData_row_index_names = [
             'epazone', 'state', 'site', 'bmp', 'storm',
-            'sampletype', 'paramgroup', 'units', 'wqscreen', 'bmpcatscreen'
+            'sampletype', 'paramgroup', 'units', 'wqscreen', 'catscreen'
         ]
         self.known_loc_subkeys_category = ['location', 'definition', 'name']
         self.known_loc_subkeys_siteid = ['location', 'definition', 'name']
@@ -435,12 +424,12 @@ class _base_table:
 
     def test_transformParameters(self):
         assert_true(hasattr(self.table, 'transformParameters'))
-        old_params = [self.known_parameters[0]]
-        new_param = 'log_' + self.known_parameters[0]
+        old_params = [self.known_parameters[-1]]
+        new_param = 'log_' + self.known_parameters[-1]
         self.table.transformParameters(
             old_params, new_param,
-            lambda x, junk: 1000*x[('res', self.known_parameters[0])],
-            lambda x, junk: x[('qual', self.known_parameters[0])],
+            lambda x, old_p: 1000*x[('res', old_p)],
+            lambda x, old_p: x[('qual', old_p)],
             '1000*mg/L'
         )
         assert_true('1000*mg/L' in self.table.data.index.get_level_values('units'))
@@ -449,7 +438,7 @@ class _base_table:
 
     def test_unionParamsWithPreference(self):
         assert_true(hasattr(self.table, 'unionParamsWithPreference'))
-        components = self.known_parameters[:2]
+        components = self.known_parameters[-2:]
         combined = 'New Combination'
         self.table.unionParamsWithPreference(components, combined, 'mg/L')
         assert_true(combined in self.table.parameter_lookup.keys())
@@ -522,8 +511,8 @@ class _base_table:
         assert_true(hasattr(self.table, 'getDatasets'))
         ds_filtered = self.table.getDatasets('category', filterfxn=da.defaultFilter)
         ds_nofilter = self.table.getDatasets('category')
-        influent_diff = 0
-        effluent_diff = 0
+        influent_diff = 5
+        effluent_diff = 4
         for dsf, dsn in zip(ds_filtered, ds_nofilter):
             assert_true(dsn.influent.data.shape[0] >= dsf.influent.data.shape[0])
             assert_true(dsn.effluent.data.shape[0] >= dsf.effluent.data.shape[0])
@@ -559,7 +548,7 @@ class _base_table:
 
     def test_redefineBMPCategory_DropOldTrue(self):
         newcat = 'Test New Category'
-        oldcat = 'MD'
+        oldcat = 'RP'
 
         bmpcat_index = self.table.index['category']
         assert_true(hasattr(self.table, 'redefineBMPCategory'))
@@ -571,7 +560,7 @@ class _base_table:
 
     def test_redefineBMPCategory_DropOldFalse(self):
         newcat = 'Test New Category'
-        oldcat = 'MD'
+        oldcat = 'RP'
 
         bmpcat_index = self.table.index['category']
         assert_true(hasattr(self.table, 'redefineBMPCategory'))
@@ -585,17 +574,21 @@ class _base_table:
 class test_table_metals(_base_table):
     def setup(self):
         self.mainsetup()
-        self.known_bmp_cats = ['BR', 'BS', 'MD']
+        self.known_bmp_cats = ['BR', 'DB', 'RP']
         self.known_name = 'Metals'
         self.known_parameters = [
-            'Lead, Dissolved', 'Copper, Dissolved',
-            'Copper, Total', 'Lead, Total'
+            'Copper, Total',
+            'Lead, Dissolved', 'Lead, Total',
+            'Zinc, Dissolved', 'Zinc, Total'
         ]
         self.db = da.Database(self.known_csvfile)
         self.known_parametername = self.known_parameters[0]
         self.known_bmpcat_code = self.known_bmp_cats[1]
-        self.table = da.Table(self.db.getGroupData(self.known_name),
-                              name=self.known_name)
+        self.table = self.db.selectData(
+            paramgroup=self.known_name,
+            astable=True,
+            name=self.known_name
+        )
         self.known_influent_diff = 5
         self.known_effluent_diff = 4
 

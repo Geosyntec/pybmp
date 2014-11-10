@@ -52,7 +52,7 @@ def getPFCs(db):
     return pfc_names
 
 
-def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
+def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
                    astable=False, minstorms=3, minbmps=3,
                    excludedbmps=None, name=None, useTex=False,
                    **selection):
@@ -62,7 +62,7 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
     ----------
     dbpath : string
         File path to the BMP Database Access file.
-    bmpcatanalysis : optional bool (default = False)
+    catanalysis : optional bool (default = False)
         Filters for data approved for BMP Category-level
         analysis.
     wqanalysis : optional bool (default = False)
@@ -97,7 +97,7 @@ def getSummaryData(dbpath, bmpcatanalysis=False, wqanalysis=False,
 
 
     # main dataset
-    db = dataAccess.Database(dbpath, bmpcatanalysis=bmpcatanalysis,
+    db = dataAccess.Database(dbpath, catanalysis=catanalysis,
                              wqanalysis=wqanalysis)
     # initial filtering
     subset = db.selectData(**selection)
