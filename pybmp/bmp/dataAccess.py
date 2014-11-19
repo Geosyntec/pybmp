@@ -99,10 +99,6 @@ class Database(object):
         Toggles the filtering for data that have been approved for BMP
         Category-level analysis
 
-    wqanalysis : optional bool (default = False)
-        Toggles the filtering for data that have been approved for WQ
-        (indiviual BMP) analysis
-
     Attributes
     ----------
 
@@ -138,7 +134,7 @@ class Database(object):
     '''
 
     def __init__(self, filename, dbtable=None, sqlquery=None,
-                 catanalysis=False, wqanalysis=False):
+                 catanalysis=False):
         self.file = filename
         self.fromdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
 
@@ -150,7 +146,6 @@ class Database(object):
         }
 
         self.catanalysis = catanalysis
-        self.wqanalysis = wqanalysis
 
         # property initialization
         self._raw_data = None
@@ -185,6 +180,8 @@ class Database(object):
                 "    [src].[Country] as [country],\n"
                 "    [src].[SITENAME] as [site],\n"
                 "    [src].[BMPName] as [bmp],\n"
+                "    [src].[PDF ID] as [PDFID],\n"
+                "    [src].[WQID],\n"
                 "    [src].[MSNAME] as [monitoringstation],\n"
                 "    [src].[Storm #] as [storm],\n"
                 "    [src].[SAMPLEDATE] as [sampledate],\n"
@@ -262,12 +259,13 @@ class Database(object):
             data = pandas.read_csv(self.file, encoding='utf-8')
 
         # WQ results need to be multiplied by 2 if the qual is a certain value
-        ND_quals = ['U', 'U ', 'UK']
+        ND_quals = ['U', 'U ', ' U', 'UK', 'UA', 'UC', 'K']
         ND_factors = data['wq_qual'].apply(lambda x: 2 if x in ND_quals else 1)
         data['wq_value'] *= ND_factors
 
         # reset all of the non-detect flags to something universal ("ND")
         flags = ['U', ' U', 'U ', 'UJ', ' UJ', 'UJ ', 'UA', 'UI', 'UC', 'UK']
+        ## UJ -> ND if res < DL, else ,=
         nondetects = data['wq_qual'].isin(flags)
         data.loc[nondetects, 'wq_qual'] = 'ND'
 
@@ -302,9 +300,6 @@ class Database(object):
         if self.catanalysis:
             data = data.query("catscreen == 'yes'")
 
-        if self.wqanalysis:
-            data = data.query("wqscreen == 'yes'")
-
         # normalize the units
         data = utils.normalize_units2(data, info.getNormalization,
                                       info.getConversion, info.getUnits,
@@ -315,13 +310,15 @@ class Database(object):
 
     def _prep_data(self):
         # columns to be the index
-        row_headers = ['category', 'epazone', 'state', 'site', 'bmp',
-                       'station', 'storm', 'sampletype', 'watertype',
-                       'paramgroup', 'units', 'parameter', 'wqscreen',
-                       'catscreen', 'fraction', 'general_parameter']
+        row_headers = [
+            'category', 'epazone', 'state', 'site', 'bmp',
+            'station', 'storm', 'sampletype', 'watertype',
+            'paramgroup', 'units', 'parameter', 'wqscreen',
+            'catscreen', 'PDFID', 'WQID'
+        ]
 
         # group the data based on the index
-        agg_rules = {'res': 'mean', 'qual': 'min'}
+        agg_rules = {'res': 'mean', 'qual': 'min', 'sampledatetime': 'min'}
 
         return self.raw_data.groupby(by=row_headers).agg(agg_rules)
 

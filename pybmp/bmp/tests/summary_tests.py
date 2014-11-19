@@ -696,22 +696,24 @@ class test_helpers(object):
         self.dbfile = os.path.join(
             sys.prefix, 'pybmp_data', 'testing', 'testdata.accdb'
         )
-        self.db = bmp.dataAccess.Database(self.dbfile, dbtable='pybmp_flatfile')
+        self.db = bmp.dataAccess.Database(self.dbfile)
         self.known_pfcs = [
             'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',
             'AustinTX3PFC', 'AustinTX1PFC', 'AustinTX2PFC'
         ]
-        self.known_shape = (3113, 2)
-        self.known_shape_excl = (3113, 2)
+        self.known_shape = (3116, 2)
+        self.known_shape_excl = (2420, 2)
 
     def test_getSummaryData_smoke(self):
         df = bmp.summary.getSummaryData(self.dbfile)
         nt.assert_tuple_equal(df.shape, self.known_shape)
 
-    def test_getSummaryDataExlucsive_smoke(self):
-        exbmps = [1708016921, 1782781956]
+    def test_getSummaryDataExclusive_smoke(self):
+        exbmps = ['BMP 12', 'BMP 13', 'Upper Detention Pond']
         df = bmp.summary.getSummaryData(self.dbfile, excludedbmps=exbmps)
         nt.assert_tuple_equal(df.shape, self.known_shape_excl)
+        for x in exbmps:
+            nt.assert_true(x not in df.index.get_level_values('bmp').unique())
 
     def test_setMPLStyle_smoke(self):
         bmp.summary.setMPLStyle()

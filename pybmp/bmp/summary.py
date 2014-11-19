@@ -35,6 +35,7 @@ def filterlocation(location, count=5, column='bmp'):
                 .shape[0]
     ) >= count
 
+
 def getPFCs(db):
     # get BMP Name of pervious friction course (PFC) BMPs
     bmpnamecol = 'BMPNAME'
@@ -52,7 +53,14 @@ def getPFCs(db):
     return pfc_names
 
 
-def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
+def _get_best_ms(row, mainstation, backupstation, valcol):
+    if pandas.isnull(row[(mainstation, valcol)]):
+        return row[(backupstation, valcol)]
+    else:
+        return row[(mainstation, valcol)]
+
+
+def getSummaryData(dbpath, catanalysis=False,
                    astable=False, minstorms=3, minbmps=3,
                    excludedbmps=None, name=None, useTex=False,
                    **selection):
@@ -63,15 +71,13 @@ def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
     dbpath : string
         File path to the BMP Database Access file.
     catanalysis : optional bool (default = False)
-        Filters for data approved for BMP Category-level
-        analysis.
+        Filters for data approved for BMP Category-level analysis.
     wqanalysis : optional bool (default = False)
-        Filters for data approvded for individual BMP
-        analysis.
+        Filters for data approvded for individual BMP analysis.
     minstorms : option int (default = 3)
-        The minimum number of storms each group defined
-        by BMP, station, and parameter should have.
-        Groups with too few storms will be filtered out.
+        The minimum number of storms each group defined by BMP, station,
+        and parameter should have. Groups with too few storms will be
+        filtered out.
     minstorms : option int (default = 3)
         The minimum number of BMPs each group defined
         by category, station, and parameter should have.
@@ -97,8 +103,7 @@ def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
 
 
     # main dataset
-    db = dataAccess.Database(dbpath, catanalysis=catanalysis,
-                             wqanalysis=wqanalysis)
+    db = dataAccess.Database(dbpath, catanalysis=catanalysis)
     # initial filtering
     subset = db.selectData(**selection)
 
@@ -124,22 +129,47 @@ def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
     # remove manufactured devices from the dataset
     subset = subset.query('category != "Manufactured Device"')
 
+    xtab = subset.unstack(level='station')
+    xtab.columns = xtab.columns.swaplevel(0, 1)
+    xtab[('final_outflow', 'res')] = xtab.apply(
+        lambda row: _get_best_ms(row, 'outflow', 'subsurface', 'res'),
+        axis=1
+    )
+    xtab[('final_outflow', 'qual')] = xtab.apply(
+        lambda row: _get_best_ms(row, 'outflow', 'subsurface', 'qual'),
+        axis=1
+    )
+    xtab[('final_inflow', 'qual')] = xtab.apply(
+        lambda row: _get_best_ms(row, 'outflow', 'reference outflow', 'qual'),
+        axis=1
+    )
+    xtab[('final_inflow', 'res')] = xtab.apply(
+        lambda row: _get_best_ms(row, 'outflow', 'reference outflow', 'res'),
+        axis=1
+    )
+
+    data = (
+        xtab.select(lambda c: 'final_' in c[0], axis=1)
+            .rename(columns=lambda col: col.replace('final_', ''))
+            .stack(level='station')
+    )
+
     # filter out all monitoring stations with less than /N/ storms
     stormlevels = ['category', 'parameter', 'station', 'bmp']
-    subset = subset.groupby(level=stormlevels).filter(
+    filtered_by_storms = data.groupby(level=stormlevels).filter(
         lambda g: g.count()['res'] >= minstorms
     )
 
     # filter out all groups with too few BMPs
     bmplevels = ['category', 'parameter', 'station']
-    subset = subset.groupby(level=bmplevels).filter(
+    filtered_by_bmp = filtered_by_storms.groupby(level=bmplevels).filter(
         lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps
     )
 
     if astable:
-        return dataAccess.Table(subset, name=name, useTex=useTex)
+        return dataAccess.Table(filtered_by_bmp, name=name, useTex=useTex)
     else:
-        return subset
+        return filtered_by_bmp
 
 
 def setMPLStyle():
