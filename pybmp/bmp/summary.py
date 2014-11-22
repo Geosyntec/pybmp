@@ -35,6 +35,7 @@ def filterlocation(location, count=5, column='bmp'):
                 .shape[0]
     ) >= count
 
+
 def getPFCs(db):
     # get BMP Name of pervious friction course (PFC) BMPs
     bmpnamecol = 'BMPNAME'
@@ -52,10 +53,91 @@ def getPFCs(db):
     return pfc_names
 
 
-def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
-                   astable=False, minstorms=3, minbmps=3,
-                   excludedbmps=None, name=None, useTex=False,
-                   **selection):
+def _pick_best_station(dataframe):
+    def best_col(row, mainstation, backupstation, valcol):
+        if pandas.isnull(row[(mainstation, valcol)]):
+            return row[(backupstation, valcol)]
+        else:
+            return row[(mainstation, valcol)]
+
+    xtab = dataframe.unstack(level='station')
+    xtab.columns = xtab.columns.swaplevel(0, 1)
+    xtab[('final_outflow', 'res')] = xtab.apply(
+        best_col, axis=1, args=('outflow', 'subsurface', 'res')
+    )
+    xtab[('final_outflow', 'qual')] = xtab.apply(
+        best_col, axis=1, args=('outflow', 'subsurface', 'qual')
+    )
+    xtab[('final_inflow', 'qual')] = xtab.apply(
+        best_col, axis=1, args=('inflow', 'reference outflow', 'qual')
+    )
+    xtab[('final_inflow', 'res')] = xtab.apply(
+        best_col, axis=1, args=('inflow', 'reference outflow', 'res')
+    )
+
+    data = (
+        xtab.select(lambda c: 'final_' in c[0], axis=1)
+            .rename(columns=lambda col: col.replace('final_', ''))
+            .stack(level='station')
+    )
+    return data
+
+
+def _pick_best_sampletype(dataframe):
+    def best_col(row):
+        if pandas.isnull(row['composite']):
+            return row[badval]
+        else:
+            return np.nan
+
+    pivotlevel='sampletype'
+    badval='grab'
+
+    orig_cols = dataframe.columns
+    xtab = dataframe.unstack(level=pivotlevel)
+    for col in orig_cols:
+        xtab[(col, badval)] = xtab[col].apply(best_col, axis=1)
+
+    data = (
+        xtab.select(lambda c: c[1] != 'unknown', axis=1)
+            .stack(level=['sampletype'])
+    )
+    return data
+
+
+def _filter_onesided_BMPs(dataframe):
+    grouplevels = ['site', 'bmp', 'parameter']
+    pivotlevel = 'station'
+
+    xtab = dataframe.unstack(level=pivotlevel)
+    xgrp = xtab.groupby(level=grouplevels)
+    data = xgrp.filter(
+        lambda g: np.all(g['res'].describe().loc['count'] > 0)
+    )
+    return data.stack(level=pivotlevel)
+
+
+def _filter_by_storm_count(dataframe, minstorms):
+    # filter out all monitoring stations with less than /N/ storms
+    grouplevels = ['site', 'bmp', 'parameter', 'station']
+
+    data = dataframe.groupby(level=grouplevels).filter(
+        lambda g: g.count()['res'] >= minstorms
+    )
+    return data
+
+def _filter_by_BMP_count(dataframe, minbmps):
+    grouplevels = ['category', 'parameter', 'station']
+
+    data = dataframe.groupby(level=grouplevels).filter(
+        lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps
+    )
+    return data
+
+
+def getSummaryData(dbpath, catanalysis=False, astable=False,
+                   minstorms=3, minbmps=3, excludedbmps=None,
+                   name=None, useTex=False, **selection):
     '''Select offical data from database.
 
     Parameters
@@ -63,15 +145,13 @@ def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
     dbpath : string
         File path to the BMP Database Access file.
     catanalysis : optional bool (default = False)
-        Filters for data approved for BMP Category-level
-        analysis.
+        Filters for data approved for BMP Category-level analysis.
     wqanalysis : optional bool (default = False)
-        Filters for data approvded for individual BMP
-        analysis.
+        Filters for data approvded for individual BMP analysis.
     minstorms : option int (default = 3)
-        The minimum number of storms each group defined
-        by BMP, station, and parameter should have.
-        Groups with too few storms will be filtered out.
+        The minimum number of storms each group defined by BMP, station,
+        and parameter should have. Groups with too few storms will be
+        filtered out.
     minstorms : option int (default = 3)
         The minimum number of BMPs each group defined
         by category, station, and parameter should have.
@@ -97,8 +177,7 @@ def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
 
 
     # main dataset
-    db = dataAccess.Database(dbpath, catanalysis=catanalysis,
-                             wqanalysis=wqanalysis)
+    db = dataAccess.Database(dbpath, catanalysis=catanalysis)
     # initial filtering
     subset = db.selectData(**selection)
 
@@ -121,20 +200,11 @@ def getSummaryData(dbpath, catanalysis=False, wqanalysis=False,
         exclude_query = "bmp not in {}".format(excludedbmps)
         subset = subset.query(exclude_query)
 
-    # remove manufactured devices from the dataset
-    subset = subset.query('category != "Manufactured Device"')
-
-    # filter out all monitoring stations with less than /N/ storms
-    stormlevels = ['category', 'parameter', 'station', 'bmp']
-    subset = subset.groupby(level=stormlevels).filter(
-        lambda g: g.count()['res'] >= minstorms
-    )
-
-    # filter out all groups with too few BMPs
-    bmplevels = ['category', 'parameter', 'station']
-    subset = subset.groupby(level=bmplevels).filter(
-        lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps
-    )
+    subset = _pick_best_sampletype(subset)
+    subset = _pick_best_station(subset)
+    subset = _filter_onesided_BMPs(subset)
+    subset = _filter_by_storm_count(subset, minstorms)
+    subset = _filter_by_BMP_count(subset, minbmps)
 
     if astable:
         return dataAccess.Table(subset, name=name, useTex=useTex)

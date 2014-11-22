@@ -93,15 +93,11 @@ class Database(object):
 
     dbtable : optional string (default = 'pybmp_flatfile')
         Table in the MS Access database storing the data for analysis.
-        Only used if `fromdb` is True.
+        Only used if `usingdb` is True.
 
     catanalysis : optional bool (default = False)
         Toggles the filtering for data that have been approved for BMP
         Category-level analysis
-
-    wqanalysis : optional bool (default = False)
-        Toggles the filtering for data that have been approved for WQ
-        (indiviual BMP) analysis
 
     Attributes
     ----------
@@ -115,13 +111,13 @@ class Database(object):
     self.category_type : string
         See Input section.
 
-    self.fromdb : boot
+    self.usingdb : bool
         See Input section.
 
     self.excluded_parameters : list of string or None
         See `parametersToExclude` in Input section.
 
-    self.all_data : pandas DataFrame
+    self.data : pandas DataFrame
         DataFrame of all of the data found in the DB or CSV file.
 
     Methods
@@ -138,24 +134,16 @@ class Database(object):
     '''
 
     def __init__(self, filename, dbtable=None, sqlquery=None,
-                 catanalysis=False, wqanalysis=False):
+                 catanalysis=False):
         self.file = filename
-        self.fromdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
-
-        bmp_cols = {
-            'raw type': {'cat': 'bmptype', 'desc': 'bmptype_desc'},
-            'raw category': {'cat': 'bmpcategory', 'desc': 'bmpcategory_desc'},
-            'analysis': {'cat': 'analysiscategory', 'desc': 'analysiscategory_desc'},
-            'md': {'cat': 'mdcategory', 'desc': 'mdcategory_desc'}
-        }
-
+        self.usingdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
         self.catanalysis = catanalysis
-        self.wqanalysis = wqanalysis
 
         # property initialization
-        self._raw_data = None
-        self._all_data = None
-        if self.fromdb:
+        self.__data_fromdb = None
+        self.__data_cleaned = None
+        self._data = None
+        if self.usingdb:
             self._sqlquery = sqlquery
             self._dbtable = dbtable
             self.driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
@@ -178,13 +166,16 @@ class Database(object):
         elif self._sqlquery is None:
             self._sqlquery = (
                 "select\n"
-                "    [src].[Category] as [category],\n"
+                "    [src].[Analysis_Category] as [category],\n"
+                "    [src].[BMP Cat Code] as [bmpcat],\n"
                 "    [src].[TBMPT 2009] as [bmptype],\n"
                 "    [src].[EPA Rain Zone] as [epazone],\n"
                 "    [src].[State] as [state],\n"
                 "    [src].[Country] as [country],\n"
                 "    [src].[SITENAME] as [site],\n"
                 "    [src].[BMPName] as [bmp],\n"
+                "    [src].[PDF ID] as [PDFID],\n"
+                "    [src].[WQID],\n"
                 "    [src].[MSNAME] as [monitoringstation],\n"
                 "    [src].[Storm #] as [storm],\n"
                 "    [src].[SAMPLEDATE] as [sampledate],\n"
@@ -200,7 +191,8 @@ class Database(object):
                 "    [src].[SGTCodeDescp] as [watertype],\n"
                 "    [src].[STCODEDescp] as [sampletype],\n"
                 "    [src].[Use in BMP WQ Analysis] as [wqscreen],\n"
-                "    [src].[Use in BMP Category Analysis] as [catscreen]\n"
+                "    [src].[Use in BMP Category Analysis] as [catscreen],\n"
+                "    [src].[Infl_Effl_Balance] as [balanced]\n"
                 "from [bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014] as [src]\n"
                 "where [src].[Common Name] is not null\n"
                 "order by\n"
@@ -220,163 +212,152 @@ class Database(object):
     def sqlquery(self, value):
         self._sqlquery = value
 
-    def _read_db(self):
-        '''
-        Get all of the data from the database.
+    @property
+    def _data_fromdb(self):
+        if self.__data_fromdb is None:
+            if self.usingdb:
+                # SQL query text, execution, data retrieval
+                with self.connect() as cnn:
+                    self.__data_fromdb = sql.read_sql(self.sqlquery, cnn)
 
-        Inputs:
-            None
+            else:
+                self.__data_fromdb = pandas.read_csv(self.file, encoding='utf-8')
 
-        Returns:
-            pandas dataframe with:
-                DataFrame of all of the data found in the DB or CSV file.
-                If reading from the default DB queries or CSV file,
-                will create a MultiIndex from the following columns:
-                    Level - Name
-                        0 - category (determined by `category_type`)
-                        1 - epazone
-                        2 - state
-                        3 - site
-                        4 - bmp
-                        5 - storm
-                        6 - sampletype
-                        7 - paramgroup
-                        8 - units
-                        9 - parameter
-                       10 - wqscreen
-                       11 - catscreen
+        return self.__data_fromdb
 
-                The column-index will also be a MultiIndex:
-                    Level - Name
-                        0 - station (e.g., inflow, outflow)
-                        1 - quantity (e.g., res, qual)
+    def _cleanup_data(self):
 
-        '''
-        if self.fromdb:
-            # SQL query text, execution, data retrieval
-            cmd = "select * from {0}".format(self.dbtable)
-            with self.connect() as cnn:
-                data = sql.read_sql(self.sqlquery, cnn)
+        data = self._data_fromdb.copy()
+        if self.usingdb:
+            # clean up the flags (remove leading and trailing spaces:
+            data['wq_qual'] = data['wq_qual'].str.strip()
 
-        else:
-            data = pandas.read_csv(self.file, encoding='utf-8')
+            # WQ results need to be multiplied by 2 if the qual is a certain value
+            factor_2_quals = ['U', 'UK', 'UA', 'UC', 'K']
+            ND_factors = data['wq_qual'].apply(lambda x: 2 if x in factor_2_quals else 1)
+            data['wq_value'] *= ND_factors
 
-        # WQ results need to be multiplied by 2 if the qual is a certain value
-        ND_quals = ['U', 'U ', 'UK']
-        ND_factors = data['wq_qual'].apply(lambda x: 2 if x in ND_quals else 1)
-        data['wq_value'] *= ND_factors
+            # reset all of the non-detect flags to something universal ("ND")
+            ## UJ -> ND if res < DL, else ,=
+            ND_flags = ['U', 'UJ', 'UA', 'UI', 'UC', 'UK', 'K']
+            nondetects = data['wq_qual'].str.strip().isin(ND_flags)
+            data.loc[nondetects, 'wq_qual'] = 'ND'
 
-        # reset all of the non-detect flags to something universal ("ND")
-        flags = ['U', ' U', 'U ', 'UJ', ' UJ', 'UJ ', 'UA', 'UI', 'UC', 'UK']
-        nondetects = data['wq_qual'].isin(flags)
-        data.loc[nondetects, 'wq_qual'] = 'ND'
+            # reset all detect-flags to "="
+            detects = data['wq_qual'] != 'ND'
+            data.loc[detects, 'wq_qual'] = '='
 
-        # reset all detect-flags to "="
-        detects = data['wq_qual'] != 'ND'
-        data.loc[detects, 'wq_qual'] = '='
+            # rename columns:
+            rename_columns = {
+                'wq_qual': 'qual',
+                'wq_value': 'res',
+                'wq_units': 'units',
+                'Fraction': 'fraction',
+                'raw_parameter': 'general_parameter',
+                'category': 'category'
+            }
+            drop_columns = ['monitoringstation']
+            data = (
+                data.rename(columns=rename_columns)
+                    .drop(drop_columns, axis=1)
+                    .dropna(subset=['res'])
+            )
+            # process screening values:
+            data['wqscreen'] = data['wqscreen'].apply(_process_screening)
+            data['catscreen'] = data['catscreen'].apply(_process_screening)
+            data['station'] = data['station'].str.lower()
+            data['sampletype'] = data['sampletype'].apply(_process_sampletype)
+            data['sampledatetime'] = data.apply(utils.makeTimestamp, axis=1)
 
-        # rename columns:
-        rename_columns = {
-            'wq_qual': 'qual',
-            'wq_value': 'res',
-            'wq_units': 'units',
-            'Fraction': 'fraction',
-            'raw_parameter': 'general_parameter',
-            'Category': 'category'
-        }
-        drop_columns = ['monitoringstation']
-        data = (
-            data.rename(columns=rename_columns)
-                .drop(drop_columns, axis=1)
-                .dropna(subset=['res'])
-        )
+            # screen the data
+            if self.catanalysis:
+                qrystring = (
+                    "catscreen == 'yes' and "
+                    "bmpcat    != 'EXC' and "
+                    "balanced  == '='"
+                )
+                data = data.query(qrystring)
 
-        # process screening values:
-        data['wqscreen'] = data['wqscreen'].apply(_process_screening)
-        data['catscreen'] = data['catscreen'].apply(_process_screening)
-        data['station'] = data['station'].str.lower()
-        data['sampletype'] = data['sampletype'].apply(_process_sampletype)
-        data['sampledatetime'] = data.apply(utils.makeTimestamp, axis=1)
-
-        # screen the data
-        if self.catanalysis:
-            data = data.query("catscreen == 'yes'")
-
-        if self.wqanalysis:
-            data = data.query("wqscreen == 'yes'")
-
-        # normalize the units
-        data = utils.normalize_units2(data, info.getNormalization,
-                                      info.getConversion, info.getUnits,
-                                      paramcol='parameter', rescol='res',
-                                      unitcol='units', dlcol=None)
+            # normalize the units
+            data = utils.normalize_units2(data, info.getNormalization,
+                                          info.getConversion, info.getUnits,
+                                          paramcol='parameter', rescol='res',
+                                          unitcol='units', dlcol=None)
 
         return data
 
-    def _prep_data(self):
+    def _group_data(self):
         # columns to be the index
-        row_headers = ['category', 'epazone', 'state', 'site', 'bmp',
-                       'station', 'storm', 'sampletype', 'watertype',
-                       'paramgroup', 'units', 'parameter', 'wqscreen',
-                       'catscreen', 'fraction', 'general_parameter']
+        row_headers = [
+            'category', 'epazone', 'state', 'site', 'bmp',
+            'station', 'storm', 'sampletype', 'watertype',
+            'paramgroup', 'units', 'parameter', 'wqscreen',
+            'catscreen', 'balanced', 'PDFID', 'WQID'
+        ]
 
         # group the data based on the index
-        agg_rules = {'res': 'mean', 'qual': 'min'}
+        agg_rules = {'res': 'mean', 'qual': 'min', 'sampledatetime': 'min'}
 
-        return self.raw_data.groupby(by=row_headers).agg(agg_rules)
-
-    @property
-    def raw_data(self):
-        if self._raw_data is None:
-            self._raw_data = self._read_db()
-        return self._raw_data
+        return self._data_cleaned.groupby(by=row_headers).agg(agg_rules)
 
     @property
-    def all_data(self):
-        if self._all_data is None:
-            self._all_data = self._prep_data()
-        return self._all_data
+    def _data_cleaned(self):
+        if self.__data_cleaned is None:
+            self.__data_cleaned = self._cleanup_data()
+        return self.__data_cleaned
+
+    @property
+    def data(self):
+        if self._data is None:
+            self._data = self._group_data()
+        return self._data
 
     @property
     def index(self):
-        return {name: level for level, name in enumerate(self.all_data.index.names)}
+        return {name: level for level, name in enumerate(self.data.index.names)}
 
     def connect(self, cmd=None, commit=False, filepath=None):
         '''
         Connects to the database using pyodbc. Executes a command if provided.
 
-        Input:
-            cmd : optional string or None (default)
-                SQL statement that will be executed (see Notes).
+        Parameters
+        ----------
+        cmd : optional string or None (default)
+            SQL statement that will be executed (see Notes).
 
-            commit : optional bool (default is False)
-                Toggles if the changes to the database executed with `cmd`
-                should be save. Be carefule. You could delete everything
+        commit : optional bool (default = False)
+            Toggles if the changes to the database executed with `cmd`
+            should be save. Be carefule. You could delete everything
 
         Returns
-            cnn : pyodbc connection object
+        -------
+        cnn : pyodbc connection object
 
-        Notes:
-            1) It's recommended to not use the `cmd` argument to retrieve data.
-                In fact, it's impossible. If you need to execute a custom
-                selection query it's recommended to use the function to create
-                the connection object and the pass that to
-                pandas.io.sql.read_frame (see Examples).
-            2) This function is primarily used internally to select large
-                amounts of data when instantiating the `Database` object.
-                It's probably best to use pandas selection methods on the
-                `all_data` attribute to isolated specific records for a
-                particular analysis.
+        Notes
+        ------
+         - It's recommended to not use the `cmd` argument to retrieve data.
+           In fact, it's impossible. If you need to execute a custom
+           selection query it's recommended to use the function to create
+           the connection object and the pass that to
+           pandas.io.sql.read_frame (see Examples).
+         - This function is primarily used internally to select large
+           amounts of data when instantiating the `Database` object.
+           It's probably best to use pandas selection methods on the
+           `data` attribute to isolated specific records for a
+           particular analysis.
 
-        Examples:
-            >>> from pandas.io import sql
-            >>> import bmp
-            >>> db = bmp.dataAccess.Database()
-            >>> myCmd = "SELECT * FROM myTable"
-            >>> with db.connect() as cnn:
-               ...: data = sql.read_frame(myCmd, cnn)
-            >>> print(data.head())
+        Examples
+        -------
+        >>> from pandas.io import sql
+        >>> import bmp
+        >>> db = bmp.dataAccess.Database()
+        >>> myCmd = "SELECT * FROM myTable"
+        >>> with db.connect() as cnn:
+           ...: data = sql.read_frame(myCmd, cnn)
+        >>> print(data.head())
+
         '''
+
         if os.path.splitext(self.file)[1] not in ['.accdb', '.mdb']:
             raise ValueError('Datasource is not an MS Access database')
 
@@ -396,6 +377,7 @@ class Database(object):
                 # commit if requested
                 if commit:
                     cnn.commit()
+
             # raise whatever exception we encoutered
             except:
                 raise
@@ -409,7 +391,7 @@ class Database(object):
         '''
         Converts all relevant tables in the DB to CSV files
         '''
-        if not self.fromdb:
+        if not self.usingdb:
             raise NotImplementedError('`Database` source is not an Access Database')
         if filepath is None:
             filepath = 'bmp/data/{0}.csv'
@@ -464,7 +446,7 @@ class Database(object):
             level_dict[self.index[key]] = kwargs[key]
 
         selection = lambda row: _filter_index(row, level_dict.keys(), level_dict.values())
-        data = self.all_data.select(selection)
+        data = self.data.select(selection)
         if astable:
             return Table(data, name=name, useTex=useTex)
         else:
@@ -482,7 +464,7 @@ class Table(object):
     ----------
 
     data : pandas.Dataframe
-        The subset of data created from the `all_data` attribute
+        The subset of data created from the `data` attribute
         of a `Database` object.
     bmpcats : dict
         A dictionary in the form of [bmp code]: [bmp description].
@@ -573,7 +555,7 @@ class Table(object):
         Ideally, there should only be one unit for each parameter.
 
         Input:
-            fromdb (bool, default False) : toggles reading from the database or a
+            usingdb (bool, default False) : toggles reading from the database or a
                 local csv file
             csvfile (string, default 'bmp/bmpcats.csv') : path and filename to the
                 datafile
