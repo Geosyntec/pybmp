@@ -694,9 +694,12 @@ input_file_string = r'''\section{Carbon Dioxide}
 
 class test_helpers(object):
     def setup(self):
-        self.dbfile = os.path.join(
-            sys.prefix, 'pybmp_data', 'testing', 'testdata.csv'
-        )
+        if os.name == 'posix':
+            dbfile = 'testdata.csv'
+        else:
+            dbfile = 'testdata.accdb'
+
+        self.dbfile = os.path.join(sys.prefix, 'pybmp_data', 'testing', dbfile)
         self.db = bmp.dataAccess.Database(self.dbfile)
         self.known_pfcs = [
             'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',

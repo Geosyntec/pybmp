@@ -113,7 +113,6 @@ class _base_database():
     @nottest
     def mainsetup(self):
         self.known_dbfile = os.path.join(datadir, 'testdata.accdb')
-        self.known_dbtable = 'pybmp_flatfile'
         self.known_csvfile = os.path.join(datadir, 'testdata.csv')
         self.known_top_col_level = ['Inflow', 'Outflow']
         self.known_bottom_col_level = ['DL', 'res', 'qual']
@@ -127,7 +126,6 @@ class _base_database():
         ]
         self.known_bmpcats = ['BR', 'BS', 'MD']
         self.known_group = 'Metals'
-
 
     @nptest.dec.skipif(skip_db)
     def test_driver(self):
@@ -228,7 +226,8 @@ class test_DatabaseFromDB(_base_database):
         self.known_usingdb = True
         self.known_file = self.known_dbfile
         self.known_catScreen = False
-        self.db = da.Database(self.known_dbfile, dbtable=self.known_dbtable)
+        self.db = da.Database(self.known_dbfile)
+        self.error = pyodbc.ProgrammingError
 
     @nptest.dec.skipif(skip_db)
     def test_connect(self):
@@ -246,21 +245,17 @@ class test_DatabaseFromDB(_base_database):
             cnn.close()
 
     @nptest.dec.skipif(skip_db)
+    @raises(pyodbc.ProgrammingError)
     def test_connect_BadQuery(self):
         cmd = "JUNKJUNKJUNK"
-        try:
-            cnn = self.db.connect(cmd=cmd)
-        except:
-            raise
-        finally:
-            cnn.close()
+        self.db.connect(cmd=cmd)
 
     @nptest.dec.skipif(skip_db)
     def test_file(self):
         assert_true(hasattr(self.db, 'file'))
         assert_equal(self.db.file, self.known_dbfile)
 
-    @nptest.dec.skipif(skip_db)
+    @nptest.dec.skipif(True)
     def test_convertTableToCSV(self):
         assert_true(hasattr(self.db, 'convertTableToCSV'))
         outputfile = os.path.join(datadir, 'testoutput.csv')
