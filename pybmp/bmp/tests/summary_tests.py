@@ -506,7 +506,6 @@ class test_CategoricalSummary(object):
             )
 
 
-
 input_file_string = r'''\section{Carbon Dioxide}
 \subsection{testbmp}
         \begin{table}[h!]
@@ -696,7 +695,7 @@ input_file_string = r'''\section{Carbon Dioxide}
 class test_helpers(object):
     def setup(self):
         self.dbfile = os.path.join(
-            sys.prefix, 'pybmp_data', 'testing', 'testdata.accdb'
+            sys.prefix, 'pybmp_data', 'testing', 'testdata.csv'
         )
         self.db = bmp.dataAccess.Database(self.dbfile)
         self.known_pfcs = [
@@ -720,6 +719,7 @@ class test_helpers(object):
     def test_setMPLStyle_smoke(self):
         bmp.summary.setMPLStyle()
 
+    @nptest.dec.skipif(os.name == 'posix')
     def test_getPFCs(self):
         pfcs = bmp.summary.getPFCs(self.db)
         nt.assert_list_equal(pfcs, self.known_pfcs)

@@ -18,7 +18,7 @@ import pandas
 from pybmp.bmp import dataAccess as da
 from pybmp.core import features
 
-skip_db = pyodbc is None
+skip_db = pyodbc is None or os.name == 'posix'
 datadir = os.path.join(sys.prefix, 'pybmp_data', 'testing')
 
 
@@ -80,27 +80,12 @@ class test__filter_index:
 
 class test_defaultFilter:
     def setup(self):
-        self.testcsv = StringIO("""\
-A,B,X
-1,A,1
-2,A,1
-1,B,1
-2,B,1
-3,B,1
-4,B,1
-1,C,1
-2,C,1
-3,C,1
-4,C,1
-1,D,1
-2,D,1
-3,D,1
-4,D,1
-1,E,1
-2,E,1
-1,F,1
-2,F,1
-""")
+        self.testcsv = StringIO(
+            "A,B,X\n1,A,1\n2,A,1\n1,B,1\n2,B,1\n3,B,1\n"
+            "4,B,1\n1,C,1\n2,C,1\n3,C,1\n4,C,1\n1,D,1\n"
+            "2,D,1\n3,D,1\n4,D,1\n1,E,1\n2,E,1\n1,F,1\n"
+            "2,F,1\n"
+        )
         self.df = pandas.read_csv(self.testcsv, index_col=['A', 'B'])
         self.minElements = 3
         self.minGroups = 4
@@ -143,34 +128,43 @@ class _base_database():
         self.known_bmpcats = ['BR', 'BS', 'MD']
         self.known_group = 'Metals'
 
+
+    @nptest.dec.skipif(skip_db)
     def test_driver(self):
         assert_true(hasattr(self.db, 'driver'))
         assert_equal(self.db.driver, self.known_driver)
 
+    @nptest.dec.skipif(skip_db)
     def test_usingdb(self):
         assert_true(hasattr(self.db, 'usingdb'))
         assert_equal(self.db.usingdb, self.known_usingdb)
 
+    @nptest.dec.skipif(skip_db)
     def test_file(self):
         assert_true(hasattr(self.db, 'file'))
         assert_equal(self.db.file, self.known_file)
 
+    @nptest.dec.skipif(skip_db)
     def test_data_exists(self):
         assert_true(hasattr(self.db, 'data'))
         assert_true(isinstance(self.db.data, pandas.DataFrame))
         assert_tuple_equal(self.db.data.shape, self.known_datashape)
 
+    @nptest.dec.skipif(skip_db)
     def test_data_index(self):
         assert_true(isinstance(self.db.data.index, pandas.MultiIndex))
         assert_equal(self.db.data.index.names, self.known_index_names)
 
+    @nptest.dec.skipif(skip_db)
     def test_data_positive(self):
         assert_true(self.db.data['res'].min() > 0)
 
+    @nptest.dec.skipif(skip_db)
     def test_selectData_exists(self):
         assert_true(hasattr(self.db, 'selectData'))
         data = self.db.selectData(paramgroup=self.known_group)
 
+    @nptest.dec.skipif(skip_db)
     def test_selectData_form(self):
         data = self.db.selectData(paramgroup=self.known_group)
         assert_true(isinstance(data, pandas.DataFrame))
@@ -180,9 +174,11 @@ class _base_database():
                           np.array([self.known_group]))
 
     @raises(ValueError)
+    @nptest.dec.skipif(skip_db)
     def test_selectData_raise(self):
         self.db.selectData(junk=False)
 
+    @nptest.dec.skipif(skip_db)
     def test_selectData_single_args(self):
         parameter = 'Copper, Total'
         siteid = '21st and Iris Rain Garden'
@@ -200,6 +196,7 @@ class _base_database():
         assert_tuple_equal(data.index.get_level_values('site').unique().shape, (1,))
         assert_tuple_equal(data.index.get_level_values('bmp').unique().shape, (1,))
 
+    @nptest.dec.skipif(skip_db)
     def test_selectData_list_args(self):
         parameters = [
             u'Copper, Total',
@@ -210,6 +207,7 @@ class _base_database():
         nptest.assert_array_equal(data.index.get_level_values('parameter').unique(),
                           np.array(parameters))
 
+    @nptest.dec.skipif(skip_db)
     def test_selectData_table(self):
         parameters = [
             u'Copper, Total',
@@ -221,8 +219,7 @@ class _base_database():
                           np.array(parameters))
 
 
-@nottest
-class test_Databaseusingdb(_base_database):
+class test_DatabaseFromDB(_base_database):
     @nptest.dec.skipif(skip_db)
     def setup(self):
         self.mainsetup()
