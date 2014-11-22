@@ -12,6 +12,8 @@ import nose.tools as nt
 import numpy as np
 import numpy.testing as nptest
 import matplotlib.pyplot as plt
+import pandas
+import pandas.util.testing as pdtest
 
 from pybmp import bmp
 from pybmp import utils
@@ -701,15 +703,15 @@ class test_helpers(object):
             'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',
             'AustinTX3PFC', 'AustinTX1PFC', 'AustinTX2PFC'
         ]
-        self.known_shape = (3116, 2)
-        self.known_shape_excl = (2420, 2)
+        self.known_shape = (2313, 2)
+        self.known_shape_excl = (2231, 2)
 
     def test_getSummaryData_smoke(self):
         df = bmp.summary.getSummaryData(self.dbfile)
         nt.assert_tuple_equal(df.shape, self.known_shape)
 
     def test_getSummaryDataExclusive_smoke(self):
-        exbmps = ['BMP 12', 'BMP 13', 'Upper Detention Pond']
+        exbmps = ['15.2Apex', '7.6Apex']
         df = bmp.summary.getSummaryData(self.dbfile, excludedbmps=exbmps)
         nt.assert_tuple_equal(df.shape, self.known_shape_excl)
         for x in exbmps:
@@ -721,6 +723,74 @@ class test_helpers(object):
     def test_getPFCs(self):
         pfcs = bmp.summary.getPFCs(self.db)
         nt.assert_list_equal(pfcs, self.known_pfcs)
+
+
+@nt.nottest
+def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
+    infile = os.path.join(sys.prefix, 'pybmp_data', 'testing', infilename)
+    outfile = os.path.join(sys.prefix, 'pybmp_data', 'testing', outfilename)
+
+    input_df = pandas.read_csv(infile, index_col=index_cols)
+    expected_df = pandas.read_csv(outfile, index_col=index_cols).sort()
+
+    test_df = fxn(input_df, *args).sort()
+    pdtest.assert_frame_equal(expected_df.reset_index(), test_df.reset_index())
+
+
+def test__pick_best_station():
+    index_cols = ['site', 'bmp', 'storm', 'parameter', 'station']
+    _do_filter_test(
+        index_cols,
+        'test_pick_station_input.csv',
+        'test_pick_station_output.csv',
+        bmp.summary._pick_best_station
+    )
+
+
+def test__pick_best_sampletype():
+    index_cols = ['site', 'bmp', 'storm', 'parameter', 'station', 'sampletype']
+
+    _do_filter_test(
+        index_cols,
+        'test_pick_sampletype_input.csv',
+        'test_pick_sampletype_output.csv',
+        bmp.summary._pick_best_sampletype
+    )
+
+
+def test__filter_onesided_BMPs():
+    index_cols = ['category', 'site', 'bmp', 'storm', 'parameter', 'station']
+
+    _do_filter_test(
+        index_cols,
+        'test_filter_onesidedbmps_input.csv',
+        'test_filter_onesidedbmps_output.csv',
+        bmp.summary._filter_onesided_BMPs
+    )
+
+
+def test__filter_by_storm_count():
+    index_cols = ['category', 'site', 'bmp', 'storm', 'parameter', 'station']
+
+    _do_filter_test(
+        index_cols,
+        'test_filter_bmp-storm_counts_input.csv',
+        'test_filter_storm_counts_output.csv',
+        bmp.summary._filter_by_storm_count,
+        6
+    )
+
+
+def test__filter_by_BMP_count():
+    index_cols = ['category', 'site', 'bmp', 'parameter', 'station']
+
+    _do_filter_test(
+        index_cols,
+        'test_filter_bmp-storm_counts_input.csv',
+        'test_filter_bmp_counts_output.csv',
+        bmp.summary._filter_by_BMP_count,
+        4
+    )
 
 
 def test_dataDump():
