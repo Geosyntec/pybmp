@@ -11,14 +11,10 @@ from .. import utils
 
 from . import dataAccess
 
-from statsmodels.tools.decorators import (resettable_cache,
-                                          cache_readonly,
-                                          cache_writable)
+from statsmodels.tools.decorators import (
+    resettable_cache, cache_readonly, cache_writable
+)
 
-
-# __all__ = ['dataDump', 'statDump', 'diffStatsDump', 'sbpat_stats',
-#            'latexInputFile', 'latexReport', 'paramTables',
-#            'paramBoxplots']
 
 def filterlocation(location, count=5, column='bmp'):
     location.filtered_data = (
@@ -125,6 +121,7 @@ def _filter_by_storm_count(dataframe, minstorms):
         lambda g: g.count()['res'] >= minstorms
     )
     return data
+
 
 def _filter_by_BMP_count(dataframe, minbmps):
     grouplevels = ['category', 'parameter', 'station']
