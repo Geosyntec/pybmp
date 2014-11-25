@@ -81,6 +81,53 @@ class test__check_levelnames(object):
         da._check_station(['site', 'junk'])
 
 
+class test__fancy_factors(object):
+    def setup(self):
+        self.default_quals = ['U', 'UK', 'UA', 'UC', 'K']
+
+    def test_2(self):
+        for dq in self.default_quals:
+            assert_equal(da._fancy_factors(dict(qual=dq)), 2.)
+
+    def test_uj_small(self):
+        row = {'res': 5., 'DL': 15., 'qual': 'UJ'}
+        assert_equal(da._fancy_factors(row), 3.)
+
+    def test_uj_big(self):
+        row = {'res': 10., 'DL': 5., 'qual': 'UJ'}
+        assert_equal(da._fancy_factors(row), 1.)
+
+    def test_other(self):
+        row = {'res': 5., 'DL': 5., 'qual': 'junk'}
+        assert_equal(da._fancy_factors(row), 1.)
+
+
+class test__fancy_quals(object):
+    def setup(self):
+        self.default_quals =  quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
+
+    def test_ND(self):
+        for dq in self.default_quals:
+            assert_equal(da._fancy_quals(dict(qual=dq)), 'ND')
+
+    def test_uj_LT(self):
+        row = {'res': 5., 'DL': 15., 'qual': 'UJ'}
+        assert_equal(da._fancy_quals(row), 'ND')
+
+    def test_uj_EQ(self):
+        row = {'res': 5., 'DL': 5., 'qual': 'UJ'}
+        assert_equal(da._fancy_quals(row), 'ND')
+
+    def test_uj_GT(self):
+        row = {'res': 15., 'DL': 5., 'qual': 'UJ'}
+        assert_equal(da._fancy_quals(row), '=')
+
+    def test_other(self):
+        row = {'res': 5., 'DL': 5., 'qual': 'junk'}
+        assert_equal(da._fancy_quals(row), '=')
+
+
+
 class test_DatabaseStaticMethods(object):
     def setup(self):
         self.quals = ['U', 'UJ']
@@ -99,7 +146,7 @@ class test_DatabaseStaticMethods(object):
         da.Database._strip_quals(df_raw, 'qual')
         pdtest.assert_frame_equal(df_raw, df_final)
 
-    def test__apply_res_factors(self):
+    def test__apply_res_factors_baseline(self):
         df_raw = pandas.DataFrame({
             'res':  [  1,   2,   3,    4,    5,    6,    7,    8],
             'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
@@ -110,8 +157,54 @@ class test_DatabaseStaticMethods(object):
             'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
         })
 
-        da.Database._apply_res_factors(df_raw, 'res', 'qual', self.quals, 2)
+        da.Database._apply_res_factors(df_raw, 'res', 'qual',
+                                       quallist=self.quals, factor=2)
         pdtest.assert_frame_equal(df_raw, df_final)
+
+    def test__apply_res_factors_fancy(self):
+        df_raw = pandas.DataFrame({
+            'res':  [ 1.,  2.,  3.,   4.,   5.,   6.,   7.,   8.],
+            'DL':   [ 1.,  2.,  3.,   4.,   5.,   6.,  10.,   8.],
+            'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
+        })
+
+        df_final = pandas.DataFrame({
+            'res':  [ 2.,  4.,  6.,   4.,   5.,   6.,  10.,   8.],
+            'DL':   [ 1.,  2.,  3.,   4.,   5.,   6.,  10.,   8.],
+            'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
+        })
+
+        def fancy_factors(row):
+            if row.qual == 'U':
+                return 2
+            elif row.qual == 'UJ'and row.res < row.DL:
+                return row.DL / row.res
+            else:
+                return 1
+
+        da.Database._apply_res_factors(df_raw, 'res', 'qual',
+                                       userfxn=fancy_factors)
+        pdtest.assert_frame_equal(df_raw, df_final)
+
+    def test__apply_res_factors_errors(self):
+        df = pandas.DataFrame([1, 2, 3])
+        assert_raises(
+            ValueError,
+            da.Database._apply_res_factors,
+            df, 'res', 'qual',
+        )
+
+        assert_raises(
+            ValueError,
+            da.Database._apply_res_factors,
+            df, 'res', 'qual', factor=2
+        )
+
+        assert_raises(
+            ValueError,
+            da.Database._apply_res_factors,
+            df, 'res', 'qual', factor=2, userfxn=2,
+        )
 
     def test__standardize_quals(self):
         df_raw = pandas.DataFrame({

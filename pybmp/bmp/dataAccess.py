@@ -21,6 +21,23 @@ __all__ = [
     'Parameter'
 ]
 
+def _fancy_factors(row, quals=None):
+    if quals is None:
+        quals = ['U', 'UK', 'UA', 'UC', 'K']
+    if row['qual'] in quals:
+        return 2.
+    elif row['qual'] == 'UJ'and row['res'] < row['DL']:
+        return row['DL'] / row['res']
+    else:
+        return 1.
+
+def _fancy_quals(row, quals=None):
+    if quals is None:
+        quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
+    if (row['qual'] in quals) or (row['qual'] == 'UJ' and row['res'] <= row['DL']):
+        return 'ND'
+    else:
+        return '='
 
 def _process_screening(screen_val):
     if screen_val.lower().strip() in ['inc', 'yes']:
@@ -162,8 +179,9 @@ class Database(object):
                 "    [src].[WQX Parameter] as [raw_parameter],\n"
                 "    [src].[Common Name] as [parameter],\n"
                 "    [src].[WQ UNITS] as [wq_units],\n"
-                "    [src].[WQ Analysis Value] as [wq_value],\n"
                 "    [src].[QUAL] as [wq_qual],\n"
+                "    [src].[WQ Analysis Value] as [wq_value],\n"
+                "    [src].[Detection Limit] as [DL],\n"
                 "    [src].[Monitoring Station Type] as [station],\n"
                 "    [src].[SGTCodeDescp] as [watertype],\n"
                 "    [src].[STCODEDescp] as [sampletype],\n"
@@ -223,29 +241,40 @@ class Database(object):
         df[qualcol] = df[qualcol].str.strip()
 
     @staticmethod
-    def _apply_res_factors(df, rescol, qualcol, quallist, factor):
-        factors = df[qualcol].apply(lambda x: factor if x in quallist else 1)
+    def _apply_res_factors(df, rescol, qualcol, userfxn=None, quallist=None, factor=None):
+
+        if factor is not None and userfxn is None:
+            if quallist is None:
+                raise ValueError("must provide `quallist` if useing `factor`")
+
+            factors = df[qualcol].apply(lambda x: factor if x in quallist else 1)
+
+        elif factor is None and userfxn is not None:
+            factors = df.apply(userfxn, axis=1)
+
+        else:
+            raise ValueError("must provide exactly 1 of `factor` or `userfxn`")
+
         df[rescol] *= factors
 
     @staticmethod
-    def _standardize_quals(df, qualcol, origsymbols):
-        df[qualcol] = df[qualcol].apply(lambda x: 'ND' if x in origsymbols else '=')
+    def _standardize_quals(df, qualcol, ndquals=None, userfxn=None):
+        if ndquals is not None and userfxn is None:
+            df[qualcol] = df.apply(
+                lambda x: 'ND' if x.qual in ndquals else '=',
+                axis=1
+            )
+        elif ndquals is None and userfxn is not None:
+            df[qualcol] = df.apply(userfxn, axis=1)
+
+        else:
+            raise ValueError("must provide exactly 1 of `ndquals` or `userfxn`")
+
 
     def _cleanup_data(self):
 
         data = self._data_fromdb.copy()
         if self.usingdb:
-            # clean up the flags (remove leading and trailing spaces:
-            self._strip_quals(data, 'wq_qual')
-
-            # WQ results need to be multiplied by 2 if the qual is a certain value
-            factor_2_quals = ['U', 'UK', 'UA', 'UC', 'K']
-            self._apply_res_factors(data, 'res', 'qual', factor_2_quals, 2)
-
-            # reset all of the non-detect flags to something universal ("ND")
-            ## TODO: UJ -> ND if res < DL, else ,=
-            ND_quals = ['U', 'UJ', 'UA', 'UI', 'UC', 'UK', 'K']
-            self._standardize_quals(data, 'qual', ND_quals)
 
             # rename columns:
             rename_columns = {
@@ -262,6 +291,16 @@ class Database(object):
                     .drop(drop_columns, axis=1)
                     .dropna(subset=['res'])
             )
+
+            # clean up the flags (remove leading and trailing spaces:
+            self._strip_quals(data, 'qual')
+
+            # WQ results need to be multiplied by 2 if the qual is a certain value
+            self._apply_res_factors(data, 'res', 'qual', userfxn=_fancy_factors)
+
+            # reset all of the non-detect flags to something universal ("ND")
+            self._standardize_quals(data, 'qual', userfxn=_fancy_quals)
+
             # process screening values:
             data['wqscreen'] = data['wqscreen'].apply(_process_screening)
             data['catscreen'] = data['catscreen'].apply(_process_screening)
@@ -787,7 +826,7 @@ class Table(object):
         if np.isscalar(existingparams):
             existingparams = [existingparams]
         for param in existingparams:
-            if param not in self.parameter_lookup.keys():
+            if param not in self.data.index.get_level_values('parameter'):
                 raise ValueError("Parameter %s is not in this dataset" % param)
 
         pindex = self.index['parameter']
