@@ -181,7 +181,7 @@ class Database(object):
                 "    [src].[WQ UNITS] as [wq_units],\n"
                 "    [src].[QUAL] as [wq_qual],\n"
                 "    [src].[WQ Analysis Value] as [wq_value],\n"
-                "    [src].[Detection Limit] as [DL],\n"
+                "    [src].[DL] as [DL],\n"
                 "    [src].[Monitoring Station Type] as [station],\n"
                 "    [src].[SGTCodeDescp] as [watertype],\n"
                 "    [src].[STCODEDescp] as [sampletype],\n"
@@ -269,7 +269,6 @@ class Database(object):
 
         else:
             raise ValueError("must provide exactly 1 of `ndquals` or `userfxn`")
-
 
     def _cleanup_data(self):
 
@@ -536,7 +535,7 @@ class Table(object):
 
     def __init__(self, dataframe, name=None, useTex=False):
         # basic stuff
-        self.data = dataframe
+        self._data = dataframe
         self.name = name
         self._parameters = None
         self._useTex = useTex
@@ -565,6 +564,13 @@ class Table(object):
     @property
     def index(self):
         return {name: level for level, name in enumerate(self.data.index.names)}
+
+    @property
+    def data(self):
+        return self._data
+    @data.setter
+    def data(self, value):
+        self._data = value
 
     def index_values(self, levelname):
         '''
@@ -823,6 +829,9 @@ class Table(object):
                   lambda x, junk: utils.pH2concentration(x[('res', 'pH')]),
                   lambda x, junk: x[('qual', 'pH')], 'mg/L')
         '''
+
+        index_name_cache = self.data.index.names
+
         if np.isscalar(existingparams):
             existingparams = [existingparams]
         for param in existingparams:
@@ -848,10 +857,6 @@ class Table(object):
         # station goes back in into columns, parameters into rows
         #selection = selection.unstack(level='station')
         selection = selection.stack(level='parameter')
-
-        selection.index = selection.index \
-                                   .swaplevel('parameter', 'catscreen') \
-                                   .swaplevel('parameter', 'wqscreen')
 
         # get the column indices in the right order
         #selection.columns = selection.columns.swaplevel('quantity', 'station')
@@ -883,7 +888,10 @@ class Table(object):
             info.parameters = info.addParameter(newparam, newunits)
 
         # return the *full* dataset (preserving original params)
-        self.data = pandas.concat([self.data, selection])
+        self.data = pandas.concat([
+            self.data.reset_index(),
+            selection.reset_index()
+        ]).set_index(index_name_cache)
 
     def unionParamsWithPreference(self, existingparams, newparam, newunits):
         '''

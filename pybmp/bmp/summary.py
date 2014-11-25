@@ -102,7 +102,7 @@ def _pick_best_sampletype(dataframe):
 
 
 def _filter_onesided_BMPs(dataframe):
-    grouplevels = ['site', 'bmp', 'parameter']
+    grouplevels = ['site', 'bmp', 'parameter', 'category']
     pivotlevel = 'station'
 
     xtab = dataframe.unstack(level=pivotlevel)
@@ -200,9 +200,9 @@ def getSummaryData(dbpath, catanalysis=False, astable=False,
 
     subset = _pick_best_sampletype(subset)
     subset = _pick_best_station(subset)
-    subset = _filter_onesided_BMPs(subset)
     subset = _filter_by_storm_count(subset, minstorms)
     subset = _filter_by_BMP_count(subset, minbmps)
+    subset = _filter_onesided_BMPs(subset)
 
     if astable:
         table = dataAccess.Table(subset, name=name, useTex=useTex)
