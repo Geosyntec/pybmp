@@ -127,7 +127,6 @@ class test__fancy_quals(object):
         assert_equal(da._fancy_quals(row), '=')
 
 
-
 class test_DatabaseStaticMethods(object):
     def setup(self):
         self.quals = ['U', 'UJ']
@@ -630,7 +629,6 @@ class _base_tableMixin(object):
     def test_getDatasets_form_raises(self):
         assert_true(hasattr(self.table, 'getDatasets'))
         datasets = self.table.getDatasets('storm')
-
 
     def test_redefineIndexLevel_DropOldTrue(self):
         levelname = 'epazone'
