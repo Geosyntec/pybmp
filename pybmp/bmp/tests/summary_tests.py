@@ -705,8 +705,8 @@ class test_helpers(object):
             'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',
             'AustinTX3PFC', 'AustinTX1PFC', 'AustinTX2PFC'
         ]
-        self.known_shape = (2313, 2)
-        self.known_shape_excl = (2231, 2)
+        self.known_shape = (2250, 2)
+        self.known_shape_excl = (2168, 2)
 
     def test_getSummaryData_smoke(self):
         df = bmp.summary.getSummaryData(self.dbfile)
