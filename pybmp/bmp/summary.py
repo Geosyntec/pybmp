@@ -634,7 +634,8 @@ class CategoricalSummary(object):
             latex_input += '\\clearpage\n'
 
             if regenfigs:
-                statfig = ds.statplot(ylabel=dsum.parameter.paramunit())
+                statfig = ds.statplot(ylabel=dsum.parameter.paramunit(),
+                                      axtype='prob')
                 scatterfig = ds.scatterplot(
                     xlabel='Influent ' + dsum.parameter.paramunit(),
                     ylabel='Effluent ' + dsum.parameter.paramunit(),
