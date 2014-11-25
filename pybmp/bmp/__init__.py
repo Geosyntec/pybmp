@@ -1,4 +1,4 @@
-from .dataAccess import Database, Table, defaultFilter
+from .dataAccess import Database, Table
 from .summary import CategoricalSummary, DatasetSummary, getSummaryData, setMPLStyle
 
 from ..testing import NoseWrapper

@@ -16,12 +16,28 @@ from ..core import features
 
 
 __all__ = [
-    'defaultFilter',
     'Database',
     'Table',
     'Parameter'
 ]
 
+def _fancy_factors(row, quals=None):
+    if quals is None:
+        quals = ['U', 'UK', 'UA', 'UC', 'K']
+    if row['qual'] in quals:
+        return 2.
+    elif row['qual'] == 'UJ'and row['res'] < row['DL']:
+        return row['DL'] / row['res']
+    else:
+        return 1.
+
+def _fancy_quals(row, quals=None):
+    if quals is None:
+        quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
+    if (row['qual'] in quals) or (row['qual'] == 'UJ' and row['res'] <= row['DL']):
+        return 'ND'
+    else:
+        return '='
 
 def _process_screening(screen_val):
     if screen_val.lower().strip() in ['inc', 'yes']:
@@ -32,6 +48,7 @@ def _process_screening(screen_val):
         msg = 'invalid screening value ({0}) found'.format(screen_val)
         raise ValueError(msg)
 
+
 def _process_sampletype(sampletype):
     if "grab" in sampletype.lower():
         return "grab"
@@ -39,19 +56,6 @@ def _process_sampletype(sampletype):
         return "composite"
     else:
         return "unknown"
-
-
-def _filter_index(row, levels, values):
-    output = True
-    for lvl, val in zip(levels, values):
-        if np.isscalar(val):
-            if row[lvl] != val:
-                output= False
-        else:
-            if row[lvl] not in val:
-                output = False
-
-    return output
 
 
 def _check_station(station):
@@ -63,78 +67,68 @@ def _check_station(station):
 
 
 def _check_levelnames(levels):
-    msg = 'valid levels are "category", "site", "bmp"'
+    good_levels = [
+        'category', 'site', 'bmp', 'parameter',
+        'sampletype', 'epazone', 'state', 'paramgroup'
+    ]
+    msg = 'valid levels are {}'.format(good_levels)
+
     for lvl in levels:
-        if lvl not in ['category', 'site', 'bmp', 'parameter', 'sampletype', 'epazone', 'state', 'paramgroup']:
+        if lvl not in good_levels:
             raise ValueError(msg)
 
 
-def defaultFilter(dataframe, levelname='bmp', minElements=3, minGroups=3):
-    # name and position of BMP (study) ID in the index
-    levelnumber = np.nonzero(np.array(dataframe.index.names) == levelname)[0][0]
-
-    # determine the number of studies
-    elem_counts = dataframe.groupby(level=levelname).size()
-    good_groups = elem_counts[elem_counts >= minElements]
-    data = dataframe.select(lambda x: x[levelnumber] in good_groups)
-    include = good_groups.shape[0] >= minGroups
-    return data, include
-
-
 class Database(object):
-    '''
-    Top-level object/entry point for International BMP Database analysis
+    def __init__(self, filename, dbtable=None, sqlquery=None, catanalysis=False):
+        '''Top-level object point for International BMP Database analysis
 
-    Parameters
-    ----------
+        Parameters
+        ----------
 
-    filename : string
-        CSV file or MS Access database containing the data.
+        filename : string
+            CSV file or MS Access database containing the data.
 
-    dbtable : optional string (default = 'pybmp_flatfile')
-        Table in the MS Access database storing the data for analysis.
-        Only used if `usingdb` is True.
+        dbtable : optional string (default = 'pybmp_flatfile')
+            Table in the MS Access database storing the data for analysis.
+            Only used if `usingdb` is True.
 
-    catanalysis : optional bool (default = False)
-        Toggles the filtering for data that have been approved for BMP
-        Category-level analysis
+        catanalysis : optional bool (default = False)
+            Toggles the filtering for data that have been approved for BMP
+            Category-level analysis
 
-    Attributes
-    ----------
+        Attributes
+        ----------
 
-    self.dbfile : string
-        Full path to the database file.
+        self.dbfile : string
+            Full path to the database file.
 
-    self.driver : string
-        ODBC-compliant Microsoft Access driver string.
+        self.driver : string
+            ODBC-compliant Microsoft Access driver string.
 
-    self.category_type : string
-        See Input section.
+        self.category_type : string
+            See Input section.
 
-    self.usingdb : bool
-        See Input section.
+        self.usingdb : bool
+            See Input section.
 
-    self.excluded_parameters : list of string or None
-        See `parametersToExclude` in Input section.
+        self.excluded_parameters : list of string or None
+            See `parametersToExclude` in Input section.
 
-    self.data : pandas DataFrame
-        DataFrame of all of the data found in the DB or CSV file.
+        self.data : pandas DataFrame
+            DataFrame of all of the data found in the DB or CSV file.
 
-    Methods
-    -------
+        Methods
+        -------
 
-    (see individual docstrings for more info):
+        (see individual docstrings for more info):
 
-    - self.connect
-    - self.redefineBMPCategory
-    - self.convertTablesToCSV
-    - self.getAllData
-    - self.getGroupData
+        - self.connect
+        - self.redefineBMPCategory
+        - self.convertTablesToCSV
+        - self.getAllData
+        - self.getGroupData
 
-    '''
-
-    def __init__(self, filename, dbtable=None, sqlquery=None,
-                 catanalysis=False):
+        '''
         self.file = filename
         self.usingdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
         self.catanalysis = catanalysis
@@ -185,8 +179,9 @@ class Database(object):
                 "    [src].[WQX Parameter] as [raw_parameter],\n"
                 "    [src].[Common Name] as [parameter],\n"
                 "    [src].[WQ UNITS] as [wq_units],\n"
-                "    [src].[WQ Analysis Value] as [wq_value],\n"
                 "    [src].[QUAL] as [wq_qual],\n"
+                "    [src].[WQ Analysis Value] as [wq_value],\n"
+                "    [src].[Detection Limit] as [DL],\n"
                 "    [src].[Monitoring Station Type] as [station],\n"
                 "    [src].[SGTCodeDescp] as [watertype],\n"
                 "    [src].[STCODEDescp] as [sampletype],\n"
@@ -225,27 +220,61 @@ class Database(object):
 
         return self.__data_fromdb
 
+    @property
+    def _data_cleaned(self):
+        if self.__data_cleaned is None:
+            self.__data_cleaned = self._cleanup_data()
+        return self.__data_cleaned
+
+    @property
+    def data(self):
+        if self._data is None:
+            self._data = self._group_data()
+        return self._data
+
+    @property
+    def index(self):
+        return {name: level for level, name in enumerate(self.data.index.names)}
+
+    @staticmethod
+    def _strip_quals(df, qualcol):
+        df[qualcol] = df[qualcol].str.strip()
+
+    @staticmethod
+    def _apply_res_factors(df, rescol, qualcol, userfxn=None, quallist=None, factor=None):
+
+        if factor is not None and userfxn is None:
+            if quallist is None:
+                raise ValueError("must provide `quallist` if useing `factor`")
+
+            factors = df[qualcol].apply(lambda x: factor if x in quallist else 1)
+
+        elif factor is None and userfxn is not None:
+            factors = df.apply(userfxn, axis=1)
+
+        else:
+            raise ValueError("must provide exactly 1 of `factor` or `userfxn`")
+
+        df[rescol] *= factors
+
+    @staticmethod
+    def _standardize_quals(df, qualcol, ndquals=None, userfxn=None):
+        if ndquals is not None and userfxn is None:
+            df[qualcol] = df.apply(
+                lambda x: 'ND' if x.qual in ndquals else '=',
+                axis=1
+            )
+        elif ndquals is None and userfxn is not None:
+            df[qualcol] = df.apply(userfxn, axis=1)
+
+        else:
+            raise ValueError("must provide exactly 1 of `ndquals` or `userfxn`")
+
+
     def _cleanup_data(self):
 
         data = self._data_fromdb.copy()
         if self.usingdb:
-            # clean up the flags (remove leading and trailing spaces:
-            data['wq_qual'] = data['wq_qual'].str.strip()
-
-            # WQ results need to be multiplied by 2 if the qual is a certain value
-            factor_2_quals = ['U', 'UK', 'UA', 'UC', 'K']
-            ND_factors = data['wq_qual'].apply(lambda x: 2 if x in factor_2_quals else 1)
-            data['wq_value'] *= ND_factors
-
-            # reset all of the non-detect flags to something universal ("ND")
-            ## UJ -> ND if res < DL, else ,=
-            ND_flags = ['U', 'UJ', 'UA', 'UI', 'UC', 'UK', 'K']
-            nondetects = data['wq_qual'].str.strip().isin(ND_flags)
-            data.loc[nondetects, 'wq_qual'] = 'ND'
-
-            # reset all detect-flags to "="
-            detects = data['wq_qual'] != 'ND'
-            data.loc[detects, 'wq_qual'] = '='
 
             # rename columns:
             rename_columns = {
@@ -262,6 +291,16 @@ class Database(object):
                     .drop(drop_columns, axis=1)
                     .dropna(subset=['res'])
             )
+
+            # clean up the flags (remove leading and trailing spaces:
+            self._strip_quals(data, 'qual')
+
+            # WQ results need to be multiplied by 2 if the qual is a certain value
+            self._apply_res_factors(data, 'res', 'qual', userfxn=_fancy_factors)
+
+            # reset all of the non-detect flags to something universal ("ND")
+            self._standardize_quals(data, 'qual', userfxn=_fancy_quals)
+
             # process screening values:
             data['wqscreen'] = data['wqscreen'].apply(_process_screening)
             data['catscreen'] = data['catscreen'].apply(_process_screening)
@@ -299,22 +338,6 @@ class Database(object):
         agg_rules = {'res': 'mean', 'qual': 'min', 'sampledatetime': 'min'}
 
         return self._data_cleaned.groupby(by=row_headers).agg(agg_rules)
-
-    @property
-    def _data_cleaned(self):
-        if self.__data_cleaned is None:
-            self.__data_cleaned = self._cleanup_data()
-        return self.__data_cleaned
-
-    @property
-    def data(self):
-        if self._data is None:
-            self._data = self._group_data()
-        return self._data
-
-    @property
-    def index(self):
-        return {name: level for level, name in enumerate(self.data.index.names)}
 
     def connect(self, cmd=None, commit=False, filepath=None):
         '''
@@ -436,17 +459,23 @@ class Database(object):
             'category', 'site', 'bmp', 'storm',
             'paramgroup', 'units', 'parameter',
             'sampletype', 'epazone', 'state',
-            'wqscreen', 'catscreen'
         ]
-        level_dict = {}
-        for key in kwargs.keys():
+
+        data = self.data.copy()
+        for key, val in kwargs.items():
             if key not in good_keys:
                 raise ValueError("filtering by %s not supported" % key)
 
-            level_dict[self.index[key]] = kwargs[key]
+            if np.isscalar(val):
+                if np.isreal(val):
+                    qry = "{} == {}"
+                else:
+                    qry = "{} == '{}'"
+            else:
+                qry = "{} in {}"
 
-        selection = lambda row: _filter_index(row, level_dict.keys(), level_dict.values())
-        data = self.data.select(selection)
+            data = data.query(qry.format(key, val))
+
         if astable:
             return Table(data, name=name, useTex=useTex)
         else:
@@ -797,7 +826,7 @@ class Table(object):
         if np.isscalar(existingparams):
             existingparams = [existingparams]
         for param in existingparams:
-            if param not in self.parameter_lookup.keys():
+            if param not in self.data.index.get_level_values('parameter'):
                 raise ValueError("Parameter %s is not in this dataset" % param)
 
         pindex = self.index['parameter']
@@ -919,9 +948,9 @@ class Table(object):
             namevals.append(str(val))
         return '_'.join(namevals)
 
-    def _get_dataset(self, selection, filterfxn=None, absmin=0):
-        influent = self._get_location(selection, 'inflow', filterfxn=filterfxn, absmin=absmin)
-        effluent = self._get_location(selection, 'outflow', filterfxn=filterfxn, absmin=absmin)
+    def _get_dataset(self, selection, absmin=0):
+        influent = self._get_location(selection, 'inflow', absmin=absmin)
+        effluent = self._get_location(selection, 'outflow', absmin=absmin)
         if influent is not None and effluent is not None:
             dataset = features.Dataset(influent, effluent)
         else:
@@ -929,16 +958,12 @@ class Table(object):
 
         return dataset
 
-    def _get_location(self, selection, station, filterfxn=None, absmin=0):
+    def _get_location(self, selection, station, absmin=0):
         selection = self.data.select(selection)
         data = selection[station.title()].dropna(subset=['res', 'qual'])
 
         if data.shape[0] >= absmin:
             loc = features.Location(data, station_type=station)
-
-            # filter the data if necessary
-            if filterfxn is not None:
-                loc.applyFilter(filterfxn)
 
         else:
             loc = None
@@ -963,15 +988,6 @@ class Table(object):
                 addition to 'parameter'. At a bare minimum, it is recommended
                 to use 'category' as well. See examples below.
 
-            filterfxn : optional function or None (default)
-                A function designed to remove data and set the `include`
-                attribute of the `Dataset.influent` and `Dataset.effluent`
-                objects based on user-defined criteria. For example,
-                `dataAccess.defaultFilter` will removed any studies with less
-                than 3 datapoints from a `Location` object and set the
-                `include` attribute to False if their are fewer than 3 remaing
-                studies. This is a very advanced feature.
-
             absmin : optional int (default = 3)
                 The absolute minimum number if datapoints required to attempt
                 to make the `Location` objects. It is not recommended to use
@@ -994,7 +1010,6 @@ class Table(object):
         '''
         _check_station(station)
         _check_levelnames(levels)
-        filterfxn = kwargs.pop('filterfxn', None)
         showprogress = kwargs.pop('showprogress', False)
 
         grouplevels = ['parameter', 'station']
@@ -1011,8 +1026,6 @@ class Table(object):
             locdata = locdata.dropna(subset=['res', 'qual'])
 
             loc = features.Location(locdata, station_type=key[1].lower())
-            if filterfxn is not None:
-                loc.applyFilter(filterfxn, **kwargs)
 
             if np.isscalar(key):
                 key = [key]
@@ -1045,15 +1058,6 @@ class Table(object):
                 addition to 'parameter'. At a bare minimum, it is recommended
                 to use 'category' as well. See examples below.
 
-            filterfxn : optional function or None (default)
-                A function designed to remove data and set the `include`
-                attribute of the `Dataset.influent` and `Dataset.effluent`
-                objects based on user-defined criteria. For example,
-                `dataAccess.defaultFilter` will removed any studies with less
-                than 3 datapoints from a `Location` object and set the
-                `include` attribute to False if their are fewer than 3 remaing
-                studies. This is a very advanced feature.
-
             absmin : optional int (default = 3)
                 The absolute minimum number if datapoints required to attempt
                 to make the `Location` objects. It is not recommended to use
@@ -1075,7 +1079,6 @@ class Table(object):
 
         '''
         _check_levelnames(levels)
-        filterfxn = kwargs.pop('filterfxn', None)
         showprogress = kwargs.pop('showprogress', False)
 
         grouplevels = ['parameter']
@@ -1100,12 +1103,6 @@ class Table(object):
                 outflow.dropna(subset=['res', 'qual']),
                 station_type='outflow', include=True
             )
-
-            if filterfxn is not None:
-                if infl is not None and infl.hasData:
-                    infl.applyFilter(filterfxn, **kwargs)
-                if effl is not None and effl.hasData:
-                    effl.applyFilter(filterfxn, **kwargs)
 
             ds = features.Dataset(infl, effl)
 

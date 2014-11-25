@@ -11,14 +11,10 @@ from .. import utils
 
 from . import dataAccess
 
-from statsmodels.tools.decorators import (resettable_cache,
-                                          cache_readonly,
-                                          cache_writable)
+from statsmodels.tools.decorators import (
+    resettable_cache, cache_readonly, cache_writable
+)
 
-
-# __all__ = ['dataDump', 'statDump', 'diffStatsDump', 'sbpat_stats',
-#            'latexInputFile', 'latexReport', 'paramTables',
-#            'paramBoxplots']
 
 def filterlocation(location, count=5, column='bmp'):
     location.filtered_data = (
@@ -126,6 +122,7 @@ def _filter_by_storm_count(dataframe, minstorms):
     )
     return data
 
+
 def _filter_by_BMP_count(dataframe, minbmps):
     grouplevels = ['category', 'parameter', 'station']
 
@@ -178,6 +175,7 @@ def getSummaryData(dbpath, catanalysis=False, astable=False,
 
     # main dataset
     db = dataAccess.Database(dbpath, catanalysis=catanalysis)
+    db
     # initial filtering
     subset = db.selectData(**selection)
 
@@ -207,7 +205,8 @@ def getSummaryData(dbpath, catanalysis=False, astable=False,
     subset = _filter_by_BMP_count(subset, minbmps)
 
     if astable:
-        return dataAccess.Table(subset, name=name, useTex=useTex)
+        table = dataAccess.Table(subset, name=name, useTex=useTex)
+        return table
     else:
         return subset
 

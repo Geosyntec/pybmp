@@ -9,11 +9,14 @@ import nose
 from nose.tools import *
 import numpy as np
 import numpy.testing as nptest
+
+import pandas
+import pandas.util.testing as pdtest
+
 try:
     import pyodbc
 except ImportError:
     pyodbc = None
-import pandas
 
 from pybmp.bmp import dataAccess as da
 from pybmp.core import features
@@ -34,7 +37,7 @@ def test__process_screening_no():
 
 @raises(ValueError)
 def test__process_screening_raiese():
-    assert_equal('yes', da._process_screening('JUNK'))
+    da._process_screening('JUNK')
 
 
 def test__process_sampletype_grab():
@@ -49,67 +52,175 @@ def test__process_sampletype_unknown():
     assert_equal(da._process_sampletype('SRjeL LSDRsdfljkSdj asdf'), 'unknown')
 
 
-class test__filter_index:
+class test__check_station(object):
+    def test_noraise_inflow(self):
+        da._check_station('inflow')
+
+    def test_noraise_outflow(self):
+        da._check_station('outflow')
+
+    @raises(NotImplementedError)
+    def test_notimpl_ref(self):
+        da._check_station('reference')
+
+    @raises(NotImplementedError)
+    def test_notimpl_ref(self):
+        da._check_station('subsurface')
+
+    @raises(ValueError)
+    def test_normal_raise(self):
+        da._check_station('junk')
+
+
+class test__check_levelnames(object):
+    def test_good(self):
+        da._check_levelnames(['epazone', 'category'])
+
+    @raises(ValueError)
+    def test_bad(self):
+        da._check_station(['site', 'junk'])
+
+
+class test__fancy_factors(object):
     def setup(self):
-        self.row = ('BI', 'CA', 11)
+        self.default_quals = ['U', 'UK', 'UA', 'UC', 'K']
 
-    def test_scalars_single_true(self):
-        assert_true(da._filter_index(self.row, [0], ['BI']))
+    def test_2(self):
+        for dq in self.default_quals:
+            assert_equal(da._fancy_factors(dict(qual=dq)), 2.)
 
-    def test_scalars_single_false(self):
-        assert_false(da._filter_index(self.row, [0], ['BS']))
+    def test_uj_small(self):
+        row = {'res': 5., 'DL': 15., 'qual': 'UJ'}
+        assert_equal(da._fancy_factors(row), 3.)
 
-    def test_scalars_multi_true(self):
-        assert_true(da._filter_index(self.row, [0, 1], ['BI', 'CA']))
+    def test_uj_big(self):
+        row = {'res': 10., 'DL': 5., 'qual': 'UJ'}
+        assert_equal(da._fancy_factors(row), 1.)
 
-    def test_scalars_multi_false(self):
-        assert_false(da._filter_index(self.row, [0, 1], ['BI','GA']))
-
-    def test_lists_single_true(self):
-        assert_true(da._filter_index(self.row, [0], [['BI', 'BS']]))
-
-    def test_lists_single_false(self):
-        assert_false(da._filter_index(self.row, [0], [['FS','BR']]))
-
-    def test_lists_multi_true(self):
-        assert_true(da._filter_index(self.row, [0, 1], [['BI'], ['CA']]))
-
-    def test_lists_multi_false(self):
-        assert_false(da._filter_index(self.row, [0, 1], [['BI'],['GA']]))
+    def test_other(self):
+        row = {'res': 5., 'DL': 5., 'qual': 'junk'}
+        assert_equal(da._fancy_factors(row), 1.)
 
 
-class test_defaultFilter:
+class test__fancy_quals(object):
     def setup(self):
-        self.testcsv = StringIO(
-            "A,B,X\n1,A,1\n2,A,1\n1,B,1\n2,B,1\n3,B,1\n"
-            "4,B,1\n1,C,1\n2,C,1\n3,C,1\n4,C,1\n1,D,1\n"
-            "2,D,1\n3,D,1\n4,D,1\n1,E,1\n2,E,1\n1,F,1\n"
-            "2,F,1\n"
+        self.default_quals =  quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
+
+    def test_ND(self):
+        for dq in self.default_quals:
+            assert_equal(da._fancy_quals(dict(qual=dq)), 'ND')
+
+    def test_uj_LT(self):
+        row = {'res': 5., 'DL': 15., 'qual': 'UJ'}
+        assert_equal(da._fancy_quals(row), 'ND')
+
+    def test_uj_EQ(self):
+        row = {'res': 5., 'DL': 5., 'qual': 'UJ'}
+        assert_equal(da._fancy_quals(row), 'ND')
+
+    def test_uj_GT(self):
+        row = {'res': 15., 'DL': 5., 'qual': 'UJ'}
+        assert_equal(da._fancy_quals(row), '=')
+
+    def test_other(self):
+        row = {'res': 5., 'DL': 5., 'qual': 'junk'}
+        assert_equal(da._fancy_quals(row), '=')
+
+
+
+class test_DatabaseStaticMethods(object):
+    def setup(self):
+        self.quals = ['U', 'UJ']
+        np.random.seed(0)
+
+    def test__strip_quals(self):
+        df_raw = pandas.DataFrame({
+            'res':  [  1,    2,     3,    4,    5,    6,     7,    8],
+            'qual': ['U', 'U ', ' U ', None, None, None, ' UJ', 'UJ']
+        })
+
+        df_final = pandas.DataFrame({
+            'res':  [  1,   2,   3,    4,    5,    6,    7,    8],
+            'qual': ['U', 'U', 'U', None, None, None, 'UJ', 'UJ']
+        })
+        da.Database._strip_quals(df_raw, 'qual')
+        pdtest.assert_frame_equal(df_raw, df_final)
+
+    def test__apply_res_factors_baseline(self):
+        df_raw = pandas.DataFrame({
+            'res':  [  1,   2,   3,    4,    5,    6,    7,    8],
+            'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
+        })
+
+        df_final = pandas.DataFrame({
+            'res':  [  2,   4,   6,    4,    5,    6,   14,   16],
+            'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
+        })
+
+        da.Database._apply_res_factors(df_raw, 'res', 'qual',
+                                       quallist=self.quals, factor=2)
+        pdtest.assert_frame_equal(df_raw, df_final)
+
+    def test__apply_res_factors_fancy(self):
+        df_raw = pandas.DataFrame({
+            'res':  [ 1.,  2.,  3.,   4.,   5.,   6.,   7.,   8.],
+            'DL':   [ 1.,  2.,  3.,   4.,   5.,   6.,  10.,   8.],
+            'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
+        })
+
+        df_final = pandas.DataFrame({
+            'res':  [ 2.,  4.,  6.,   4.,   5.,   6.,  10.,   8.],
+            'DL':   [ 1.,  2.,  3.,   4.,   5.,   6.,  10.,   8.],
+            'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
+        })
+
+        def fancy_factors(row):
+            if row.qual == 'U':
+                return 2
+            elif row.qual == 'UJ'and row.res < row.DL:
+                return row.DL / row.res
+            else:
+                return 1
+
+        da.Database._apply_res_factors(df_raw, 'res', 'qual',
+                                       userfxn=fancy_factors)
+        pdtest.assert_frame_equal(df_raw, df_final)
+
+    def test__apply_res_factors_errors(self):
+        df = pandas.DataFrame([1, 2, 3])
+        assert_raises(
+            ValueError,
+            da.Database._apply_res_factors,
+            df, 'res', 'qual',
         )
-        self.df = pandas.read_csv(self.testcsv, index_col=['A', 'B'])
-        self.minElements = 3
-        self.minGroups = 4
-        self.known_A_filtered_length = 18
-        self.known_A_include = True
-        self.known_B_filtered_length = 12
-        self.known_B_include = False
 
-    def test_A_filter(self):
-        a_data, a_include = da.defaultFilter(self.df, levelname='A',
-                                         minElements=self.minElements,
-                                         minGroups=self.minGroups)
-        assert_equal(self.known_A_filtered_length, a_data.shape[0])
-        assert_equal(self.known_A_include, a_include)
+        assert_raises(
+            ValueError,
+            da.Database._apply_res_factors,
+            df, 'res', 'qual', factor=2
+        )
 
-    def test_B_filter(self):
-        b_data, b_include = da.defaultFilter(self.df, levelname='B',
-                                         minElements=self.minElements,
-                                         minGroups=self.minGroups)
-        assert_equal(self.known_B_filtered_length, b_data.shape[0])
-        assert_equal(self.known_B_include, b_include)
+        assert_raises(
+            ValueError,
+            da.Database._apply_res_factors,
+            df, 'res', 'qual', factor=2, userfxn=2,
+        )
+
+    def test__standardize_quals(self):
+        df_raw = pandas.DataFrame({
+            'res':  [  2,   4,   6,    4,    5,    6,   14,   16],
+            'qual': ['U', 'U', 'U', None, None, None, 'UJ', 'UJ']
+        })
+
+        df_final = pandas.DataFrame({
+            'res':  [   2,    4,    6,   4,   5,   6,   14,   16],
+            'qual': ['ND', 'ND', 'ND', '=', '=', '=', 'ND', 'ND']
+        })
+        da.Database._standardize_quals(df_raw, 'qual', self.quals)
+        pdtest.assert_frame_equal(df_raw, df_final)
 
 
-class _base_database():
+class _base_database_Mixin(object):
     @nottest
     def mainsetup(self):
         self.known_dbfile = os.path.join(datadir, 'testdata.accdb')
@@ -127,42 +238,42 @@ class _base_database():
         self.known_bmpcats = ['BR', 'BS', 'MD']
         self.known_group = 'Metals'
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_driver(self):
         assert_true(hasattr(self.db, 'driver'))
         assert_equal(self.db.driver, self.known_driver)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_usingdb(self):
         assert_true(hasattr(self.db, 'usingdb'))
         assert_equal(self.db.usingdb, self.known_usingdb)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_file(self):
         assert_true(hasattr(self.db, 'file'))
         assert_equal(self.db.file, self.known_file)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_data_exists(self):
         assert_true(hasattr(self.db, 'data'))
         assert_true(isinstance(self.db.data, pandas.DataFrame))
         assert_tuple_equal(self.db.data.shape, self.known_datashape)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_data_index(self):
         assert_true(isinstance(self.db.data.index, pandas.MultiIndex))
         assert_equal(self.db.data.index.names, self.known_index_names)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_data_positive(self):
         assert_true(self.db.data['res'].min() > 0)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_selectData_exists(self):
         assert_true(hasattr(self.db, 'selectData'))
         data = self.db.selectData(paramgroup=self.known_group)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_selectData_form(self):
         data = self.db.selectData(paramgroup=self.known_group)
         assert_true(isinstance(data, pandas.DataFrame))
@@ -171,12 +282,32 @@ class _base_database():
         nptest.assert_array_equal(data.index.get_level_values('paramgroup').unique(),
                           np.array([self.known_group]))
 
+    def test_sqlquery_setter(self):
+        assert_true(hasattr(self.db, 'sqlquery'))
+        new_query = 'test'
+        self.db.sqlquery = new_query
+        assert_equal(self.db.sqlquery, new_query)
+
+    def test__data_fromdb(self):
+        assert_true(hasattr(self.db, '_data_fromdb'))
+        assert_true(isinstance(self.db._data_fromdb, pandas.DataFrame))
+
+    def test__data_cleaned(self):
+        assert_true(hasattr(self.db, '_data_cleaned'))
+        assert_true(isinstance(self.db._data_cleaned, pandas.DataFrame))
+
+    def test_dbtable(self):
+        assert_true(hasattr(self.db, 'dbtable'))
+        assert_equal(self.db.dbtable, None)
+        self.db.dbtable = 'test'
+        assert_equal(self.db.dbtable, 'test')
+
     @raises(ValueError)
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_selectData_raise(self):
         self.db.selectData(junk=False)
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_selectData_single_args(self):
         parameter = 'Copper, Total'
         siteid = '21st and Iris Rain Garden'
@@ -194,7 +325,7 @@ class _base_database():
         assert_tuple_equal(data.index.get_level_values('site').unique().shape, (1,))
         assert_tuple_equal(data.index.get_level_values('bmp').unique().shape, (1,))
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_selectData_list_args(self):
         parameters = [
             u'Copper, Total',
@@ -205,7 +336,7 @@ class _base_database():
         nptest.assert_array_equal(data.index.get_level_values('parameter').unique(),
                           np.array(parameters))
 
-    @nptest.dec.skipif(skip_db)
+    #@nptest.dec.skipif(skip_db)
     def test_selectData_table(self):
         parameters = [
             u'Copper, Total',
@@ -217,7 +348,7 @@ class _base_database():
                           np.array(parameters))
 
 
-class test_DatabaseFromDB(_base_database):
+class test_DatabaseFromDB(_base_database_Mixin):
     @nptest.dec.skipif(skip_db)
     def setup(self):
         self.mainsetup()
@@ -262,7 +393,8 @@ class test_DatabaseFromDB(_base_database):
         self.db.convertTableToCSV('bmpcats', filepath=outputfile)
 
 
-class test_DatabaseFromCSV(_base_database):
+class test_DatabaseFromCSV(_base_database_Mixin):
+    usingdb = False
     def setup(self):
         self.mainsetup()
         self.known_driver = None
@@ -289,7 +421,7 @@ class test_DatabaseFromCSV(_base_database):
         assert_equal(self.db.file, self.known_csvfile)
 
 
-class _base_table:
+class _base_tableMixin(object):
     @nottest
     def mainsetup(self):
         self.known_data_columns = pandas.MultiIndex.from_tuples([
@@ -499,20 +631,6 @@ class _base_table:
         assert_true(hasattr(self.table, 'getDatasets'))
         datasets = self.table.getDatasets('storm')
 
-    def test_getDatasets_withFilter(self):
-        assert_true(hasattr(self.table, 'getDatasets'))
-        ds_filtered = self.table.getDatasets('category', filterfxn=da.defaultFilter)
-        ds_nofilter = self.table.getDatasets('category')
-        influent_diff = 5
-        effluent_diff = 10
-        for dsf, dsn in zip(ds_filtered, ds_nofilter):
-            assert_true(dsn.influent.data.shape[0] >= dsf.influent.data.shape[0])
-            assert_true(dsn.effluent.data.shape[0] >= dsf.effluent.data.shape[0])
-            influent_diff += dsn.influent.data.shape[0] - dsf.influent.data.shape[0]
-            effluent_diff += dsn.effluent.data.shape[0] - dsf.effluent.data.shape[0]
-
-        assert_equal(influent_diff, self.known_influent_diff)
-        assert_equal(effluent_diff, self.known_effluent_diff)
 
     def test_redefineIndexLevel_DropOldTrue(self):
         levelname = 'epazone'
@@ -563,7 +681,7 @@ class _base_table:
         assert_true(oldcat in self.table.data.index.get_level_values('category'))
 
 
-class test_table_metals(_base_table):
+class test_table_metals(_base_tableMixin):
     def setup(self):
         self.mainsetup()
         self.known_bmp_cats = [
@@ -589,7 +707,7 @@ class test_table_metals(_base_table):
         self.known_effluent_diff = 16
 
 
-class _base_parameter:
+class _base_parameterMixin(object):
     @nottest
     def mainsetup(self):
         self.known_name = 'Copper, Total'
@@ -619,7 +737,7 @@ class _base_parameter:
                      self.known_paramunits)
 
 
-class test_param(_base_parameter):
+class test_param(_base_parameterMixin):
     def setup(self):
         self.mainsetup()
         self.usecomma = False
@@ -627,7 +745,7 @@ class test_param(_base_parameter):
         self.known_paramunits = r'Total Copper (\si[per-mode=symbol]{\micro\gram\per\liter})'
 
 
-class test_param_usecomma(_base_parameter):
+class test_param_usecomma(_base_parameterMixin):
     def setup(self):
         self.mainsetup()
         self.usecomma = True
