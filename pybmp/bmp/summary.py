@@ -400,8 +400,8 @@ class DatasetSummary(object):
                 \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\""" % tabletitle
 
         stats = [
-            {'name': 'Count', 'attribute': 'N', 'rule': 'top', 'sigfigs': 1},
-            {'name': 'Number of NDs', 'attribute': 'ND', 'sigfigs': 1},
+            {'name': 'Count', 'attribute': 'N', 'rule': 'top', 'forceint': True},
+            {'name': 'Number of NDs', 'attribute': 'ND', 'forceint': True},
             #{'name': 'Number of Studies', 'attribute': 'JUNK', 'sigfigs': 0},
             {'name': 'Min, Max', 'attribute': ['min', 'max'], 'twoval': True},
             {'name': 'Mean', 'attribute': 'mean', },
