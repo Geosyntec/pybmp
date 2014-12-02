@@ -35,7 +35,7 @@ class mock_parameter(object):
 @nt.nottest
 class mock_location(object):
     def __init__(self, include):
-        self.N = 20
+        self.N = 25
         self.ND = 5
         self.min = 0.123456
         self.max = 123.456
@@ -64,7 +64,7 @@ class mock_dataset(object):
         self.influent = mock_location(infl_include)
         self.effluent = mock_location(effl_include)
 
-        self.n_pairs = 20
+        self.n_pairs = 22
         self.wilcoxon_p = 0.0005
         self.mannwhitney_p = 0.456123
         self.definition = {
@@ -94,7 +94,7 @@ class _base_DatasetSummary_Mixin(object):
                 \toprule
                 \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
                 \toprule
-                Count & 20 & 20 \\
+                Count & 25 & 25 \\
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
@@ -126,7 +126,7 @@ class _base_DatasetSummary_Mixin(object):
                 \midrule
                 Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
                 \toprule
-                Number of Pairs & \multicolumn{2}{c} {20} \\
+                Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
                 Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
                 \midrule
@@ -156,7 +156,7 @@ class _base_DatasetSummary_Mixin(object):
                 \toprule
                 \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
                 \toprule
-                Count & NA & 20 \\
+                Count & NA & 25 \\
                 \midrule
                 Number of NDs & NA & 5 \\
                 \midrule
@@ -236,6 +236,11 @@ class _base_DatasetSummary_Mixin(object):
         r = self.ds_sum._tex_table_row('The Medians', 'median')
         nt.assert_equal(r, self.known_r_basic)
 
+    def test__tex_table_row_forceint(self):
+        r = self.ds_sum._tex_table_row('Counts', 'N', forceint=True,
+                                       sigfigs=1)
+        nt.assert_equal(r, self.known_r_forceint)
+
     def test__tex_table_row_advanced(self):
         r = self.ds_sum._tex_table_row('Mean CI', 'mean_conf_interval', rule='top',
                                    twoval=True, ci=True, sigfigs=2)
@@ -292,6 +297,10 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
                 \midrule
                 Quartiles & 0.612, 2.35 & 0.612, 2.35 \\'''
 
+        self.known_r_forceint = r'''
+                \midrule
+                Counts & 25 & 25 \\'''
+
         self.main_setup()
 
     def test__make_tex_table(self):
@@ -304,7 +313,7 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
                 \toprule
                 \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
                 \toprule
-                Count & 20 & 20 \\
+                Count & 25 & 25 \\
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
@@ -336,7 +345,7 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
                 \midrule
                 Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
                 \toprule
-                Number of Pairs & \multicolumn{2}{c} {20} \\
+                Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
                 Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
                 \midrule
@@ -371,6 +380,10 @@ class test_DatasetSummary_TF(_base_DatasetSummary_Mixin):
                 \midrule
                 Quartiles & 0.612, 2.35 & NA \\'''
 
+        self.known_r_forceint = r'''
+                \midrule
+                Counts & 25 & NA \\'''
+
 
 class test_DatasetSummary_FT(_base_DatasetSummary_Mixin):
     def setup(self):
@@ -389,6 +402,10 @@ class test_DatasetSummary_FT(_base_DatasetSummary_Mixin):
                 \midrule
                 Quartiles & NA & 0.612, 2.35 \\'''
 
+        self.known_r_forceint = r'''
+                \midrule
+                Counts & NA & 25 \\'''
+
 
 class test_DatasetSummary_FF(_base_DatasetSummary_Mixin):
     def setup(self):
@@ -406,6 +423,10 @@ class test_DatasetSummary_FF(_base_DatasetSummary_Mixin):
         self.known_r_twoattrs = r'''
                 \midrule
                 Quartiles & NA & NA \\'''
+
+        self.known_r_forceint = r'''
+                \midrule
+                Counts & NA & NA \\'''
 
 
 class test_CategoricalSummary(object):
@@ -515,7 +536,7 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \toprule
                 \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
                 \toprule
-                Count & 20 & 20 \\
+                Count & 25 & 25 \\
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
@@ -547,7 +568,7 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \midrule
                 Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
                 \toprule
-                Number of Pairs & \multicolumn{2}{c} {20} \\
+                Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
                 Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
                 \midrule
@@ -576,7 +597,7 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \toprule
                 \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
                 \toprule
-                Count & 20 & 20 \\
+                Count & 25 & 25 \\
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
@@ -608,7 +629,7 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \midrule
                 Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
                 \toprule
-                Number of Pairs & \multicolumn{2}{c} {20} \\
+                Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
                 Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
                 \midrule
@@ -637,7 +658,7 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \toprule
                 \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
                 \toprule
-                Count & NA & 20 \\
+                Count & NA & 25 \\
                 \midrule
                 Number of NDs & NA & 5 \\
                 \midrule
