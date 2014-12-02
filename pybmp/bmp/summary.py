@@ -306,7 +306,7 @@ class DatasetSummary(object):
 
     def _tex_table_row(self, name, attribute, rule='mid', twoval=False,
                        sigfigs=3, ci=False, fromdataset=False, pval=False,
-                       tex=False):
+                       tex=False, forceint=False):
         rulemap = {
             'top': '\\toprule',
             'mid': '\\midrule',
@@ -321,8 +321,8 @@ class DatasetSummary(object):
 
         if fromdataset:
             if self.ds.effluent.include and self.ds.influent.include:
-                val = utils.sigFigs(getattr(self.ds, attribute),
-                                    sigfigs, pval=pval, tex=tex)
+                val = utils.sigFigs(getattr(self.ds, attribute), sigfigs,
+                                    pval=pval, tex=tex, forceint=forceint)
             else:
                 val = 'NA'
 
@@ -343,14 +343,19 @@ class DatasetSummary(object):
                     if val is not None:
                         if twoval:
                             thisstring = '{}, {}'.format(
-                                utils.sigFigs(val[0], sigfigs, pval=pval, tex=tex),
-                                utils.sigFigs(val[1], sigfigs, pval=pval, tex=tex)
+                                utils.sigFigs(val[0], sigfigs, pval=pval,
+                                              tex=tex, forceint=forceint),
+                                utils.sigFigs(val[1], sigfigs, pval=pval,
+                                              tex=tex, forceint=forceint)
                             )
 
                             if ci:
                                 thisstring = '({})'.format(thisstring)
                         else:
-                            thisstring = utils.sigFigs(val, sigfigs, pval=pval, tex=tex)
+                            thisstring = utils.sigFigs(
+                                val, sigfigs, pval=pval,
+                                tex=tex, forceint=forceint
+                            )
 
                     else:
                         thisstring = 'NA'
@@ -433,7 +438,8 @@ class DatasetSummary(object):
                 'twoval': True,
             },
             {'name': 'Number of Pairs', 'attribute': 'n_pairs',
-                'rule': 'top', 'fromdataset': True, 'sigfigs': 1
+                'rule': 'top', 'fromdataset': True,
+                'sigfigs': 1, 'forceint': True
             },
             {'name': 'Wilcoxon p-value', 'attribute': 'wilcoxon_p',
                 'fromdataset': True, 'pval': True, 'tex': True
