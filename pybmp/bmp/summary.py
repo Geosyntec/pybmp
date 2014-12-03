@@ -640,8 +640,11 @@ class CategoricalSummary(object):
             latex_input += '\\clearpage\n'
 
             if regenfigs:
-                statfig = ds.statplot(ylabel=dsum.parameter.paramunit(),
-                                      axtype='prob')
+                statfig = ds.statplot(
+                    ylabel=dsum.parameter.paramunit(),
+                    bacteria=(self.paramgroup=='Bacteria'),
+                    axtype='prob'
+                )
                 scatterfig = ds.scatterplot(
                     xlabel='Influent ' + dsum.parameter.paramunit(),
                     ylabel='Effluent ' + dsum.parameter.paramunit(),
