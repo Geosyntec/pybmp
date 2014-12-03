@@ -817,10 +817,6 @@ def test__filter_by_BMP_count():
     )
 
 
-def test_dataDump():
-    pass
-
-
 def test_statDump():
     pass
 
@@ -838,14 +834,6 @@ def test_diffStatsDump():
 
 
 def test_sbpat_stats():
-    pass
-
-
-def test_latexInputFile():
-    pass
-
-
-def test_latexReport():
     pass
 
 
