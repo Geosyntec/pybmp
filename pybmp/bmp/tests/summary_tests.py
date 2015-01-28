@@ -98,33 +98,33 @@ class _base_DatasetSummary_Mixin(object):
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
-                Min, Max & 0.123, 123 & 0.123, 123 \\
+                Min; Max & 0.123; 123 & 0.123; 123 \\
                 \midrule
                 Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Log. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Log. Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Geo. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
-                Covariance & 5.61 & 5.61 \\
+                Coeff. of Variation & 5.61 & 5.61 \\
                 \midrule
                 Skewness & 6.12 & 6.12 \\
                 \midrule
                 Median & 1.23 & 1.23 \\
                 %%
-                (95\% confidence interval) & (0.235, 2.23) & (0.235, 2.23) \\
+                (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
                 \midrule
-                Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
+                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
                 \toprule
                 Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
@@ -160,33 +160,33 @@ class _base_DatasetSummary_Mixin(object):
                 \midrule
                 Number of NDs & NA & 5 \\
                 \midrule
-                Min, Max & NA & 0.123, 123 \\
+                Min; Max & NA & 0.123; 123 \\
                 \midrule
                 Mean & NA & 12.3 \\
                 %%
-                (95\% confidence interval) & NA & (11.3, 13.3) \\
+                (95\% confidence interval) & NA & (11.3; 13.3) \\
                 \midrule
                 Standard Deviation & NA & 4.56 \\
                 \midrule
                 Log. Mean & NA & 12.3 \\
                 %%
-                (95\% confidence interval) & NA & (11.3, 13.3) \\
+                (95\% confidence interval) & NA & (11.3; 13.3) \\
                 \midrule
                 Log. Standard Deviation & NA & 4.56 \\
                 \midrule
                 Geo. Mean & NA & 12.3 \\
                 %%
-                (95\% confidence interval) & NA & (11.3, 13.3) \\
+                (95\% confidence interval) & NA & (11.3; 13.3) \\
                 \midrule
-                Covariance & NA & 5.61 \\
+                Coeff. of Variation & NA & 5.61 \\
                 \midrule
                 Skewness & NA & 6.12 \\
                 \midrule
                 Median & NA & 1.23 \\
                 %%
-                (95\% confidence interval) & NA & (0.235, 2.23) \\
+                (95\% confidence interval) & NA & (0.235; 2.23) \\
                 \midrule
-                Quartiles & NA & 0.612, 2.35 \\
+                Quartiles & NA & 0.612; 2.35 \\
                 \toprule
                 Number of Pairs & \multicolumn{2}{c} {NA} \\
                 \midrule
@@ -291,11 +291,11 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
 
         self.known_r_advanced = r'''
                 \toprule
-                Mean CI & (11, 13) & (11, 13) \\'''
+                Mean CI & (11; 13) & (11; 13) \\'''
 
         self.known_r_twoattrs = r'''
                 \midrule
-                Quartiles & 0.612, 2.35 & 0.612, 2.35 \\'''
+                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\'''
 
         self.known_r_forceint = r'''
                 \midrule
@@ -317,33 +317,33 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
-                Min, Max & 0.123, 123 & 0.123, 123 \\
+                Min; Max & 0.123; 123 & 0.123; 123 \\
                 \midrule
                 Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Log. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Log. Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Geo. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
-                Covariance & 5.61 & 5.61 \\
+                Coeff. of Variation & 5.61 & 5.61 \\
                 \midrule
                 Skewness & 6.12 & 6.12 \\
                 \midrule
                 Median & 1.23 & 1.23 \\
                 %%
-                (95\% confidence interval) & (0.235, 2.23) & (0.235, 2.23) \\
+                (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
                 \midrule
-                Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
+                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
                 \toprule
                 Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
@@ -374,11 +374,11 @@ class test_DatasetSummary_TF(_base_DatasetSummary_Mixin):
 
         self.known_r_advanced = r'''
                 \toprule
-                Mean CI & (11, 13) & NA \\'''
+                Mean CI & (11; 13) & NA \\'''
 
         self.known_r_twoattrs = r'''
                 \midrule
-                Quartiles & 0.612, 2.35 & NA \\'''
+                Quartiles & 0.612; 2.35 & NA \\'''
 
         self.known_r_forceint = r'''
                 \midrule
@@ -396,11 +396,11 @@ class test_DatasetSummary_FT(_base_DatasetSummary_Mixin):
 
         self.known_r_advanced = r'''
                 \toprule
-                Mean CI & NA & (11, 13) \\'''
+                Mean CI & NA & (11; 13) \\'''
 
         self.known_r_twoattrs = r'''
                 \midrule
-                Quartiles & NA & 0.612, 2.35 \\'''
+                Quartiles & NA & 0.612; 2.35 \\'''
 
         self.known_r_forceint = r'''
                 \midrule
@@ -540,33 +540,33 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
-                Min, Max & 0.123, 123 & 0.123, 123 \\
+                Min; Max & 0.123; 123 & 0.123; 123 \\
                 \midrule
                 Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Log. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Log. Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Geo. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
-                Covariance & 5.61 & 5.61 \\
+                Coeff. of Variation & 5.61 & 5.61 \\
                 \midrule
                 Skewness & 6.12 & 6.12 \\
                 \midrule
                 Median & 1.23 & 1.23 \\
                 %%
-                (95\% confidence interval) & (0.235, 2.23) & (0.235, 2.23) \\
+                (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
                 \midrule
-                Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
+                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
                 \toprule
                 Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
@@ -601,33 +601,33 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \midrule
                 Number of NDs & 5 & 5 \\
                 \midrule
-                Min, Max & 0.123, 123 & 0.123, 123 \\
+                Min; Max & 0.123; 123 & 0.123; 123 \\
                 \midrule
                 Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Log. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
                 Log. Standard Deviation & 4.56 & 4.56 \\
                 \midrule
                 Geo. Mean & 12.3 & 12.3 \\
                 %%
-                (95\% confidence interval) & (11.3, 13.3) & (11.3, 13.3) \\
+                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
                 \midrule
-                Covariance & 5.61 & 5.61 \\
+                Coeff. of Variation & 5.61 & 5.61 \\
                 \midrule
                 Skewness & 6.12 & 6.12 \\
                 \midrule
                 Median & 1.23 & 1.23 \\
                 %%
-                (95\% confidence interval) & (0.235, 2.23) & (0.235, 2.23) \\
+                (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
                 \midrule
-                Quartiles & 0.612, 2.35 & 0.612, 2.35 \\
+                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
                 \toprule
                 Number of Pairs & \multicolumn{2}{c} {22} \\
                 \midrule
@@ -662,33 +662,33 @@ input_file_string = r'''\section{Carbon Dioxide}
                 \midrule
                 Number of NDs & NA & 5 \\
                 \midrule
-                Min, Max & NA & 0.123, 123 \\
+                Min; Max & NA & 0.123; 123 \\
                 \midrule
                 Mean & NA & 12.3 \\
                 %%
-                (95\% confidence interval) & NA & (11.3, 13.3) \\
+                (95\% confidence interval) & NA & (11.3; 13.3) \\
                 \midrule
                 Standard Deviation & NA & 4.56 \\
                 \midrule
                 Log. Mean & NA & 12.3 \\
                 %%
-                (95\% confidence interval) & NA & (11.3, 13.3) \\
+                (95\% confidence interval) & NA & (11.3; 13.3) \\
                 \midrule
                 Log. Standard Deviation & NA & 4.56 \\
                 \midrule
                 Geo. Mean & NA & 12.3 \\
                 %%
-                (95\% confidence interval) & NA & (11.3, 13.3) \\
+                (95\% confidence interval) & NA & (11.3; 13.3) \\
                 \midrule
-                Covariance & NA & 5.61 \\
+                Coeff. of Variation & NA & 5.61 \\
                 \midrule
                 Skewness & NA & 6.12 \\
                 \midrule
                 Median & NA & 1.23 \\
                 %%
-                (95\% confidence interval) & NA & (0.235, 2.23) \\
+                (95\% confidence interval) & NA & (0.235; 2.23) \\
                 \midrule
-                Quartiles & NA & 0.612, 2.35 \\
+                Quartiles & NA & 0.612; 2.35 \\
                 \toprule
                 Number of Pairs & \multicolumn{2}{c} {NA} \\
                 \midrule
@@ -730,12 +730,12 @@ class test_helpers(object):
         self.known_shape_excl = (2168, 2)
 
     def test_getSummaryData_smoke(self):
-        df = bmp.summary.getSummaryData(self.dbfile)
+        df, db = bmp.summary.getSummaryData(self.dbfile)
         nt.assert_tuple_equal(df.shape, self.known_shape)
 
     def test_getSummaryDataExclusive_smoke(self):
         exbmps = ['15.2Apex', '7.6Apex']
-        df = bmp.summary.getSummaryData(self.dbfile, excludedbmps=exbmps)
+        df, db = bmp.summary.getSummaryData(self.dbfile, excludedbmps=exbmps)
         nt.assert_tuple_equal(df.shape, self.known_shape_excl)
         for x in exbmps:
             nt.assert_true(x not in df.index.get_level_values('bmp').unique())

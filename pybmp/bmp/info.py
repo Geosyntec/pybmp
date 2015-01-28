@@ -5,7 +5,7 @@ def getUnits(param):
     '''
     Returns the standard units for a given parameter
     '''
-    return parameters[param.strip()]['units']
+    return parameters[param.strip().lower()]['units']
 
 
 def getTexUnit(unit):
@@ -20,7 +20,7 @@ def getTexParam(param):
     '''
     Returns a LaTeX representation of the name of a parameter
     '''
-    return parameters[param.strip()]['tex']
+    return parameters[param.strip().lower()]['tex']
 
 
 def getNormalization(unit):
@@ -40,7 +40,7 @@ def getConversion(param):
     result to convert to the standard units for that parameter
     (e.g., g/L -> ug/L for Dissolved Lead)
     '''
-    return units[parameters[param.strip()]['units']]['factor']
+    return units[parameters[param.strip().lower()]['units']]['factor']
 
 def addParameter(name, units, tex=None):
     if tex is None:
@@ -49,7 +49,7 @@ def addParameter(name, units, tex=None):
         'tex': tex,
         'units': units
     }
-    parameters[name] = values
+    parameters[name.lower()] = values
     return parameters
 
 def addUnit(name, factor, texname=None, unicodename=None):
@@ -247,1455 +247,1575 @@ units = {
 }
 
 parameters = {
-    '1,1,1,2-Tetrachloroethane': {
+    '1,1,1,2-tetrachloroethane': {
         'tex': '1,1,1,2-Tetrachloroethane',
         'units': 'ug/L'
     },
-    '1,1,1-Trichloroethane': {
+    '1,1,1-trichloroethane': {
         'tex': '1,1,1-Trichloroethane',
         'units': 'ug/L'
     },
-    '1,1,2,2-Tetrachloroethane': {
+    '1,1,2,2-tetrachloroethane': {
         'tex': '1,1,2,2-Tetrachloroethane',
         'units': 'ug/L'
     },
-    '1,1,2-Trichloroethane': {
+    '1,1,2-trichloroethane': {
         'tex': '1,1,2-Trichloroethane',
         'units': 'ug/L'
     },
-    '1,1-Dichloroethane': {
+    '1,1-dichloroethane': {
         'tex': '1,1-Dichloroethane',
         'units': 'ug/L'
     },
-    '1,1-Dichloroethylene': {
+    '1,1-dichloroethylene': {
         'tex': '1,1-Dichloroethylene',
         'units': 'ug/L'
     },
-    '1,1-Dichloropropene': {
+    '1,1-dichloropropene': {
         'tex': '1,1-Dichloropropene',
         'units': 'ug/L'
     },
-    '1,2,3-Trichlorobenzene': {
+    '1,2,3-trichlorobenzene': {
         'tex': '1,2,3-Trichlorobenzene',
         'units': 'ug/L'
     },
-    '1,2,3-Trichloropropane': {
+    '1,2,3-trichloropropane': {
         'tex': '1,2,3-Trichloropropane',
         'units': 'ug/L'
     },
-    '1,2,4-Trichlorobenzene': {
+    '1,2,4-trichlorobenzene': {
         'tex': '1,2,4-Trichlorobenzene',
         'units': 'ug/L'
     },
-    '1,2,4-Trimethylbenzene': {
+    '1,2,4-trimethylbenzene': {
         'tex': '1,2,4-Trimethylbenzene',
         'units': 'ug/L'
     },
-    '1,2-Benzanthracene': {
+    '1,2-benzanthracene': {
         'tex': '1,2-Benzanthracene',
         'units': 'ug/L'
     },
-    '1,2-Dibromo-3-Chloropropane': {
+    '1,2-dibromo-3-chloropropane': {
         'tex': '1,2-Dibromo-3-Chloropropane',
         'units': 'ug/L'
     },
-    '1,2-Dibromoethane': {
+    '1,2-dibromoethane': {
         'tex': '1,2-Dibromoethane',
         'units': 'ug/L'
     },
-    '1,2-Dichlorobenzene': {
+    '1,2-dichlorobenzene': {
         'tex': '1,2-Dichlorobenzene',
         'units': 'ug/L'
     },
-    '1,2-Dichloroethane': {
+    '1,2-dichloroethane': {
         'tex': '1,2-Dichloroethane',
         'units': 'ug/L'
     },
-    '1,2-Dichloropropane': {
+    '1,2-dichloropropane': {
         'tex': '1,2-Dichloropropane',
         'units': 'ug/L'
     },
-    '1,2-Diphenylhydrazine': {
+    '1,2-diphenylhydrazine': {
         'tex': '1,2-Diphenylhydrazine',
         'units': 'ug/L'
     },
-    '1,3,5-Trimethylbenzene': {
+    '1,3,5-trimethylbenzene': {
         'tex': '1,3,5-Trimethylbenzene',
         'units': 'ug/L'
     },
-    '1,3-Dichlorobenzene': {
+    '1,3-dichlorobenzene': {
         'tex': '1,3-Dichlorobenzene',
         'units': 'ug/L'
     },
-    '1,3-Dichloropropane': {
+    '1,3-dichloropropane': {
         'tex': '1,3-Dichloropropane',
         'units': 'ug/L'
     },
-    '1,4-Dichlorobenzene': {
+    '1,4-dichlorobenzene': {
         'tex': '1,4-Dichlorobenzene',
         'units': 'ug/L'
     },
-    '1-Chlorohexane': {
+    '1-chlorohexane': {
         'tex': '1-Chlorohexane',
         'units': 'ug/L'
     },
-    '1-Methylnaphthalene': {
+    '1-methylnaphthalene': {
         'tex': '1-Methylnaphthalene',
         'units': 'ug/L'
     },
-    '2,2-Dichloropropane': {
+    '2,2-dichloropropane': {
         'tex': '2,2-Dichloropropane',
         'units': 'ug/L'
     },
-    "2,4'-DDD": {
+    "2,4'-ddd": {
         'tex': "2,4'-DDD",
         'units': 'ug/L'
     },
-    "2,4'-DDE": {
+    "2,4'-dde": {
         'tex': "2,4'-DDE",
         'units': 'ug/L'
     },
-    "2,4'-DDT": {
+    "2,4'-ddt": {
         'tex': "2,4'-DDT",
         'units': 'ug/L'
     },
-    '2,4,5-TP-SILVEX': {
+    '2,4,5-tp-silvex': {
         'tex': '2,4,5-TP-SILVEX',
         'units': 'ug/L'
     },
-    '2,4,5-Trichlorophenol': {
+    '2,4,5-trichlorophenol': {
         'tex': '2,4,5-Trichlorophenol',
         'units': 'ug/L'
     },
-    '2,4,6-Trichlorophenol': {
+    '2,4,6-trichlorophenol': {
         'tex': '2,4,6-Trichlorophenol',
         'units': 'ug/L'
     },
-    '2,4-D': {
+    '2,4-d': {
         'tex': '2,4-D',
         'units': 'ug/L'
     },
-    '2,4-Dichlorophenol': {
+    '2,4-dichlorophenol': {
         'tex': '2,4-Dichlorophenol',
         'units': 'ug/L'
     },
-    '2,4-Dinitrophenol': {
+    '2,4-dinitrophenol': {
         'tex': '2,4-Dinitrophenol',
         'units': 'ug/L'
     },
-    '2,4-Dinitrotoluene': {
+    '2,4-dinitrotoluene': {
         'tex': '2,4-Dinitrotoluene',
         'units': 'ug/L'
     },
-    '2,4-Dimethylphenol': {
+    '2,4-dimethylphenol': {
         'tex': '2,4-Dimethylphenol',
         'units': 'ug/L'
     },
-    '2,6-Dinitrotoluene': {
+    '2,6-dinitrotoluene': {
         'tex': '2,6-Dinitrotoluene',
         'units': 'ug/L'
     },
-    '2-Butanone': {
+    '2-butanone': {
         'tex': '2-Butanone',
         'units': 'ug/L'
     },
-    '2-Chloroethyl Vinyl Ether': {
+    '2-chloroethyl vinyl ether': {
         'tex': '2-Chloroethyl Vinyl Ether',
         'units': 'ug/L'
     },
-    '2-Chloronaphthalene': {
+    '2-chloronaphthalene': {
         'tex': '2-Chloronaphthalene',
         'units': 'ug/L'
     },
-    '2-Chlorophenol': {
+    '2-chlorophenol': {
         'tex': '2-Chlorophenol',
         'units': 'ug/L'
     },
-    '2-Chlorotoluene': {
+    '2-chlorotoluene': {
         'tex': '2-Chlorotoluene',
         'units': 'ug/L'
     },
-    '2-Hexanone': {
+    '2-hexanone': {
         'tex': '2-Hexanone',
         'units': 'ug/L'
     },
-    '2-Methylnaphthalene': {
+    '2-methylnaphthalene': {
         'tex': '2-Methylnaphthalene',
         'units': 'ug/L'
     },
-    '2-Nitrophenol': {
+    '2-nitrophenol': {
         'tex': '2-Nitrophenol',
         'units': 'ug/L'
     },
-    "3,3'-Dichlorobenzidine": {
+    "3,3'-dichlorobenzidine": {
         'tex': "3,3'-Dichlorobenzidine",
         'units': 'ug/L'
     },
-    "4,4'-DDD": {
+    "4,4'-ddd": {
         'tex': "4,4'-DDD",
         'units': 'ug/L'
     },
-    "4,4'-DDE": {
+    "4,4'-dde": {
         'tex': "4,4'-DDE",
         'units': 'ug/L'
     },
-    "4,4'-DDT": {
+    "4,4'-ddt": {
         'tex': "4,4'-DDT",
         'units': 'ug/L'
     },
-    '4,6-Dinitro-2-methylphenol': {
+    '4,6-dinitro-2-methylphenol': {
         'tex': '4,6-Dinitro-2-methylphenol',
         'units': 'ug/L'
     },
-    '4,6-Dinitro-o-cresol': {
+    '4,6-dinitro-o-cresol': {
         'tex': '4,6-Dinitro-o-cresol',
         'units': 'ug/L'
     },
-    '4-Bromophenyl phenyl ether': {
-        'tex': '4-Bromophenyl phenyl ether',
+    '4-bromophenyl phenyl ether': {
+        'tex': '4-Bromophenyl Phenyl Ether',
         'units': 'ug/L'
     },
-    '4-Chlorophenyl phenyl ether': {
-        'tex': '4-Chlorophenyl phenyl ether',
+    '4-chlorophenyl phenyl ether': {
+        'tex': '4-Chlorophenyl Phenyl Ether',
         'units': 'ug/L'
     },
-    '4-Chlorotoluene': {
+    '4-chlorotoluene': {
         'tex': '4-Chlorotoluene',
         'units': 'ug/L'
     },
-    '4-Nitrophenol': {
+    '4-nitrophenol': {
         'tex': '4-Nitrophenol',
         'units': 'ug/L'
     },
     '4-chloro-3-methylphenol': {
-        'tex': '4-Chloro-3-methylphenol',
+        'tex': '4-Chloro-3-Methylphenol',
         'units': 'ug/L'
     },
-    '4-chloro-3-methylphenol,  Dissolved': {
-        'tex': 'Dissolved 4-Chloro-3-methylphenol',
+    '4-chloro-3-methylphenol,  dissolved': {
+        'tex': 'Dissolved 4-Chloro-3-Methylphenol',
         'units': 'ug/L'
     },
-    '4-Hydroxy-4-methyl-2-pentanone': {
-        'tex': '4-Hydroxy-4-methyl-2-pentanone',
+    '4-hydroxy-4-methyl-2-pentanone': {
+        'tex': '4-Hydroxy-4-Methyl-2-Pentanone',
         'units': 'ug/L'
     },
-    'Acenaphthene': {
+    'acenaphthene': {
         'tex': 'Acenaphthene',
         'units': 'ug/L'
     },
-    'Acenaphthene,  Dissolved': {
+    'acenaphthene,  dissolved': {
         'tex': 'Dissolved Acenaphthene',
         'units': 'ug/L'
     },
-    'Acenaphthylene': {
+    'acenaphthylene': {
         'tex': 'Acenaphthylene',
         'units': 'ug/L'
     },
-    'Acenaphthylene, Suspended': {
+    'acenaphthylene, suspended': {
         'tex': 'Suspended Acenaphthylene',
         'units': 'ug/L'
     },
-    'Acetone': {
+    'acetone': {
         'tex': 'Acetone',
         'units': 'ug/L'
     },
-    'Acrolein': {
+    'acrolein': {
         'tex': 'Acrolein',
         'units': 'ug/L'
     },
-    'Acrylonitrile': {
+    'acrylonitrile': {
         'tex': 'Acrylonitrile',
         'units': 'ug/L'
     },
-    'Alachlor': {
+    'alachlor': {
         'tex': 'Alachlor',
         'units': 'ug/L'
     },
-    'Aldrin': {
+    'aldrin': {
         'tex': 'Aldrin',
         'units': 'ug/L'
     },
-    'Alkalinity': {
+    'alkalinity': {
         'tex': 'Alkalinity',
         'units': 'mg/L'
     },
-    'Alkalinity, carbonate as CaCO3': {
-        'tex': 'Alkalinity, carbonate as CaCO$_{3}$',
+    'alkalinity, carbonate as caco3': {
+        'tex': 'Alkalinity, Carbonate as CaCO$_{3}$',
         'units': 'mg/L'
     },
-    'Aluminum, Dissolved': {
+    'aluminum, dissolved': {
         'tex': 'Dissolved Aluminum',
         'units': 'ug/L'
     },
-    'Aluminum, Total': {
+    'aluminum, total': {
         'tex': 'Total Aluminum',
         'units': 'ug/L'
     },
-    'Anthracene': {
+    'anthracene': {
         'tex': 'Anthracene',
         'units': 'ug/L'
     },
-    'Anthracene, Suspended': {
+    'anthracene, suspended': {
         'tex': 'Suspended Anthracene',
         'units': 'ug/L'
     },
-    'Antimony, Dissolved': {
+    'antimony, dissolved': {
         'tex': 'Dissolved Antimony',
         'units': 'ug/L'
     },
-    'Antimony, Total': {
+    'antimony, total': {
         'tex': 'Total Antimony',
         'units': 'ug/L'
     },
-    'Aroclor 1016': {
+    'aroclor 1016': {
         'tex': 'Aroclor 1016',
         'units': 'ug/L'
     },
-    'Aroclor 1221': {
+    'aroclor 1221': {
         'tex': 'Aroclor 1221',
         'units': 'ug/L'
     },
-    'Aroclor 1232': {
+    'aroclor 1232': {
         'tex': 'Aroclor 1232',
         'units': 'ug/L'
     },
-    'Aroclor 1242': {
+    'aroclor 1242': {
         'tex': 'Aroclor 1242',
         'units': 'ug/L'
     },
-    'Aroclor 1248': {
+    'aroclor 1248': {
         'tex': 'Aroclor 1248',
         'units': 'ug/L'
     },
-    'Aroclor 1254': {
+    'aroclor 1254': {
         'tex': 'Aroclor 1254',
         'units': 'ug/L'
     },
-    'Aroclor 1260': {
+    'aroclor 1260': {
         'tex': 'Aroclor 1260',
         'units': 'ug/L'
     },
-    'Arsenic, Dissolved': {
+    'arsenic, dissolved': {
         'tex': 'Dissolved Arsenic',
         'units': 'ug/L'
     },
-    'Arsenic, Total': {
+    'arsenic, total': {
         'tex': 'Total Arsenic',
         'units': 'ug/L'
     },
-    'Atrazine': {
+    'dissolved arsenic': {
+        'tex': 'Dissolved Arsenic',
+        'units': 'ug/L'
+    },
+    'total arsenic': {
+        'tex': 'Total Arsenic',
+        'units': 'ug/L'
+    },
+    'atrazine': {
         'tex': 'Atrazine',
         'units': 'ug/L'
     },
-    'BHC-ALPHA': {
+    'bhc-alpha': {
         'tex': 'BHC-ALPHA',
         'units': 'ug/L'
     },
-    'BHC-BETA': {
+    'bhc-beta': {
         'tex': 'BHC-BETA',
         'units': 'ug/L'
     },
-    'BHC-DELTA': {
+    'bhc-delta': {
         'tex': 'BHC-DELTA',
         'units': 'ug/L'
     },
-    'BOD': {
-        'tex': 'Biological oxygen demand',
+    'bod': {
+        'tex': 'Biological Oxygen Demand',
         'units': 'mg/L'
     },
-    'BOD, Dissolved': {
-        'tex': 'Biological oxygen demand (dissolved)',
+    'bod, dissolved': {
+        'tex': 'Biological Oxygen Demand (dissolved)',
         'units': 'mg/L'
     },
-    'BOD, non-standard conditions': {
-        'tex': 'Biological oxygen demand (non-standard conditions)',
+    'bod, non-standard conditions': {
+        'tex': 'Biological Oxygen Demand (non-standard conditions)',
         'units': 'mg/L'
     },
-    'Barium, Dissolved': {
+    'barium, dissolved': {
         'tex': 'Dissolved Barium',
         'units': 'ug/L'
     },
-    'Barium, Total': {
+    'barium, total': {
         'tex': 'Total Barium',
         'units': 'ug/L'
     },
-    'Benz[a]anthracene': {
+    'benz[a]anthracene': {
         'tex': 'Benz[a]anthracene',
         'units': 'ug/L'
     },
-    'Benz[a]anthracene, Suspended': {
+    'benz[a]anthracene, suspended': {
         'tex': 'Suspended Benz[a]anthracene',
         'units': 'ug/L'
     },
-    'Benzene': {
+    'benzene': {
         'tex': 'Benzene',
         'units': 'ug/L'
     },
-    'Benzidine': {
+    'benzidine': {
         'tex': 'Benzidine',
         'units': 'ug/L'
     },
-    'Benzo(b)fluoranthene': {
+    'benzo(b)fluoranthene': {
         'tex': 'Benzo(b)fluoranthene',
         'units': 'ug/L'
     },
-    'Benzo(b)fluoranthene, Suspended': {
+    'benzo(b)fluoranthene, suspended': {
         'tex': 'Suspended Benzo(b)fluoranthene',
         'units': 'ug/L'
     },
-    'Benzo[a]pyrene': {
+    'benzo[a]pyrene': {
         'tex': 'Benzo[a]pyrene',
         'units': 'ug/L'
     },
-    'Benzo[a]pyrene, Suspended': {
+    'benzo[a]pyrene, suspended': {
         'tex': 'Suspended Benzo[a]pyrene',
         'units': 'ug/L'
     },
-    'Benzo[ghi]perylene': {
+    'benzo[ghi]perylene': {
         'tex': 'Benzo[ghi]perylene',
         'units': 'ug/L'
     },
-    'Benzo[ghi]perylene, Suspended': {
+    'benzo[ghi]perylene, suspended': {
         'tex': 'Suspended Benzo[ghi]perylene',
         'units': 'ug/L'
     },
-    'Benzo[k]fluoranthene': {
+    'benzo[k]fluoranthene': {
         'tex': 'Benzo[k]fluoranthene',
         'units': 'ug/L'
     },
-    'Benzo[k]fluoranthene, Suspended': {
+    'benzo[k]fluoranthene, suspended': {
         'tex': 'Suspended Benzo[k]fluoranthene',
         'units': 'ug/L'
     },
-    'Benzoic acid': {
+    'benzoic acid': {
         'tex': 'Benzoic acid',
         'units': 'ug/L'
     },
-    'Benzyl alcohol': {
-        'tex': 'Benzyl alcohol',
+    'benzyl alcohol': {
+        'tex': 'Benzyl Alcohol',
         'units': 'ug/L'
     },
-    'Beryllium, Dissolved': {
+    'beryllium, dissolved': {
         'tex': 'Dissolved Beryllium',
         'units': 'ug/L'
     },
-    'Beryllium, Total': {
+    'beryllium, total': {
         'tex': 'Total Beryllium',
         'units': 'ug/L'
     },
-    'Biphenyl': {
+    'biphenyl': {
         'tex': 'Biphenyl',
         'units': 'ug/L'
     },
-    'Bis(2-chloro-1-methylethyl) ether': {
-        'tex': 'Bis(2-chloro-1-methylethyl) ether',
+    'bis(2-chloro-1-methylethyl) ether': {
+        'tex': 'Bis(2-chloro-1-methylethyl) Ether',
         'units': 'ug/L'
     },
-    'Bis(2-chloroethoxy)methane': {
+    'bis(2-chloroethoxy)methane': {
         'tex': 'Bis(2-chloroethoxy)methane',
         'units': 'ug/L'
     },
-    'Bis(2-chloroethyl) ether': {
-        'tex': 'Bis(2-chloroethyl) ether',
+    'bis(2-chloroethyl) ether': {
+        'tex': 'Bis(2-chloroethyl) Ether',
         'units': 'ug/L'
     },
-    'Bis(2-chloroisopropyl) ether': {
-        'tex': 'Bis(2-chloroisopropyl) ether',
+    'bis(2-chloroisopropyl) ether': {
+        'tex': 'Bis(2-chloroisopropyl) Ether',
         'units': 'ug/L'
     },
-    'Bis(2-ethylhexyl) phthalate': {
-        'tex': 'Bis(2-ethylhexyl) phthalate',
+    'bis(2-ethylhexyl) phthalate': {
+        'tex': 'Bis(2-ethylhexyl) Phthalate',
         'units': 'ug/L'
     },
-    'Bis(n-octyl)phthalate': {
+    'bis(n-octyl)phthalate': {
         'tex': 'Bis(n-octyl)phthalate',
         'units': 'ug/L'
     },
-    'Bromobenzene': {
+    'bromobenzene': {
         'tex': 'Bromobenzene',
         'units': 'ug/L'
     },
-    'Bromochloroiodomethane': {
+    'bromochloroiodomethane': {
         'tex': 'Bromochloroiodomethane',
         'units': 'ug/L'
     },
-    'Bromoform': {
+    'bromoform': {
         'tex': 'Bromoform',
         'units': 'ug/L'
     },
-    'Bromomethane': {
+    'bromomethane': {
         'tex': 'Bromomethane',
         'units': 'ug/L'
     },
-    'Butyl benzyl phthalate': {
-        'tex': 'Butyl benzyl phthalate',
+    'butyl benzyl phthalate': {
+        'tex': 'Butyl Benzyl Phthalate',
         'units': 'ug/L'
     },
-    'CBOD': {
-        'tex': 'Chemical-biological oxygen demand',
+    'cbod': {
+        'tex': 'Chemical-Biological Oxygen Demand',
         'units': 'mg/L'
     },
-    'CFC-11': {
+    'cfc-11': {
         'tex': 'CFC-11',
         'units': 'ug/L'
     },
-    'CFC-12': {
+    'cfc-12': {
         'tex': 'CFC-12',
         'units': 'ug/L'
     },
-    'Cadmium, Dissolved': {
+    'cadmium, dissolved': {
         'tex': 'Dissolved Cadmium',
         'units': 'ug/L'
     },
-    'Cadmium, Suspended': {
+    'cadmium, suspended': {
         'tex': 'Suspended Cadmium',
         'units': 'ug/L'
     },
-    'Cadmium, Total': {
+    'cadmium, total': {
         'tex': 'Total Cadmium',
         'units': 'ug/L'
     },
-    'Calcium as CaCO3, Total': {
+    'dissolved cadmium': {
+        'tex': 'Dissolved Cadmium',
+        'units': 'ug/L'
+    },
+    'suspended cadmium': {
+        'tex': 'Suspended Cadmium',
+        'units': 'ug/L'
+    },
+    'total cadmium': {
+        'tex': 'Total Cadmium',
+        'units': 'ug/L'
+    },
+    'calcium as caco3, total': {
         'tex': 'Total Calcium as CaCO$_{3}$',
         'units': 'mg/L'
     },
-    'Calcium, Dissolved': {
+    'calcium, dissolved': {
         'tex': 'Dissolved Calcium',
         'units': 'mg/L'
     },
-    'Calcium, Total': {
+    'calcium, total': {
         'tex': 'Total Calcium',
         'units': 'mg/L'
     },
-    'Carbofuran': {
+    'carbofuran': {
         'tex': 'Carbofuran',
         'units': 'ug/L'
     },
-    'Carbon Disulfide': {
+    'carbon disulfide': {
         'tex': 'Carbon Disulfide',
         'units': 'ug/L'
     },
-    'Carbon Fraction, Particulate Organic Material': {
+    'carbon fraction, particulate organic material': {
         'tex': 'Carbon Fraction, Particulate Organic Material',
         'units': 'mg/L'
     },
-    'Carbon Tetrachloride': {
+    'carbon tetrachloride': {
         'tex': 'Carbon Tetrachloride',
         'units': 'ug/L'
     },
-    'Carbon disulfide': {
-        'tex': 'Carbon disulfide',
+    'carbon disulfide': {
+        'tex': 'Carbon Disulfide',
         'units': 'ug/L'
     },
-    'Carbon tetrachloride': {
-        'tex': 'Carbon tetrachloride',
+    'carbon tetrachloride': {
+        'tex': 'Carbon Tetrachloride',
         'units': 'ug/L'
     },
-    'Chemical oxygen demand': {
-        'tex': 'Chemical oxygen demand',
+    'chemical oxygen demand': {
+        'tex': 'Chemical Oxygen Demand',
         'units': 'mg/L'
     },
-    'Chemical oxygen demand, High Level': {
-        'tex': 'Chemical oxygen demand (high level)',
+    'chemical oxygen demand, high level': {
+        'tex': 'Chemical Oxygen Demand (high level)',
         'units': 'mg/L'
     },
-    'Chemical oxygen demand, Low Level': {
-        'tex': 'Chemical oxygen demand (low level)',
+    'chemical oxygen demand, low level': {
+        'tex': 'Chemical Oxygen Demand (low level)',
         'units': 'mg/L'
     },
-    'Chemical oxygen demand, Low Level, Filtered': {
-        'tex': 'Chemical oxygen demand (low level, filtered)',
+    'chemical oxygen demand, low level, filtered': {
+        'tex': 'Chemical Oxygen Demand (low level, filtered)',
         'units': 'mg/L'
     },
-    'Chemical oxygen demand, Soluble': {
-        'tex': 'Chemical oxygen demand (soluble)',
+    'chemical oxygen demand, soluble': {
+        'tex': 'Chemical Oxygen Demand (soluble)',
         'units': 'mg/L'
     },
-    'Chlordane': {
+    'chlordane': {
         'tex': 'Chlordane',
         'units': 'ug/L'
     },
-    'Chloride, Dissolved': {
+    'chloride, dissolved': {
         'tex': 'Dissolved Chloride',
         'units': 'mg/L'
     },
-    'Chloride, Total': {
+    'chloride, total': {
         'tex': 'Total Chloride',
         'units': 'mg/L'
     },
-    'Chlorobenzene': {
+    'chlorobenzene': {
         'tex': 'Chlorobenzene',
         'units': 'ug/L'
     },
-    'Chlorodibromomethane': {
+    'chlorodibromomethane': {
         'tex': 'Chlorodibromomethane',
         'units': 'ug/L'
     },
-    'Chloroethane': {
+    'chloroethane': {
         'tex': 'Chloroethane',
         'units': 'ug/L'
     },
-    'Chloroform': {
+    'chloroform': {
         'tex': 'Chloroform',
         'units': 'ug/L'
     },
-    'Chloromethane': {
+    'chloromethane': {
         'tex': 'Chloromethane',
         'units': 'ug/L'
     },
-    'Chlorotoluene': {
+    'chlorotoluene': {
         'tex': 'Chlorotoluene',
         'units': 'ug/L'
     },
-    'Chlorpyrifos': {
+    'chlorpyrifos': {
         'tex': 'Chlorpyrifos',
         'units': 'ug/L'
     },
-    'Chromium(VI), Dissolved': {
+    'chromium(vi), dissolved': {
         'tex': 'Dissolved Chromium(VI)',
         'units': 'ug/L'
     },
-    'Chromium(VI), Total': {
+    'chromium(vi), total': {
         'tex': 'Total Chromium(VI)',
         'units': 'ug/L'
     },
-    'Chromium, Dissolved': {
+    'chromium, dissolved': {
         'tex': 'Dissolved Chromium',
         'units': 'ug/L'
     },
-    'Chromium, Suspended': {
+    'chromium, suspended': {
         'tex': 'Suspended Chromium',
         'units': 'ug/L'
     },
-    'Chromium, Total': {
+    'chromium, total': {
         'tex': 'Total Chromium',
         'units': 'ug/L'
     },
-    'Chrysene': {
+    'dissolved chromium': {
+        'tex': 'Dissolved Chromium',
+        'units': 'ug/L'
+    },
+    'suspended chromium': {
+        'tex': 'Suspended Chromium',
+        'units': 'ug/L'
+    },
+    'total chromium': {
+        'tex': 'Total Chromium',
+        'units': 'ug/L'
+    },
+    'chrysene': {
         'tex': 'Chrysene',
         'units': 'ug/L'
     },
-    'Chrysene, Suspended': {
+    'chrysene, suspended': {
         'tex': 'Suspended Chrysene',
         'units': 'ug/L'
     },
-    'Cobalt, Total': {
+    'cobalt, total': {
         'tex': 'Total Cobalt',
         'units': 'ug/L'
     },
-    'Copper, Dissolved': {
+    'copper, dissolved': {
         'tex': 'Dissolved Copper',
         'units': 'ug/L'
     },
-    'Copper, Suspended': {
+    'copper, suspended': {
         'tex': 'Suspended Copper',
         'units': 'ug/L'
     },
-    'Copper, Total': {
+    'copper, total': {
         'tex': 'Total Copper',
         'units': 'ug/L'
     },
-    'Cumene': {
+    'dissolved copper': {
+        'tex': 'Dissolved Copper',
+        'units': 'ug/L'
+    },
+    'suspended copper': {
+        'tex': 'Suspended Copper',
+        'units': 'ug/L'
+    },
+    'total copper': {
+        'tex': 'Total Copper',
+        'units': 'ug/L'
+    },
+    'cumene': {
         'tex': 'Cumene',
         'units': 'ug/L'
     },
-    'Cyanazine': {
+    'cyanazine': {
         'tex': 'Cyanazine',
         'units': 'ug/L'
     },
-    'Cyanide': {
+    'cyanide': {
         'tex': 'Cyanide',
         'units': 'mg/L'
     },
-    'DACONIL': {
+    'daconil': {
         'tex': 'DACONIL',
         'units': 'ug/L'
     },
-    'Di(2-ethylhexyl) phthalate': {
-        'tex': 'Di(2-ethylhexyl) phthalate',
+    'di(2-ethylhexyl) phthalate': {
+        'tex': 'Di(2-ethylhexyl) Phthalate',
         'units': 'ug/L'
     },
-    'Di-n-octyl phthalate': {
-        'tex': 'Di-n-octyl phthalate',
+    'di-n-octyl phthalate': {
+        'tex': 'Di-n-octyl Phthalate',
         'units': 'ug/L'
     },
-    'Diazinon': {
+    'diazinon': {
         'tex': 'Diazinon',
         'units': 'ug/L'
     },
-    'Dibenz[a,h]anthracene': {
+    'dibenz[a,h]anthracene': {
         'tex': 'Dibenz[a,h]anthracene',
         'units': 'ug/L'
     },
-    'Dibenz[a,h]anthracene,  Dissolved': {
+    'dibenz[a,h]anthracene,  dissolved': {
         'tex': 'Dissolved Dibenz[a,h]anthracene',
         'units': 'ug/L'
     },
-    'Dibenzofuran': {
+    'dibenzofuran': {
         'tex': 'Dibenzofuran',
         'units': 'ug/L'
     },
-    'Dibromomethane': {
+    'dibromomethane': {
         'tex': 'Dibromomethane',
         'units': 'ug/L'
     },
-    'Dibromodichloromethane': {
+    'dibromodichloromethane': {
         'tex': 'Dibromodichloromethane',
         'units': 'ug/L'
     },
-    'Dibutyl phthalate': {
-        'tex': 'Dibutyl phthalate',
+    'dibutyl phthalate': {
+        'tex': 'Dibutyl Phthalate',
         'units': 'ug/L'
     },
-    'Dichlorobromomethane': {
+    'dichlorobromomethane': {
         'tex': 'Dichlorobromomethane',
         'units': 'ug/L'
     },
-    'Dichlorodifluoromethane': {
+    'dichlorodifluoromethane': {
         'tex': 'Dichlorodifluoromethane',
         'units': 'ug/L'
     },
-    'Dichlorophenol': {
+    'dichlorophenol': {
         'tex': 'Dichlorophenol',
         'units': 'ug/L'
     },
-    'Dinitrophenol': {
+    'dinitrophenol': {
         'tex': 'Dinitrophenol',
         'units': 'ug/L'
     },
-    'Dieldrin': {
+    'dieldrin': {
         'tex': 'Dieldrin',
         'units': 'ug/L'
     },
-    'Diethyl phthalate': {
-        'tex': 'Diethyl phthalate',
+    'diethyl phthalate': {
+        'tex': 'Diethyl Phthalate',
         'units': 'ug/L'
     },
-    'Dimethyl phthalate': {
-        'tex': 'Dimethyl phthalate',
+    'dimethyl phthalate': {
+        'tex': 'Dimethyl Phthalate',
         'units': 'ug/L'
     },
-    'Dimethylnaphthalene': {
+    'dimethylnaphthalene': {
         'tex': 'Dimethylnaphthalene',
         'units': 'ug/L'
     },
-    'Dissolved oxygen (DO)': {
-        'tex': 'Dissolved oxygen (DO)',
+    'dissolved oxygen (do)': {
+        'tex': 'Dissolved Oxygen (DO)',
         'units': 'mg/L'
     },
-    'DRO': {
+    'dro': {
         'tex': 'DRO',
         'units': 'ug/L'
     },
-    'Endosulfan I': {
+    'endosulfan i': {
         'tex': 'Endosulfan I',
         'units': 'ug/L'
     },
-    'Endosulfan I (alpha)': {
+    'endosulfan i (alpha)': {
         'tex': 'Endosulfan I (alpha)',
         'units': 'ug/L'
     },
-    '.alpha.-Endosulfan,  Dissolved': {
+    '.alpha.-endosulfan,  dissolved': {
         'tex': 'Dissolved, Endosulfan I (alpha)',
         'units': 'ug/L'
     },
-    'Endosulfan II': {
+    'endosulfan ii': {
         'tex': 'Endosulfan II',
         'units': 'ug/L'
     },
-    'Endosulfan II (beta)': {
+    'endosulfan ii (beta)': {
         'tex': 'Endosulfan II (beta)',
         'units': 'ug/L'
     },
-    '.beta.-Endosulfan,  Dissolved': {
+    '.beta.-endosulfan,  dissolved': {
         'tex': 'Dissolved, Endosulfan II (beta)',
         'units': 'ug/L'
     },
-    'Endosulfan sulfate': {
+    'endosulfan sulfate': {
         'tex': 'Endosulfan sulfate',
         'units': 'ug/L'
     },
-    'Endrin': {
+    'endrin': {
         'tex': 'Endrin',
         'units': 'ug/L'
     },
-    'Endrin aldehyde': {
-        'tex': 'Endrin aldehyde',
+    'endrin aldehyde': {
+        'tex': 'Endrin Aldehyde',
         'units': 'ug/L'
     },
-    'Endrin ketone': {
-        'tex': 'Endrin ketone',
+    'endrin ketone': {
+        'tex': 'Endrin Ketone',
         'units': 'ug/L'
     },
-    'Enterococcus': {
+    'enterococcus': {
         'tex': 'Enterococcus',
         'units': 'MPN/100 mL'
     },
-    'Escherichia coli': {
+    'escherichia coli': {
         'tex': 'Escherichia coli',
         'units': 'MPN/100 mL'
     },
-    'Ethyl Methacrylate': {
+    'ethyl methacrylate': {
         'tex': 'Ethyl Methacrylate',
         'units': 'ug/L'
     },
-    'Ethylbenzene': {
+    'ethylbenzene': {
         'tex': 'Ethylbenzene',
         'units': 'ug/L'
     },
-    'Ethylene dibromide': {
-        'tex': 'Ethylene dibromide',
+    'ethylene dibromide': {
+        'tex': 'Ethylene Dibromide',
         'units': 'ug/L'
     },
-    'Fecal Coliform': {
+    'fecal coliform': {
         'tex': 'Fecal Coliform',
         'units': 'MPN/100 mL'
     },
-    'Fecal Streptococcus Group Bacteria': {
+    'fecal streptococcus group bacteria': {
         'tex': 'Fecal Streptococcus Group Bacteria',
         'units': 'MPN/100 mL'
     },
-    'Fluoranthene': {
+    'fluoranthene': {
         'tex': 'Fluoranthene',
         'units': 'ug/L'
     },
-    'Fluoranthene, Suspended': {
+    'fluoranthene, suspended': {
         'tex': 'Suspended Fluoranthene',
         'units': 'ug/L'
     },
-    'Fluorene': {
+    'fluorene': {
         'tex': 'Fluorene',
         'units': 'ug/L'
     },
-    'Fluorene, Suspended': {
+    'fluorene, suspended': {
         'tex': 'Suspended Fluorene',
         'units': 'ug/L'
     },
-    'Fluoride, Dissolved': {
+    'fluoride, dissolved': {
         'tex': 'Dissolved Fluoride',
         'units': 'mg/L'
     },
-    'Fluoride, Total': {
+    'fluoride, total': {
         'tex': 'Total Fluoride',
         'units': 'mg/L'
     },
-    'Glyphosate': {
+    'glyphosate': {
         'tex': 'Glyphosate',
         'units': 'ug/L'
     },
-    'Halon 1011': {
+    'halon 1011': {
         'tex': 'Halon 1011',
         'units': 'ug/L'
     },
-    'Hardness': {
+    'hardness': {
         'tex': 'Hardness',
         'units': 'mg/L'
     },
-    'Hardness, non-carbonate': {
+    'hardness, non-carbonate': {
         'tex': 'Hardness, non-carbonate',
         'units': 'mg/L'
     },
-    'Heptachlor': {
+    'heptachlor': {
         'tex': 'Heptachlor',
         'units': 'ug/L'
     },
-    'Heptachlor epoxide': {
-        'tex': 'Heptachlor epoxide',
+    'heptachlor epoxide': {
+        'tex': 'Heptachlor Epoxide',
         'units': 'ug/L'
     },
-    'Hexachlorobenzene': {
+    'hexachlorobenzene': {
         'tex': 'Hexachlorobenzene',
         'units': 'ug/L'
     },
-    'Hexachlorobutadiene': {
+    'hexachlorobutadiene': {
         'tex': 'Hexachlorobutadiene',
         'units': 'ug/L'
     },
-    'Hexachlorocyclopentadiene': {
+    'hexachlorocyclopentadiene': {
         'tex': 'Hexachlorocyclopentadiene',
         'units': 'ug/L'
     },
-    'Hexachloroethane': {
+    'hexachloroethane': {
         'tex': 'Hexachloroethane',
         'units': 'ug/L'
     },
-    'Hydrocarbons, total petroleum (TPH)': {
-        'tex': 'Hydrocarbons, total petroleum (TPH)',
+    'hydrocarbons, total petroleum (tph)': {
+        'tex': 'Hydrocarbons, Total Petroleum (TPH)',
         'units': 'ug/L'
     },
-    'Hydrocarbons, total petroleum, diesel range organics': {
-        'tex': 'Hydrocarbons, total petroleum, diesel range organics',
+    'hydrocarbons, total petroleum, diesel range organics': {
+        'tex': 'Hydrocarbons, Total Petroleum, diesel range organics',
         'units': 'ug/L'
     },
-    'Hydrocarbons, total petroleum, gasoline range organics': {
-        'tex': 'Hydrocarbons, total petroleum, gasoline range organics',
+    'hydrocarbons, total petroleum, gasoline range organics': {
+        'tex': 'Hydrocarbons, Total Petroleum, gasoline range organics',
         'units': 'ug/L'
     },
-    'Indeno[1,2,3-cd]pyrene': {
+    'indeno[1,2,3-cd]pyrene': {
         'tex': 'Indeno[1,2,3-cd]pyrene',
         'units': 'ug/L'
     },
-    'Indeno[1,2,3-cd]pyrene, Suspended': {
+    'indeno[1,2,3-cd]pyrene, suspended': {
         'tex': 'Suspended Indeno[1,2,3-cd]pyrene',
         'units': 'ug/L'
     },
-    'Inorganic Carbon, Total': {
+    'inorganic carbon, total': {
         'tex': 'Total Inorganic Carbon',
         'units': 'mg/L'
     },
-    'Iodomethane': {
+    'iodomethane': {
         'tex': 'Iodomethane',
         'units': 'ug/L'
     },
-    'Iron, Dissolved': {
+    'iron, dissolved': {
         'tex': 'Dissolved Iron',
         'units': 'ug/L'
     },
-    'Iron, Total': {
+    'iron, total': {
         'tex': 'Total Iron',
         'units': 'ug/L'
     },
-    'Isophorone': {
+    'dissolved iron': {
+        'tex': 'Dissolved Iron',
+        'units': 'ug/L'
+    },
+    'total iron': {
+        'tex': 'Total Iron',
+        'units': 'ug/L'
+    },
+    'isophorone': {
         'tex': 'Isophorone',
         'units': 'ug/L'
     },
-    'Isopropylbenzene': {
+    'isopropylbenzene': {
         'tex': 'Isopropylbenzene',
         'units': 'ug/L'
     },
-    'Kjeldahl nitrogen (TKN)': {
-        'tex': 'Total Kjeldahl nitrogen',
+    'kjeldahl nitrogen (tkn)': {
+        'tex': 'Total Kjeldahl Nitrogen',
         'units': 'mg/L'
     },
-    'Kjeldahl nitrogen, Dissolved': {
-        'tex': 'Dissolved Kjeldahl nitrogen',
+    'total kjeldahl nitrogen': {
+        'tex': 'Total Kjeldahl Nitrogen',
         'units': 'mg/L'
     },
-    'Kjeldahl nitrogen, Suspended': {
-        'tex': 'Suspended Kjeldahl nitrogen',
+    'kjeldahl nitrogen, dissolved': {
+        'tex': 'Dissolved Kjeldahl Nitrogen',
         'units': 'mg/L'
     },
-    'Lead, Dissolved': {
+    'kjeldahl nitrogen, suspended': {
+        'tex': 'Suspended Kjeldahl Nitrogen',
+        'units': 'mg/L'
+    },
+    'lead, dissolved': {
         'tex': 'Dissolved Lead',
         'units': 'ug/L'
     },
-    'Lead, Suspended': {
+    'lead, suspended': {
         'tex': 'Suspended Lead',
         'units': 'ug/L'
     },
-    'Lead, Total': {
+    'lead, total': {
         'tex': 'Total Lead',
         'units': 'ug/L'
     },
-    'Lindane': {
+    'dissolved lead': {
+        'tex': 'Dissolved Lead',
+        'units': 'ug/L'
+    },
+    'suspended lead': {
+        'tex': 'Suspended Lead',
+        'units': 'ug/L'
+    },
+    'total lead': {
+        'tex': 'Total Lead',
+        'units': 'ug/L'
+    },
+    'lindane': {
         'tex': 'Lindane',
         'units': 'ug/L'
     },
-    'Lithium, Dissolved': {
+    'lithium, dissolved': {
         'tex': 'Dissolved Lithium',
         'units': 'ug/L'
     },
-    'Magnesium, Dissolved': {
+    'magnesium, dissolved': {
         'tex': 'Dissolved Magnesium',
         'units': 'ug/L'
     },
-    'Magnesium, Total': {
+    'magnesium, total': {
         'tex': 'Total Magnesium',
         'units': 'ug/L'
     },
-    'Malathion': {
+    'malathion': {
         'tex': 'Malathion',
         'units': 'ug/L'
     },
-    'Manganese, Dissolved': {
+    'manganese, dissolved': {
         'tex': 'Dissolved Manganese',
         'units': 'ug/L'
     },
-    'Manganese, Total': {
+    'manganese, total': {
         'tex': 'Total Manganese',
         'units': 'ug/L'
     },
-    'Mercury, Dissolved': {
+    'mercury, dissolved': {
         'tex': 'Dissolved Mercury',
         'units': 'ug/L'
     },
-    'Mercury, Total': {
+    'mercury, total': {
         'tex': 'Total Mercury',
         'units': 'ug/L'
     },
-    'Methoxychlor': {
+    'methoxychlor': {
         'tex': 'Methoxychlor',
         'units': 'ug/L'
     },
-    'Methyl Mercury': {
+    'methyl mercury': {
         'tex': 'Methyl Mercury',
         'units': 'ug/L'
     },
-    'Methyl bromide': {
+    'methyl bromide': {
         'tex': 'Methyl bromide',
         'units': 'ug/L'
     },
-    'Methyl ethyl ketone': {
-        'tex': 'Methyl ethyl ketone',
+    'methyl ethyl ketone': {
+        'tex': 'Methyl Ethyl Ketone',
         'units': 'ug/L'
     },
-    'Methyl isobutyl ketone': {
-        'tex': 'Methyl isobutyl ketone',
+    'methyl isobutyl ketone': {
+        'tex': 'Methyl Isobutyl Ketone',
         'units': 'ug/L'
     },
-    'Methyl tert-butyl ether': {
-        'tex': 'Methyl tert-butyl ether',
+    'methyl tert-butyl ether': {
+        'tex': 'Methyl Tertiary Butyl Ether',
         'units': 'ug/L'
     },
-    'Methylene Blue Active Substances (MBAS)': {
+    'methylene blue active substances (mbas)': {
         'tex': 'Methylene Blue Active Substances (MBAS)',
         'units': 'ug/L'
     },
-    'Methylene Chloride': {
+    'methylene chloride': {
         'tex': 'Methylene Chloride',
         'units': 'ug/L'
     },
-    'Methylnaphthalene': {
+    'methylnaphthalene': {
         'tex': 'Methylnaphthalene',
         'units': 'ug/L'
     },
-    'Molybdenum, Total': {
+    'molybdenum, total': {
         'tex': 'Total Molybdenum',
         'units': 'ug/L'
     },
-    'N-Nitrosodi-n-propylamine': {
-        'tex': 'N-Nitrosodi-n-propylamine',
+    'n-nitrosodi-n-propylamine': {
+        'tex': 'N-Nitrosodi-n-Propylamine',
         'units': 'ug/L'
     },
-    'N-Nitrosodimethylamine': {
+    'n-nitrosodimethylamine': {
         'tex': 'N-Nitrosodimethylamine',
         'units': 'ug/L'
     },
-    'N-Nitrosodiphenylamine': {
+    'n-nitrosodiphenylamine': {
         'tex': 'N-Nitrosodiphenylamine',
         'units': 'ug/L'
     },
-    'Naphthalene': {
+    'naphthalene': {
         'tex': 'Naphthalene',
         'units': 'ug/L'
     },
-    'Naphthalene,  Dissolved': {
+    'naphthalene,  dissolved': {
         'tex': 'Dissolved Naphthalene',
         'units': 'ug/L'
     },
-    'Naphthalene, Suspended': {
+    'naphthalene, suspended': {
         'tex': 'Suspended Naphthalene',
         'units': 'ug/L'
     },
-    'Nickel, Dissolved': {
+    'nickel, dissolved': {
         'tex': 'Dissolved Nickel',
         'units': 'ug/L'
     },
-    'Nickel, Total': {
+    'nickel, total': {
         'tex': 'Total Nickel',
         'units': 'ug/L'
     },
-    'Nitrobenzene': {
+    'dissolved nickel': {
+        'tex': 'Dissolved Nickel',
+        'units': 'ug/L'
+    },
+    'total nickel': {
+        'tex': 'Total Nickel',
+        'units': 'ug/L'
+    },
+    'nitrobenzene': {
         'tex': 'Nitrobenzene',
         'units': 'ug/L'
     },
-    'Nitrogen, Nitrate (NO3) as N': {
+    'nitrogen, nitrate (no3) as n': {
         'tex': 'Nitrogen, Nitrate (NO$_{3}$) as N',
         'units': 'mg/L'
     },
-    'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N': {
+    'nitrogen, nitrate (no$_{3}$) as n': {
+        'tex': 'Nitrogen, Nitrate (NO$_{3}$) as N',
+        'units': 'mg/L'
+    },
+    'nitrogen, nitrite (no2) + nitrate (no3) as n': {
         'tex': 'Nitrogen, Nitrite (NO$_{2}$) + Nitrate (NO$_{3}$) as N',
         'units': 'mg/L'
     },
-    'Nitrogen, Nitrite (NO2) as N': {
+    'nitrogen, nitrite (no$_{2}$) + nitrate (no$_{3}$) as n': {
+        'tex': 'Nitrogen, Nitrite (NO$_{2}$) + Nitrate (NO$_{3}$) as N',
+        'units': 'mg/L'
+    },
+    'nitrogen, nitrite (no2) as n': {
         'tex': 'Nitrogen, Nitrite (NO$_{2}$) as N',
         'units': 'mg/L'
     },
-    'Nitrogen, NOx as N': {
+    'nitrogen, nitrite (no$_{2}$) as n': {
+        'tex': 'Nitrogen, Nitrite (NO$_{2}$) as N',
+        'units': 'mg/L'
+    },
+    'nitrogen, nox as n': {
         'tex': 'Nitrogen, NO$_{x}$ as N',
         'units': 'mg/L'
     },
-    'Nitrogen, Total': {
+    'nitrogen, no$_{x}$ as n': {
+        'tex': 'Nitrogen, NO$_{x}$ as N',
+        'units': 'mg/L'
+    },
+    'nitrogen, total': {
         'tex': 'Total Nitrogen',
         'units': 'mg/L'
     },
-    'Nitrogen, ammonia as N': {
-        'tex': 'Nitrogen, ammonia as N',
+    'total nitrogen': {
+        'tex': 'Total Nitrogen',
         'units': 'mg/L'
     },
-    'Nitrogen, ammonium (NH4) as N': {
-        'tex': 'Nitrogen, ammonium (NH4) as N',
+    'nitrogen, ammonia as n': {
+        'tex': 'Nitrogen, Ammonia as N',
         'units': 'mg/L'
     },
-    'Nitrogen, ammonium (NH4) as NH4': {
-        'tex': 'Nitrogen, ammonium (NH$_{4}$) as NH$_{4}$',
+    'nitrogen, ammonium (nh4) as n': {
+        'tex': 'Nitrogen, Ammonium (NH4) as N',
         'units': 'mg/L'
     },
-    'Nitrogen, unionized ammonia (NH3) as N': {
-        'tex': 'Nitrogen, unionized ammonia (NH$_{3}$) as N',
+    'nitrogen, ammonium (nh4) as nh4': {
+        'tex': 'Nitrogen, Ammonium (NH$_{4}$) as NH$_{4}$',
         'units': 'mg/L'
     },
-    'Oil Range Organics': {
+    'nitrogen, unionized ammonia (nh3) as n': {
+        'tex': 'Nitrogen, Unionized Ammonia (NH$_{3}$) as N',
+        'units': 'mg/L'
+    },
+    'oil range organics': {
         'tex': 'Oil Range Organics',
         'units': 'ug/L'
     },
-    'Oil and Grease': {
+    'oil and grease': {
         'tex': 'Oil and Grease',
         'units': 'mg/L'
     },
-    'Organic Nitrogen, Dissolved': {
+    'organic nitrogen, dissolved': {
         'tex': 'Dissolved Organic Nitrogen',
         'units': 'mg/L'
     },
-    'Organic Nitrogen, Total': {
+    'organic nitrogen, total': {
         'tex': 'Total Organic Nitrogen',
         'units': 'mg/L'
     },
-    'Organic carbon, Dissolved': {
+    'organic carbon, dissolved': {
         'tex': 'Dissolved Organic carbon',
         'units': 'mg/L'
     },
-    'Organic carbon, Total': {
+    'organic carbon, total': {
         'tex': 'Total Organic carbon',
         'units': 'mg/L'
     },
-    'ORO': {
+    'oro': {
         'tex': 'ORO',
         'units': 'ug/L'
     },
-    'Oxidation reduction potential (ORP)': {
-        'tex': 'Oxidation reduction potential (ORP)',
+    'oxidation reduction potential (orp)': {
+        'tex': 'Oxidation Reduction Potential (ORP)',
         'units': 'mV'
     },
-    'p-Isopropyltoluene': {
+    'p-isopropyltoluene': {
         'tex': 'p-Isopropyltoluene',
         'units': 'ug/L'
     },
-    "p,p'-DDE": {
+    "p,p'-dde": {
         'tex': "p,p'-DDE",
         'units': 'ug/L'
     },
-    'PBP': {
+    'pbp': {
         'tex': 'PBP',
         'units': 'ug/L'
     },
-    'Pentachlorophenol': {
+    'pentachlorophenol': {
         'tex': 'Pentachlorophenol',
         'units': 'ug/L'
     },
-    'Pentachlorophenol,  Dissolved': {
+    'pentachlorophenol,  dissolved': {
         'tex': 'Dissolved Pentachlorophenol',
         'units': 'ug/L'
     },
-    'Phenanthrene': {
+    'phenanthrene': {
         'tex': 'Phenanthrene',
         'units': 'ug/L'
     },
-    'Phenanthrene,  Dissolved': {
+    'phenanthrene,  dissolved': {
         'tex': 'Dissolved Phenanthrene',
         'units': 'ug/L'
     },
-    'Phenanthrene, Suspended': {
+    'phenanthrene, suspended': {
         'tex': 'Suspended Phenanthrene',
         'units': 'ug/L'
     },
-    'Phenol': {
+    'phenol': {
         'tex': 'Phenol',
         'units': 'ug/L'
     },
-    'Phenols': {
+    'phenols': {
         'tex': 'Phenols',
         'units': 'ug/L'
     },
-    'Phosphate-phosphorus': {
-        'tex': 'Phosphate-phosphorus',
+    'phosphate-phosphorus': {
+        'tex': 'Phosphate-Phosphorus',
         'units': 'mg/L'
     },
-    'Phosphorus as P, Dissolved': {
+    'phosphorus as p, dissolved': {
         'tex': 'Dissolved Phosphorus as P',
         'units': 'mg/L'
     },
-    'Phosphorus as P, Suspended': {
+    'dissolved phosphorus as p': {
+        'tex': 'Dissolved Phosphorus as P',
+        'units': 'mg/L'
+    },
+    'phosphorus as p, suspended': {
         'tex': 'Suspended Phosphorus as P',
         'units': 'mg/L'
     },
-    'Phosphorus as P, Total': {
+    'phosphorus as p, total': {
         'tex': 'Total Phosphorus as P',
         'units': 'mg/L'
     },
-    'Phosphorus as PO4, Total': {
+    'total phosphorus as p': {
+        'tex': 'Total Phosphorus as P',
+        'units': 'mg/L'
+    },
+    'phosphorus as po4, total': {
         'tex': 'Total Phosphorus as PO4',
         'units': 'mg/L'
     },
-    'Phosphorus, Particulate Organic': {
+    'phosphorus, particulate organic': {
         'tex': 'Phosphorus, Particulate Organic',
         'units': 'mg/L'
     },
-    'Phosphorus, Soluble Reactive (SRP)': {
+    'phosphorus, soluble reactive (srp)': {
         'tex': 'Phosphorus, Soluble Reactive (SRP)',
         'units': 'mg/L'
     },
-    'Phosphorus, organic as P, Dissolved': {
+    'phosphorus, organic as p, dissolved': {
         'tex': 'Dissolved Phosphorus, organic as P',
         'units': 'mg/L'
     },
-    'Phosphorus, orthophosphate as P': {
-        'tex': 'Phosphorus, orthophosphate as P',
+    'dissolved phosphorus, organic as p': {
+        'tex': 'Dissolved Phosphorus, organic as P',
         'units': 'mg/L'
     },
-    'Phosphorus, orthophosphate as P, Dissolved': {
-        'tex': 'Dissolved Phosphorus, orthophosphate as P',
+    'phosphorus, orthophosphate as p': {
+        'tex': 'Phosphorus, Orthophosphate as P',
         'units': 'mg/L'
     },
-    'Phosphorus, orthophosphate as P, Suspended': {
+    'phosphorus, orthophosphate as p, dissolved': {
+        'tex': 'Dissolved Phosphorus, Orthophosphate as P',
+        'units': 'mg/L'
+    },
+    'phosphorus, orthophosphate as p, suspended': {
         'tex': 'Suspended Phosphorus, Orthophosphate as P',
         'units': 'mg/L'
     },
-    'Phosphorus, orthophosphate as PO4': {
+    'phosphorus, orthophosphate as po4': {
         'tex': 'Phosphorus, Orthophosphate as PO$_{4}$',
         'units': 'mg/L'
     },
-    'Polycyclic aromatic hydrocarbons': {
+    'polycyclic aromatic hydrocarbons': {
         'tex': 'Polycyclic Aromatic Hydrocarbons',
         'units': 'ug/L'
     },
-    'Potassium, Dissolved': {
+    'potassium, dissolved': {
         'tex': 'Dissolved Potassium',
         'units': 'mg/L'
     },
-    'Potassium, Total': {
+    'potassium, total': {
         'tex': 'Total Potassium',
         'units': 'mg/L'
     },
-    'Prometryn': {
+    'prometryn': {
         'tex': 'Prometryn',
         'units': 'ug/L'
     },
-    'Pyrene': {
+    'pyrene': {
         'tex': 'Pyrene',
         'units': 'ug/L'
     },
-    'Pyrene, Suspended': {
+    'pyrene, suspended': {
         'tex': 'Suspended Pyrene',
         'units': 'ug/L'
     },
-    'RELATIVE TOXICITY (I 25% REDUCTION)': {
+    'relative toxicity (i 25% reduction)': {
         'tex': 'RELATIVE TOXICITY (I 25\% REDUCTION)',
         'units': '%'
     },
-    'RELATIVE TOXICITY (I 25% REDUCTION), Filtered': {
+    'relative toxicity (i 25% reduction), filtered': {
         'tex': 'RELATIVE TOXICITY (I 25\% REDUCTION, filtered)',
         'units': '%'
     },
-    'SSC-Total Coarse Fraction (>63um)': {
+    'ssc-total coarse fraction (>63um)': {
         'tex': 'SSC-Total Coarse Fraction ($>63$ \\si[per-mode=symbol]{\\micro\\meter})',
         'units': 'mg/L'
     },
-    'SSC-Total Fine Fraction (<63um)': {
+    'ssc-total fine fraction (<63um)': {
         'tex': 'SSC-Total Fine Fraction (<63 \\si[per-mode=symbol]{\\micro\\meter})',
         'units': 'mg/L'
     },
-    'SSC-Total Particulate Solids': {
+    'ssc-total particulate solids': {
         'tex': 'SSC-Total Particulate Solids',
         'units': 'mg/L'
     },
-    'Sand': {
+    'sand': {
         'tex': 'Sand',
         'units': 'mg/L'
     },
-    'Sec-Butylbenzene': {
+    'sec-butylbenzene': {
         'tex': 'Sec-Butylbenzene',
         'units': 'ug/L'
     },
-    'Selenium, Dissolved': {
+    'selenium, dissolved': {
         'tex': 'Dissolved Selenium',
         'units': 'ug/L'
     },
-    'Selenium, Total': {
+    'selenium, total': {
         'tex': 'Total Selenium',
         'units': 'ug/L'
     },
-    'Settleable solids': {
+    'settleable solids': {
         'tex': 'Settleable Solids',
         'units': 'mg/L'
     },
-    'Silt': {
+    'silt': {
         'tex': 'Silt',
         'units': 'mg/L'
     },
-    'Silver, Dissolved': {
+    'silver, dissolved': {
         'tex': 'Dissolved Silver',
         'units': 'ug/L'
     },
-    'Silver, Total': {
+    'silver, total': {
         'tex': 'Total Silver',
         'units': 'ug/L'
     },
-    'Simazine': {
+    'simazine': {
         'tex': 'Simazine',
         'units': 'ug/L'
     },
-    'Sodium, Dissolved': {
+    'sodium, dissolved': {
         'tex': 'Dissolved Sodium',
         'units': 'mg/L'
     },
-    'Sodium, Total': {
+    'sodium, total': {
         'tex': 'Total Sodium',
         'units': 'mg/L'
     },
-    'Specific conductance': {
+    'specific conductance': {
         'tex': 'Specific Conductance',
         'units': 'umhos/cm'
     },
-    'Styrene': {
+    'styrene': {
         'tex': 'Styrene',
         'units': 'ug/L'
     },
-    'Sulfate, Dissolved': {
+    'sulfate, dissolved': {
         'tex': 'Dissolved Sulfate',
         'units': 'mg/L'
     },
-    'Sulfate, Total': {
+    'sulfate, total': {
         'tex': 'Total Sulfate',
         'units': 'mg/L'
     },
-    'Sulfide, Total': {
+    'sulfide, total': {
         'tex': 'Total Sulfide',
         'units': 'mg/L'
     },
-    'Surfactants': {
+    'surfactants': {
         'tex': 'Surfactants',
         'units': 'ug/L'
     },
-    'Suspended Sediment Concentration (SSC)': {
+    'suspended sediment concentration (ssc)': {
         'tex': 'Suspended Sediment Concentration',
         'units': 'mg/L'
     },
-    'Temperature, water': {
+    'temperature, water': {
         'tex': 'Temperature, water',
         'units': 'deg C'
     },
-    'Tetrachloroethane': {
+    'tetrachloroethane': {
         'tex': 'Tetrachloroethane',
         'units': 'ug/L'
     },
-    'Tetrachloroethylene': {
+    'tetrachloroethylene': {
         'tex': 'Tetrachloroethylene',
         'units': 'ug/L'
     },
-    'Thallium, Dissolved': {
+    'thallium, dissolved': {
         'tex': 'Dissolved Thallium',
         'units': 'ug/L'
     },
-    'Thallium, Total': {
+    'thallium, total': {
         'tex': 'Total Thallium',
         'units': 'ug/L'
     },
-    'Toluene': {
+    'toluene': {
         'tex': 'Toluene',
         'units': 'ug/L'
     },
-    'Total Coliform': {
+    'total coliform': {
         'tex': 'Total Coliform',
         'units': 'MPN/100 mL'
     },
-    'Total dissolved solids': {
+    'total dissolved solids': {
         'tex': 'Total Dissolved Solids',
         'units': 'mg/L'
     },
-    'Total solids': {
+    'total solids': {
         'tex': 'Total Solids',
         'units': 'mg/L'
     },
-    'Total suspended solids': {
+    'total suspended solids': {
         'tex': 'Total Suspended Solids',
         'units': 'mg/L'
     },
-    'Total volatile solids': {
-        'tex': 'Total volatile solids',
+    'total volatile solids': {
+        'tex': 'Total Volatile Solids',
         'units': 'mg/L'
     },
-    'Total volatile solids, filterable': {
-        'tex': 'Total volatile solids (filterable)',
+    'total volatile solids, filterable': {
+        'tex': 'Total Volatile Solids (filterable)',
         'units': 'mg/L'
     },
-    'Toxaphene': {
+    'toxaphene': {
         'tex': 'Toxaphene',
         'units': 'ug/L'
     },
-    'Tribromomethane': {
+    'tribromomethane': {
         'tex': 'Tribromomethane',
         'units': 'ug/L'
     },
-    'Trichloroethane': {
+    'trichloroethane': {
         'tex': 'Trichloroethane',
         'units': 'ug/L'
     },
-    'Trichloroethylene': {
+    'trichloroethylene': {
         'tex': 'Trichloroethylene',
         'units': 'ug/L'
     },
-    'Trichlorofuoromethane': {
+    'trichlorofuoromethane': {
         'tex': 'Trichlorofuoromethane',
         'units': 'ug/L'
     },
-    'Trichlorotrifluoroethane': {
+    'trichlorotrifluoroethane': {
         'tex': 'Trichlorotrifluoroethane',
         'units': 'ug/L'
     },
-    'Trihalomethanes': {
+    'trihalomethanes': {
         'tex': 'Trihalomethanes',
         'units': 'ug/L'
     },
-    'True Color': {
+    'true color': {
         'tex': 'True Color',
         'units': 'ADMI Value'
     },
-    'True color': {
+    'true color': {
         'tex': 'True Color',
         'units': 'ADMI Value'
     },
-    'True color, filtered': {
-        'tex': 'True Color (filtered)',
+    'true color, filtered': {
+        'tex': 'Filtered True Color',
         'units': 'ADMI Value'
     },
-    'True color, Filtered': {
-        'tex': 'True Color (filtered)',
+    'true color, filtered': {
+        'tex': 'Filtered True Color',
         'units': 'ADMI Value'
     },
-    'Turbidity': {
+    'turbidity': {
         'tex': 'Turbidity',
         'units': 'NTU'
     },
-    'Turbidity, Filtered': {
-        'tex': 'Turbidity (filtered)',
+    'turbidity, filtered': {
+        'tex': 'Filtered Turbidity',
         'units': 'NTU'
     },
-    'Vanadium, Total': {
+    'vanadium, total': {
         'tex': 'Total Vanadium',
         'units': 'ug/L'
     },
-    'Vinyl Acetate': {
+    'vinyl acetate': {
         'tex': 'Vinyl Acetate',
         'units': 'ug/L'
     },
-    'Vinyl Chloride': {
+    'vinyl chloride': {
         'tex': 'Vinyl Chloride',
         'units': 'ug/L'
     },
-    'Zinc, Dissolved': {
-        'tex': 'Dissolved Zinc',
-        'units': 'ug/L'
-    },
-    'Xylenes, Total': {
+    'xylenes, total': {
         'tex': 'Total Xylenes',
         'units': 'ug/L'
     },
-    'Zinc, Suspended': {
+    'zinc, dissolved': {
+        'tex': 'Dissolved Zinc',
+        'units': 'ug/L'
+    },
+    'zinc, suspended': {
         'tex': 'Suspended Zinc',
         'units': 'ug/L'
     },
-    'Zinc, Total': {
+    'zinc, total': {
+        'tex': 'Total Zinc',
+        'units': 'ug/L'
+    },
+    'dissolved zinc': {
+        'tex': 'Dissolved Zinc',
+        'units': 'ug/L'
+    },
+    'suspended zinc': {
+        'tex': 'Suspended Zinc',
+        'units': 'ug/L'
+    },
+    'total zinc': {
         'tex': 'Total Zinc',
         'units': 'ug/L'
     },
@@ -1703,83 +1823,83 @@ parameters = {
         'tex': 'alpha-chlordane',
         'units': 'ug/L'
     },
-    'cis-1,2-Dichloroethylene': {
+    'cis-1,2-dichloroethylene': {
         'tex': 'cis-1,2-Dichloroethylene',
         'units': 'ug/L'
     },
-    'cis-1,3-Dichloropropene': {
+    'cis-1,3-dichloropropene': {
         'tex': 'cis-1,3-Dichloropropene',
         'units': 'ug/L'
     },
-    'di-n-Butyl phthalate': {
-        'tex': 'di-n-Butyl phthalate',
+    'di-n-butyl phthalate': {
+        'tex': 'di-n-Butyl Phthalate',
         'units': 'ug/L'
     },
     'gamma-chlordane': {
-        'tex': 'gamma-chlordane',
+        'tex': 'Gamma-Chlordane',
         'units': 'ug/L'
     },
-    'm-Dichlorobenzene': {
+    'm-dichlorobenzene': {
         'tex': 'm-Dichlorobenzene',
         'units': 'ug/L'
     },
-    'm-Nitroaniline': {
+    'm-nitroaniline': {
         'tex': 'm-Nitroaniline',
         'units': 'ug/L'
     },
-    'm-Xylene': {
+    'm-xylene': {
         'tex': 'm-Xylene',
         'units': 'ug/L'
     },
-    'n-Butylbenzene': {
+    'n-butylbenzene': {
         'tex': 'n-Butylbenzene',
         'units': 'ug/L'
     },
-    'n-Propylbenzene': {
+    'n-propylbenzene': {
         'tex': 'n-Propylbenzene',
         'units': 'ug/L'
     },
-    'o-Chlorotoluene': {
+    'o-chlorotoluene': {
         'tex': 'o-Chlorotoluene',
         'units': 'ug/L'
     },
-    'o-Dichlorobenzene': {
+    'o-dichlorobenzene': {
         'tex': 'o-Dichlorobenzene',
         'units': 'ug/L'
     },
-    'o-Xylene': {
+    'o-xylene': {
         'tex': 'o-Xylene',
         'units': 'ug/L'
     },
-    'p-Bromophenyl phenyl ether': {
-        'tex': 'p-Bromophenyl phenyl ether',
+    'p-bromophenyl phenyl ether': {
+        'tex': 'p-Bromophenyl Phenyl Ether',
         'units': 'ug/L'
     },
-    'p-Chlorophenyl phenyl ether': {
-        'tex': 'p-Chlorophenyl phenyl ether',
+    'p-chlorophenyl phenyl ether': {
+        'tex': 'p-Chlorophenyl Phenyl Ether',
         'units': 'ug/L'
     },
-    'p-Chlorotoluene': {
+    'p-chlorotoluene': {
         'tex': 'p-Chlorotoluene',
         'units': 'ug/L'
     },
-    'p-Cymene': {
+    'p-cymene': {
         'tex': 'p-Cymene',
         'units': 'ug/L'
     },
-    'p-Dichlorobenzene': {
+    'p-dichlorobenzene': {
         'tex': 'p-Dichlorobenzene',
         'units': 'ug/L'
     },
-    'p-Nitrophenol': {
+    'p-nitrophenol': {
         'tex': 'p-Nitrophenol',
         'units': 'ug/L'
     },
-    'p-Xylene': {
+    'p-xylene': {
         'tex': 'p-Xylene',
         'units': 'ug/L'
     },
-    'pH': {
+    'ph': {
         'tex': 'pH',
         'units': 'SU'
     },
@@ -1787,251 +1907,251 @@ parameters = {
         'tex': 'Protons (Hydrogen Ions)',
         'units': 'mg/L'
     },
-    'tert-Butylbenzene': {
-        'tex': 'tert-Butylbenzene',
+    'tert-butylbenzene': {
+        'tex': 'Tertiary Butylbenzene',
         'units': 'ug/L'
     },
     'total petroleum hydrocarbons, motor oil range': {
-        'tex': 'total petroleum hydrocarbons, motor oil range',
+        'tex': 'Total Petroleum Hydrocarbons (motor oil range)',
         'units': 'ug/L'
     },
     'trans-1,2-dichloroethylene': {
-        'tex': 'trans-1,2-dichloroethylene',
+        'tex': 'trans-1,2-Dichloroethylene',
         'units': 'ug/L'
     },
     'trans-1,3-dichloropropene': {
-        'tex': 'trans-1,3-dichloropropene',
+        'tex': 'trans-1,3-Dichloropropene',
         'units': 'ug/L'
     },
-    'trans-1,4-Dichloro-2-butene': {
+    'trans-1,4-dichloro-2-butene': {
         'tex': 'trans-1,4-Dichloro-2-butene',
         'units': 'ug/L'
     },
-    'Dibenzo[b,k]fluoranthene': {
+    'dibenzo[b,k]fluoranthene': {
         'tex': 'Dibenzo[b,k]fluoranthene',
         'units': 'ug/L'
     },
-    'Dichlobenil': {
+    'dichlobenil': {
         'tex': 'Dichlobenil',
         'units': 'ug/L'
     },
-    'Prometon': {
+    'prometon': {
         'tex': 'Prometon',
         'units': 'ug/L'
     },
-    'Total volatile solids, non-filterable': {
-        'tex': 'Total volatile solids, non-filterable',
+    'total volatile solids, non-filterable': {
+        'tex': 'Total Volatile Solids (non-filterable)',
         'units': 'ug/L'
     },
-    'Benzo(b/j)fluoranthene': {
+    'benzo(b/j)fluoranthene': {
         'tex': 'Benzo(b/j)fluoranthene',
         'units': 'ug/L'
     },
-    'Bismuth': {
+    'bismuth': {
         'tex': 'Bismuth',
         'units': 'ug/L'
     },
-    'Boron': {
+    'boron': {
         'tex': 'Boron',
         'units': 'ug/L'
     },
-    'Lithium, Total': {
+    'lithium, total': {
         'tex': 'Lithium, Total',
         'units': 'ug/L'
     },
-    'Silicon': {
+    'silicon': {
         'tex': 'Silicon',
         'units': 'ug/L'
     },
-    'Strontium': {
+    'strontium': {
         'tex': 'Strontium',
         'units': 'ug/L'
     },
-    'Tellurium': {
+    'tellurium': {
         'tex': 'Tellurium',
         'units': 'ug/L'
     },
-    'Tin, Total': {
+    'tin, total': {
         'tex': 'Tin, Total',
         'units': 'ug/L'
     },
-    'Titanium, Total': {
+    'titanium, total': {
         'tex': 'Titanium, Total',
         'units': 'ug/L'
     },
-    'Tungsten': {
+    'tungsten': {
         'tex': 'Tungsten',
         'units': 'ug/L'
     },
-    'Uranium': {
+    'uranium': {
         'tex': 'Uranium',
         'units': 'ug/L'
     },
-    'Zirconium': {
+    'zirconium': {
         'tex': 'Zirconium',
         'units': 'ug/L'
     },
-    'Cesium': {
+    'cesium': {
         'tex': 'Cesium',
         'units': 'ug/L'
     },
-    'Rubidium': {
+    'rubidium': {
         'tex': 'Rubidium',
         'units': 'ug/L'
     },
-    '1,2-Dibromo-3-chloropropane': {
-        'tex': '1,2-Dibromo-3-chloropropane',
+    '1,2-dibromo-3-chloropropane': {
+        'tex': '1,2-Dibromo-3-Chloropropane',
         'units': 'ug/L'
     },
-    'sec-Butylbenzene': {
+    'sec-butylbenzene': {
         'tex': 'sec-Butylbenzene',
         'units': 'ug/L'
     },
-    'trans-1,2-Dichloroethylenetrans-1,2-dichloroethylene': {
-        'tex': 'trans-1,2-Dichloroethylenetrans-1,2-dichloroethylene',
+    'trans-1,2-dichloroethylenetrans-1,2-dichloroethylene': {
+        'tex': 'trans-1,2-Dichloroethylenetrans-1,2-Dichloroethylene',
         'units': 'ug/L'
     },
-    '2,4,5-T': {
+    '2,4,5-t': {
         'tex': '2,4,5-T',
         'units': 'ug/L'
     },
-    '2,4-DB': {
+    '2,4-db': {
         'tex': '2,4-DB',
         'units': 'ug/L'
     },
-    'Dalapon': {
+    'dalapon': {
         'tex': 'Dalapon',
         'units': 'ug/L'
     },
-    'Dicamba': {
+    'dicamba': {
         'tex': 'Dicamba',
         'units': 'ug/L'
     },
-    'Dichlorprop': {
+    'dichlorprop': {
         'tex': 'Dichlorprop',
         'units': 'ug/L'
     },
-    'MCPA': {
+    'mcpa': {
         'tex': 'MCPA',
         'units': 'ug/L'
     },
-    'Mecoprop': {
+    'mecoprop': {
         'tex': 'Mecoprop',
         'units': 'ug/L'
     },
-    'Sulfur': {
+    'sulfur': {
         'tex': 'Sulfur',
         'units': 'ug/L'
     },
-    'm,p-Xylenes': {
+    'm,p-xylenes': {
         'tex': 'm,p-Xylenes',
         'units': 'ug/L'
     },
-    'Silica': {
+    'silica': {
         'tex': 'Silica',
         'units': 'ug/L'
     },
-    'Nitrogen, Dissolved': {
+    'nitrogen, dissolved': {
         'tex': 'Nitrogen, Dissolved',
         'units': 'ug/L'
     },
-    '2-Chloroethyl vinyl ether': {
+    '2-chloroethyl vinyl ether': {
         'tex': '2-Chloroethyl vinyl ether',
         'units': 'ug/L'
     },
-    'Ethyl methacrylate': {
+    'ethyl methacrylate': {
         'tex': 'Ethyl methacrylate',
         'units': 'ug/L'
     },
-    'meta & para Xylene mix': {
+    'meta & para xylene mix': {
         'tex': 'meta & para Xylene mix',
         'units': 'ug/L'
     },
-    'Temperature, air': {
+    'temperature, air': {
         'tex': 'Temperature, air',
         'units': 'ug/L'
     },
-    'Gasoline range organics': {
+    'gasoline range organics': {
         'tex': 'Gasoline range organics',
         'units': 'ug/L'
     },
-    'Particle Size, Percent > 50 microns': {
+    'particle size, percent > 50 microns': {
         'tex': 'Particle Size, Percent > 50 microns',
         'units': 'ug/L'
     },
-    'Chlorophyll a, uncorrected for pheophytin': {
-        'tex': 'Chlorophyll a, uncorrected for pheophytin',
+    'chlorophyll a, uncorrected for pheophytin': {
+        'tex': 'Chlorophyll A (uncorrected for pheophytin)',
         'units': 'ug/L'
     },
-    '1-Methylphenanthrene': {
+    '1-methylphenanthrene': {
         'tex': '1-Methylphenanthrene',
         'units': 'ug/L'
     },
-    '2,6-Dimethylnaphthalene': {
+    '2,6-dimethylnaphthalene': {
         'tex': '2,6-Dimethylnaphthalene',
         'units': 'ug/L'
     },
-    'Benzo[e]pyrene': {
+    'benzo[e]pyrene': {
         'tex': 'Benzo[e]pyrene',
         'units': 'ug/L'
     },
-    'Bifenthrin by NCI': {
+    'bifenthrin by nci': {
         'tex': 'Bifenthrin by NCI',
         'units': 'ug/L'
     },
-    'Cobalt, Dissolved': {
+    'cobalt, dissolved': {
         'tex': 'Cobalt, Dissolved',
         'units': 'ug/L'
     },
-    'Cyfluthrin by NCI': {
+    'cyfluthrin by nci': {
         'tex': 'Cyfluthrin by NCI',
         'units': 'ug/L'
     },
-    'Cypermethrin': {
+    'cypermethrin': {
         'tex': 'Cypermethrin',
         'units': 'ug/L'
     },
-    'Dibenzothiophene': {
+    'dibenzothiophene': {
         'tex': 'Dibenzothiophene',
         'units': 'ug/L'
     },
-    'Esfenvalerate': {
+    'esfenvalerate': {
         'tex': 'Esfenvalerate',
         'units': 'ug/L'
     },
-    'Fenvalerate': {
+    'fenvalerate': {
         'tex': 'Fenvalerate',
         'units': 'ug/L'
     },
-    'L-Cyhalothrin by NCI': {
+    'l-cyhalothrin by nci': {
         'tex': 'L-Cyhalothrin by NCI',
         'units': 'ug/L'
     },
-    'Molybdenum, Dissolved': {
+    'molybdenum, dissolved': {
         'tex': 'Molybdenum, Dissolved',
         'units': 'ug/L'
     },
-    'Permethrin': {
+    'permethrin': {
         'tex': 'Permethrin',
         'units': 'ug/L'
     },
-    'Tin, Dissolved': {
+    'tin, dissolved': {
         'tex': 'Tin, Dissolved',
         'units': 'ug/L'
     },
-    'Titanium, Dissolved': {
+    'titanium, dissolved': {
         'tex': 'Titanium, Dissolved',
         'units': 'ug/L'
     },
-    'Vanadium, Dissolved': {
+    'vanadium, dissolved': {
         'tex': 'Vanadium, Dissolved',
         'units': 'ug/L'
     },
-    'Cypermethrin by NCI': {
+    'cypermethrin by nci': {
         'tex': 'Cypermethrin by NCI',
         'units': 'ug/L'
     },
-    'Bicarbonate': {
+    'bicarbonate': {
         'tex': 'Bicarbonate',
         'units': 'ug/L'
     }

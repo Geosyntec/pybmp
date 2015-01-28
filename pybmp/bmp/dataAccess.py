@@ -31,6 +31,7 @@ def _fancy_factors(row, quals=None):
     else:
         return 1.
 
+
 def _fancy_quals(row, quals=None):
     if quals is None:
         quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
@@ -38,6 +39,7 @@ def _fancy_quals(row, quals=None):
         return 'ND'
     else:
         return '='
+
 
 def _process_screening(screen_val):
     if screen_val.lower().strip() in ['inc', 'yes']:

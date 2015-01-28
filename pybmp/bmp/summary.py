@@ -9,11 +9,13 @@ import openpyxl
 
 from .. import utils
 
-from . import dataAccess
+from . import dataAccess, info
 
 from statsmodels.tools.decorators import (
     resettable_cache, cache_readonly, cache_writable
 )
+
+from ..core.features import Parameter
 
 
 def filterlocation(location, count=5, column='bmp'):
@@ -133,8 +135,9 @@ def _filter_by_BMP_count(dataframe, minbmps):
 
 
 def getSummaryData(dbpath, catanalysis=False, astable=False,
-                   minstorms=3, minbmps=3, excludedbmps=None,
-                   name=None, useTex=False, **selection):
+                   minstorms=3, minbmps=3, name=None, useTex=False,
+                   excludedbmps=None, excludedparams=None,
+                   **selection):
     '''Select offical data from database.
 
     Parameters
@@ -172,31 +175,50 @@ def getSummaryData(dbpath, catanalysis=False, astable=False,
 
     '''
 
-
     # main dataset
     db = dataAccess.Database(dbpath, catanalysis=catanalysis)
-    db
-    # initial filtering
-    subset = db.selectData(**selection)
+    table = dataAccess.Table(db.data)
 
+    grab_BMPs = ['Retention Pond', 'Wetland Basin']
+    if catanalysis:
+        # combine NO3+NO2 and NO3 into NOx
+        nitro_components = [
+            'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
+            'Nitrogen, Nitrate (NO3) as N'
+        ]
+        nitro_combined = 'Nitrogen, NOx as N'
+        table.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
+
+        # merge Wetland Basins and Retention ponds, keeping
+        # the original records
+        WBRP_combo = 'Wetland Basin/Retention Pond'
+        table.redefineBMPCategory(
+            bmpname=WBRP_combo,
+            criteria=lambda r: r[0] in grab_BMPs,
+            dropold=False
+        )
+        grab_BMPs.append(WBRP_combo)
 
     # all data should be compisite data, but grabs are allowed
     # for bacteria at all BMPs, and all parameter groups at
     # retention ponds and wetland basins. Samples of an unknown
     # type are excluded
     querytxt = (
-    '(sampletype == "composite") | ('
-        '(category == "Retention Pond") | '
-        '(category == "Wetland Basin") | '
-        '(paramgroup == "Biological") '
-    ') & (sampletype != "unknown")'
-    )
-    subset = subset.query(querytxt)
+    "(sampletype == 'composite') | ("
+        "(category in {}) | "
+        "(paramgroup == 'Biological') "
+    ") & (sampletype != 'unknown')"
+    ).format(grab_BMPs)
+    subset = table.data.query(querytxt)
 
     if excludedbmps is not None:
         # remove all of the PFCs from the dataset
-        exclude_query = "bmp not in {}".format(excludedbmps)
-        subset = subset.query(exclude_query)
+        exclude_bmp_query = "bmp not in {}".format(excludedbmps)
+        subset = subset.query(exclude_bmp_query)
+
+    if excludedparams is not None:
+        exclude_params_query = "parameter not in {}".format(excludedparams)
+        subset = subset.query(exclude_params_query)
 
     subset = _pick_best_sampletype(subset)
     subset = _pick_best_station(subset)
@@ -206,9 +228,9 @@ def getSummaryData(dbpath, catanalysis=False, astable=False,
 
     if astable:
         table = dataAccess.Table(subset, name=name, useTex=useTex)
-        return table
+        return table, db
     else:
-        return subset
+        return subset, db
 
 
 def setMPLStyle():
@@ -342,7 +364,7 @@ class DatasetSummary(object):
 
                     if val is not None:
                         if twoval:
-                            thisstring = '{}, {}'.format(
+                            thisstring = '{}; {}'.format(
                                 utils.sigFigs(val[0], sigfigs, pval=pval,
                                               tex=tex, forceint=forceint),
                                 utils.sigFigs(val[1], sigfigs, pval=pval,
@@ -408,7 +430,7 @@ class DatasetSummary(object):
             {'name': 'Count', 'attribute': 'N', 'rule': 'top', 'forceint': True},
             {'name': 'Number of NDs', 'attribute': 'ND', 'forceint': True},
             #{'name': 'Number of Studies', 'attribute': 'JUNK', 'sigfigs': 0},
-            {'name': 'Min, Max', 'attribute': ['min', 'max'], 'twoval': True},
+            {'name': 'Min; Max', 'attribute': ['min', 'max'], 'twoval': True},
             {'name': 'Mean', 'attribute': 'mean', },
             {'name': '(95\% confidence interval)',
                 'attribute': 'mean_conf_interval',
@@ -426,7 +448,7 @@ class DatasetSummary(object):
                 'attribute': 'geomean_conf_interval',
                 'twoval': True, 'ci': True, 'rule':'none'
             },
-            {'name': 'Covariance', 'attribute': 'cov', },
+            {'name': 'Coeff. of Variation', 'attribute': 'cov', },
             {'name': 'Skewness', 'attribute': 'skew', },
             {'name': 'Median', 'attribute': 'median', },
             {'name': '(95\% confidence interval)',
@@ -687,3 +709,92 @@ class CategoricalSummary(object):
                     reportIO,
                     report_title
                 )
+
+
+def _proxy_inflow_outflow(dataset):
+    from matplotlib.lines import Line2D
+    infl_color = dataset.influent.color
+    infl = Line2D([], [], color=infl_color, linestyle='-', linewidth=1.75,
+                  marker='o', markerfacecolor='white',
+                  markeredgewidth=1.25, markeredgecolor=infl_color)
+    effl_color = dataset.effluent.color
+    effl = Line2D([], [], color=effl_color, linestyle='-', linewidth=1.75,
+                  marker='s', markerfacecolor='white',
+                  markeredgewidth=1.25, markeredgecolor=effl_color)
+    return infl, effl
+
+
+def parameterBoxplots(datacollection, prefix, bacteria=False):
+    param = None
+    bmplabels = datacollection.tidy['category'].unique()
+
+    # positions of the ticks
+    bmppositions = np.arange(1, len(bmplabels) + 1) * 2
+    pos_map = dict(zip(bmplabels, bmppositions))
+
+    for parameter in datacollection.tidy['parameter'].unique():
+
+        fig, ax = plt.subplots(figsize=(6.5, 4))
+        datasets = datacollection.selectDatasets(parameter=parameter)
+        infl_proxy = None
+        effl_proxy = None
+
+        for n, ds in enumerate(datasets):
+            pos = pos_map[ds.definition['category']]
+            if ds is not None:
+
+                bp = ds.boxplot(ax=ax, yscale='log', width=0.45,
+                                bacteria=bacteria, pos=pos, offset=0.25)
+
+                if infl_proxy is None:
+                    infl_proxy, effl_proxy = _proxy_inflow_outflow(ds)
+
+                if param is None:
+                    param = ds.definition['parameter_obj']
+
+        ax.set_xticks(bmppositions)
+        ax.set_xticklabels([x.replace('/', '/\n') for x in bmplabels])
+        ax.set_ylabel(param.paramunit())
+        ax.set_xlabel('')
+        utils.figutils.rotateTickLabels(ax, 45, 'x')
+        ax.set_xlim(left=1, right=bmppositions.max()+1)
+        if infl_proxy is not None:
+            ax.legend(
+                (infl_proxy, effl_proxy),
+                ('Influent', 'Effluent'),
+                ncol=2,
+                frameon=False,
+                bbox_to_anchor=(1.0, 1.1)
+            )
+        fig.tight_layout()
+        figpath = 'figures/{}_{}_boxplots.png'.format(prefix, parameter.replace(', ', ''))
+        fig.savefig(figpath, dpi=600, bbox_inches='tight', transparent=True)
+        plt.close(fig)
+
+
+def bmpStatSummary(datacollection):
+    stat_dict = {}
+
+    def getNStudies(loc):
+        return loc.filtered_data.index.get_level_values('bmp').unique().shape[0]
+
+    for ds in datacollection.datasets:
+        key = (ds.definition['parameter'], ds.definition['category'])
+        stat_dict[key] = {}
+        for n, loc in zip(['In', 'Out'], [ds.influent, ds.effluent]):
+            stat_dict[key][('N', n)] = loc.N
+            stat_dict[key][('N-Studies', n)] = getNStudies(loc)
+            stat_dict[key][('25th', n)] = loc.pctl25
+            stat_dict[key][('Median', n)] = loc.median
+            stat_dict[key][('Median CI low', n)] = loc.median_conf_interval[0]
+            stat_dict[key][('Median CI high', n)] = loc.median_conf_interval[1]
+            stat_dict[key][('75th', n)] = loc.pctl75
+
+    stat_df = pandas.DataFrame(stat_dict).T
+
+    full_index = pandas.MultiIndex.from_product([
+        stat_df.index.get_level_values(0).unique(),
+        stat_df.index.get_level_values(1).unique(),
+    ], names=['Parameter', 'BMP Type'])
+
+    return stat_df.reindex(full_index)
