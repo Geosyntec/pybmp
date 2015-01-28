@@ -4,7 +4,8 @@ from .summary import (
     DatasetSummary,
     getSummaryData,
     setMPLStyle,
-    parameterBoxplots
+    parameterBoxplots,
+    bmpStatSummary
 )
 
 from ..testing import NoseWrapper
