@@ -22,6 +22,7 @@ from pybmp import testing
 
 mock_figure = mock.Mock(spec=plt.Figure)
 
+
 @nt.nottest
 class mock_parameter(object):
     def __init__(self):
@@ -31,6 +32,7 @@ class mock_parameter(object):
 
     def paramunit(self, *args, **kwargs):
         return 'Carbon Dioxide (mg/L)'
+
 
 @nt.nottest
 class mock_location(object):
@@ -57,6 +59,7 @@ class mock_location(object):
         self.exclude = not self.include
 
     pass
+
 
 @nt.nottest
 class mock_dataset(object):
@@ -506,7 +509,7 @@ class test_CategoricalSummary(object):
 
     @nptest.dec.skipif(pythonversion == 2)
     def test_makeReport(self):
-        texdir = '{}/pybmp_data/bmp/tex'.format(sys.prefix)
+        texdir = '{}/pybmp_data/tex'.format(sys.prefix)
         templatepath = '{}/draft_template.tex'.format(texdir)
         inputpath = '{}/inputs_{}.tex'.format(texdir, self.csum.paramgroup.lower())
         reportpath = '{}/report_{}.tex'.format(texdir, self.csum.paramgroup.lower())
