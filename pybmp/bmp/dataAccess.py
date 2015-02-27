@@ -627,6 +627,17 @@ class Table(object):
 
         return parameters
 
+    def _check_for_parameters(self, parameter_names):
+        params_exist = True
+        if np.isscalar(parameter_names):
+            parameter_names = [parameter_names]
+
+        for param in parameter_names:
+            if param not in self.data.index.get_level_values('parameter'):
+                params_exist = False
+
+        return params_exist
+
     def getData(self, parametername, bmpCat, paired=False):
         '''
         Method to return a cross-section of self.data for a
@@ -790,7 +801,8 @@ class Table(object):
             criteria=criteria, dropold=dropold
         )
 
-    def transformParameters(self, existingparams, newparam, resfxn, qualfxn, newunits, indexMods=None):
+    def transformParameters(self, existingparams, newparam, resfxn, qualfxn,
+                            newunits, indexMods=None):
         '''
         Apply an arbitrary transformation to a parameter in `table.data`. For
         example, converting pH into H+ concentration.
@@ -836,9 +848,11 @@ class Table(object):
 
         if np.isscalar(existingparams):
             existingparams = [existingparams]
-        for param in existingparams:
-            if param not in self.data.index.get_level_values('parameter'):
-                raise ValueError("Parameter %s is not in this dataset" % param)
+
+        params_exist = self._check_for_parameters(existingparams)
+        if not params_exist:
+            raise ValueError("Parameter %s is not in this dataset" % param)
+
 
         pindex = self.index['parameter']
         selection = self.data.query("parameter in {}".format(existingparams))
@@ -1133,8 +1147,8 @@ class Table(object):
 
         return datasets
 
-    def getDatasetCollection(self):
-        pass
+    def to_DataCollection(self, *args, **kwargs):
+        return features.DataCollection(self.data, *args, **kwargs)
 
 
 class Parameter(object):

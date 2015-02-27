@@ -678,6 +678,17 @@ class _base_tableMixin(object):
         assert_true(newcat in self.table.data.index.get_level_values('category'))
         assert_true(oldcat in self.table.data.index.get_level_values('category'))
 
+    def test_to_DataCollection(self):
+        assert_true(hasattr(self.table, 'to_DataCollection'))
+        dc = self.table.to_DataCollection()
+        assert_true(isinstance(dc, features.DataCollection))
+
+    def test__check_for_parameters(self):
+        assert_true(hasattr(self.table, '_check_for_parameters'))
+        assert_true(self.table._check_for_parameters(self.known_parameters))
+        assert_true(self.table._check_for_parameters(self.known_parameters[0]))
+        assert_false(self.table._check_for_parameters(['junk', 'garbage']))
+
 
 class test_table_metals(_base_tableMixin):
     def setup(self):

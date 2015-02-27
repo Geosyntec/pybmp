@@ -134,7 +134,7 @@ def _filter_by_BMP_count(dataframe, minbmps):
     return data
 
 
-def getSummaryData(dbpath, catanalysis=False, astable=False,
+def getSummaryData(dbpath=None, catanalysis=False, astable=False,
                    minstorms=3, minbmps=3, name=None, useTex=False,
                    excludedbmps=None, excludedparams=None,
                    **selection):
@@ -176,20 +176,28 @@ def getSummaryData(dbpath, catanalysis=False, astable=False,
     '''
 
     # main dataset
+    if dbpath is None:
+        dbpath = os.path.join(sys.prefix, 'pybmp_data', 'data', 'bmpdata.csv')
+
     db = dataAccess.Database(dbpath, catanalysis=catanalysis)
-    table = dataAccess.Table(db.data)
+
+    # astable must be true here. The input value is respected later
+    table = db.selectData(astable=True, useTex=useTex, **selection)
+
+    # combine NO3+NO2 and NO3 into NOx
+    nitro_components = [
+        'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
+        'Nitrogen, Nitrate (NO3) as N'
+    ]
+    nitros_exist = table._check_for_parameters(nitro_components)
+    if nitros_exist:
+        nitro_combined = 'Nitrogen, NOx as N'
+        table.unionParamsWithPreference(nitro_components, nitro_combined,
+                                        'mg/L')
 
     grab_BMPs = ['Retention Pond', 'Wetland Basin']
     if catanalysis:
-        # combine NO3+NO2 and NO3 into NOx
-        nitro_components = [
-            'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
-            'Nitrogen, Nitrate (NO3) as N'
-        ]
-        nitro_combined = 'Nitrogen, NOx as N'
-        table.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
-
-        # merge Wetland Basins and Retention ponds, keeping
+        # merge Wet land Basins and Retention ponds, keeping
         # the original records
         WBRP_combo = 'Wetland Basin/Retention Pond'
         table.redefineBMPCategory(
