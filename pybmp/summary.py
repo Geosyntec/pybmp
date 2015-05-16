@@ -8,7 +8,8 @@ import matplotlib.ticker as mticker
 import pandas
 import openpyxl
 
-from .. import utils
+from wqio import utils
+from wqio import Parameter
 
 from . import dataAccess, info
 
@@ -16,7 +17,6 @@ from statsmodels.tools.decorators import (
     resettable_cache, cache_readonly, cache_writable
 )
 
-from ..core.features import Parameter
 
 
 def filterlocation(location, count=5, column='bmp'):
@@ -242,17 +242,31 @@ def getSummaryData(dbpath=None, catanalysis=False, astable=False,
         return subset, db
 
 
-def setMPLStyle():
-    style_dict = {
-        'text.usetex': True,
-        'font.family': ['serif'],
-        'font.serif': ['Utopia', 'Palantino'],
-        'lines.linewidth': 0.5,
-        'patch.linewidth': 0.5,
-        'text.latex.preamble': [
+def setMPLStyle(serif=False):
+    if serif:
+        fontfamily = 'serif'
+        preamble = [
             r'\usepackage{siunitx}',
             r'\sisetup{detect-all}',
-            r'\usepackage{fourier}'],
+            r'\usepackage{fourier}'
+        ]
+    else:
+        fontfamily = 'sans-serif'
+        preamble = [
+            r'\usepackage{siunitx}',
+            r'\sisetup{detect-all}',
+            r'\usepackage{helvet}',
+            r'\usepackage{sansmath}',
+            r'\sansmath'
+        ]
+    style_dict = {
+        'text.usetex': True,
+        'font.family': [fontfamily],
+        'font.serif': ['Utopia', 'Palantino'],
+        'font.sans-serif': ['Helvetica', 'Arial'],
+        'lines.linewidth': 0.5,
+        'patch.linewidth': 0.5,
+        'text.latex.preamble': preamble,
         'axes.linewidth': 0.5,
         'axes.grid': True,
         'axes.titlesize': 12,
@@ -265,7 +279,7 @@ def setMPLStyle():
         'legend.fancybox': True,
         'legend.numpoints': 1,
         'legend.fontsize': 8,
-        'figure.figsize': (5, 3),
+        'figure.figsize': (6.5, 3.5),
         'savefig.dpi': 300
     }
     matplotlib.rcParams.update(style_dict)
