@@ -8,7 +8,7 @@ from .summary import (
     bmpStatSummary
 )
 
-from ..testing import NoseWrapper
+from wqio.testing import NoseWrapper
 test = NoseWrapper().test
 
 def style_notebook(filepath=None):

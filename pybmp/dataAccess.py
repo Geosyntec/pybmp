@@ -11,8 +11,8 @@ import pandas
 from pandas.io import sql
 
 from . import info
-from .. import utils
-from ..core import features
+import wqio
+from wqio import utils
 
 
 __all__ = [
@@ -616,12 +616,12 @@ class Table(object):
             basic_param = row[self.index['parameter']]
             basic_unit = info.getUnits(basic_param)
             if self.useTex:
-                p = features.Parameter(
+                p = wqio.Parameter(
                     name=info.getTexParam(basic_param),
                     units=info.getTexUnit(basic_unit)
                 )
             else:
-                p = features.Parameter(name=basic_param, units=basic_unit)
+                p = wqio.Parameter(name=basic_param, units=basic_unit)
 
             parameters.append(p)
 
@@ -976,7 +976,7 @@ class Table(object):
         influent = self._get_location(selection, 'inflow', absmin=absmin)
         effluent = self._get_location(selection, 'outflow', absmin=absmin)
         if influent is not None and effluent is not None:
-            dataset = features.Dataset(influent, effluent)
+            dataset = wqio.Dataset(influent, effluent)
         else:
             dataset = None
 
@@ -987,7 +987,7 @@ class Table(object):
         data = selection[station.title()].dropna(subset=['res', 'qual'])
 
         if data.shape[0] >= absmin:
-            loc = features.Location(data, station_type=station)
+            loc = wqio.Location(data, station_type=station)
 
         else:
             loc = None
@@ -996,7 +996,7 @@ class Table(object):
 
     def getLocations(self, station, *levels, **kwargs):
         '''
-        Returns a list of core.features.Location objects from queried out from
+        Returns a list of wqio.Location objects from queried out from
         `Table.data` and the relevant metadata about  what sorts of info make
         up those datasets. At a minimum, datasets will be divded up by
         parameter. Can additionally cut up the data by 'site', bmp', and
@@ -1049,7 +1049,7 @@ class Table(object):
             # select the data for an individual dataset
             locdata = locdata.dropna(subset=['res', 'qual'])
 
-            loc = features.Location(locdata, station_type=key[1].lower())
+            loc = wqio.Location(locdata, station_type=key[1].lower())
 
             if np.isscalar(key):
                 key = [key]
@@ -1069,7 +1069,7 @@ class Table(object):
 
     def getDatasets(self, *levels, **kwargs):
         '''
-        Returns a list of core.features.Dataset objects from queried out from
+        Returns a list of wqio.Dataset objects from queried out from
         `Table.data` and the relevant metadata about  what sorts of info make
         up those datasets. At a minimum, datasets will be divded up by
         parameter. Can additionally cut up the data by 'site', bmp', and
@@ -1117,18 +1117,18 @@ class Table(object):
             # select the data for an individual dataset
 
             inflow = dsdata.xs("inflow", level='station')
-            infl = features.Location(
+            infl = wqio.Location(
                 inflow.dropna(subset=['res', 'qual']),
                 station_type='inflow', include=True
             )
 
             outflow = dsdata.xs("outflow", level='station')
-            effl = features.Location(
+            effl = wqio.Location(
                 outflow.dropna(subset=['res', 'qual']),
                 station_type='outflow', include=True
             )
 
-            ds = features.Dataset(infl, effl)
+            ds = wqio.Dataset(infl, effl)
 
             if np.isscalar(key):
                 key = [key]
@@ -1148,7 +1148,7 @@ class Table(object):
         return datasets
 
     def to_DataCollection(self, *args, **kwargs):
-        return features.DataCollection(self.data, *args, **kwargs)
+        return wqio.DataCollection(self.data, *args, **kwargs)
 
 
 class Parameter(object):
