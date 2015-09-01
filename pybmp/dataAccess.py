@@ -21,6 +21,7 @@ __all__ = [
     'Parameter'
 ]
 
+
 def _fancy_factors(row, quals=None):
     if quals is None:
         quals = ['U', 'UK', 'UA', 'UC', 'K']
