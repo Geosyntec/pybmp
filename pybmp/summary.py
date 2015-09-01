@@ -54,10 +54,13 @@ def getPFCs(db):
 
 def _pick_best_station(dataframe):
     def best_col(row, mainstation, backupstation, valcol):
-        if pandas.isnull(row[(mainstation, valcol)]):
-            return row[(backupstation, valcol)]
-        else:
-            return row[(mainstation, valcol)]
+        try:
+            if pandas.isnull(row[(mainstation, valcol)]):
+                return row[(backupstation, valcol)]
+            else:
+                return row[(mainstation, valcol)]
+        except KeyError:
+            return np.nan
 
     xtab = dataframe.unstack(level='station')
     xtab.columns = xtab.columns.swaplevel(0, 1)
