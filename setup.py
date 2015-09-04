@@ -13,6 +13,8 @@ def getDataFiles(folder):
     )]
     return files
 
+
+
 DESCRIPTION = "pybmp: Analyze data from the International Stormwater BMP Database"
 LONG_DESCRIPTION = DESCRIPTION
 NAME = "pybmp"
@@ -38,15 +40,9 @@ CLASSIFIERS = [
 ]
 INSTALL_REQUIRES = ['wqio']
 PACKAGE_DATA = {
-    #'pybmp': ['pybmp/bmp/data/*', 'pybmp/bmp/tex/*'],
-    #'pybmp/testing': ["pybmp/testing/data/testdata.accdb"]
+    'pybmp.data': ['*.csv'],
+    'pybmp.tex': ['*.tex'],
 }
-DATA_FILES = [
-    ('pybmp_data/data', getDataFiles('data')),
-    ('pybmp_data/tex', getDataFiles('tex')),
-    #('pybmp_data/testing', getDataFiles('testing/data')),
-    #('pybmp_data/nsqd', getDataFiles('nsqd', 'data')),
-]
 
 if __name__ == "__main__":
     setup(
@@ -61,7 +57,6 @@ if __name__ == "__main__":
         license=LICENSE,
         packages=PACKAGES,
         package_data=PACKAGE_DATA,
-        data_files=DATA_FILES,
         platforms=PLATFORMS,
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,

@@ -341,7 +341,7 @@ class Database(object):
 
         return self._data_cleaned.groupby(by=row_headers).agg(agg_rules)
 
-    def connect(self, cmd=None, commit=False, filepath=None):
+    def connect(self, cmd=None, commit=False):
         '''
         Connects to the database using pyodbc. Executes a command if provided.
 
