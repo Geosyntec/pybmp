@@ -78,6 +78,7 @@ src/bmp/tex/boxplotlegend.png
 *.sublime-workspace
 src/*/old/*
 src/bmp/data/old/*
+coversheets
 
 # Visual Studio stuff #
 #######################
