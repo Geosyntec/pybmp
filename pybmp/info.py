@@ -1,3 +1,5 @@
+# coding=utf-8
+
 __all__ = ['getUnits', 'getTexParam', 'getTexUnit',
            'getNormalization', 'getConversion']
 
@@ -2156,5 +2158,3 @@ parameters = {
         'units': 'ug/L'
     }
 }
-
-

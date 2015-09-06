@@ -1,5 +1,7 @@
 import sys
 import os
+from pkg_resources import resource_filename
+pythonversion = sys.version_info.major
 
 pythonversion = sys.version_info.major
 if pythonversion == 3:
@@ -15,12 +17,22 @@ import matplotlib.pyplot as plt
 import pandas
 import pandas.util.testing as pdtest
 
-from pybmp import bmp
-from pybmp import utils
-from pybmp import testing
+import pybmp
+from wqio import utils
+from wqio import testing
 
 
 mock_figure = mock.Mock(spec=plt.Figure)
+
+
+@nt.nottest
+def get_data_file(filename):
+    return resource_filename("wqio.data", filename)
+
+
+@nt.nottest
+def get_tex_file(filename):
+    return resource_filename("pybmp.tex", filename)
 
 
 @nt.nottest
@@ -88,7 +100,7 @@ class _base_DatasetSummary_Mixin(object):
         self.known_paramgroup = 'Metals'
         self.known_bmp = 'testbmp'
         self.known_latex_file_name = 'metalstestbmpcarbondioxide'
-        self.ds_sum = bmp.DatasetSummary(self.ds, self.known_paramgroup, 'testfigpath')
+        self.ds_sum = pybmp.DatasetSummary(self.ds, self.known_paramgroup, 'testfigpath')
         self.known_latex_input_tt = r"""\subsection{testbmp}
         \begin{table}[h!]
             \caption{test table title}
@@ -444,7 +456,7 @@ class test_CategoricalSummary(object):
         self.datasets = [mock_dataset(*inc) for inc in includes]
         self.known_paramgroup = 'Metals'
         self.known_dataset_count = 3
-        self.csum = bmp.CategoricalSummary(
+        self.csum = pybmp.CategoricalSummary(
             self.datasets,
             self.known_paramgroup,
             'basepath',
@@ -509,10 +521,9 @@ class test_CategoricalSummary(object):
 
     @nptest.dec.skipif(pythonversion == 2)
     def test_makeReport(self):
-        texdir = '{}/pybmp_data/tex'.format(sys.prefix)
-        templatepath = '{}/draft_template.tex'.format(texdir)
-        inputpath = '{}/inputs_{}.tex'.format(texdir, self.csum.paramgroup.lower())
-        reportpath = '{}/report_{}.tex'.format(texdir, self.csum.paramgroup.lower())
+        templatepath = get_tex_file('draft_template.tex')
+        inputpath = get_tex_file('inputs_{}.tex'.format(self.csum.paramgroup.lower()))
+        reportpath = get_tex_file('report_{}.tex'.format(self.csum.paramgroup.lower()))
         self.csum.makeReport(
             self.test_templatefile,
             'testpath.tex',
@@ -723,8 +734,8 @@ class test_helpers(object):
         else:
             dbfile = 'testdata.accdb'
 
-        self.dbfile = os.path.join(sys.prefix, 'pybmp_data', 'testing', dbfile)
-        self.db = bmp.dataAccess.Database(self.dbfile)
+        self.dbfile = get_data_file(dbfile)
+        self.db = pybmp.dataAccess.Database(self.dbfile)
         self.known_pfcs = [
             'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',
             'AustinTX3PFC', 'AustinTX1PFC', 'AustinTX2PFC'
@@ -733,29 +744,29 @@ class test_helpers(object):
         self.known_shape_excl = (2168, 2)
 
     def test_getSummaryData_smoke(self):
-        df, db = bmp.summary.getSummaryData(self.dbfile)
+        df, db = pybmp.summary.getSummaryData(dbpath=self.dbfile)
         nt.assert_tuple_equal(df.shape, self.known_shape)
 
     def test_getSummaryDataExclusive_smoke(self):
         exbmps = ['15.2Apex', '7.6Apex']
-        df, db = bmp.summary.getSummaryData(self.dbfile, excludedbmps=exbmps)
+        df, db = pybmp.summary.getSummaryData(dbpath=self.dbfile, excludedbmps=exbmps)
         nt.assert_tuple_equal(df.shape, self.known_shape_excl)
         for x in exbmps:
             nt.assert_true(x not in df.index.get_level_values('bmp').unique())
 
     def test_setMPLStyle_smoke(self):
-        bmp.summary.setMPLStyle()
+        pybmp.summary.setMPLStyle()
 
     @nptest.dec.skipif(os.name == 'posix')
     def test_getPFCs(self):
-        pfcs = bmp.summary.getPFCs(self.db)
+        pfcs = pybmp.summary.getPFCs(self.db)
         nt.assert_list_equal(pfcs, self.known_pfcs)
 
 
 @nt.nottest
 def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
-    infile = os.path.join(sys.prefix, 'pybmp_data', 'testing', infilename)
-    outfile = os.path.join(sys.prefix, 'pybmp_data', 'testing', outfilename)
+    infile = get_data_file(infilename)
+    outfile = get_data_file(outfilename)
 
     input_df = pandas.read_csv(infile, index_col=index_cols)
     expected_df = pandas.read_csv(outfile, index_col=index_cols).sort()
@@ -770,7 +781,7 @@ def test__pick_best_station():
         index_cols,
         'test_pick_station_input.csv',
         'test_pick_station_output.csv',
-        bmp.summary._pick_best_station
+        pybmp.summary._pick_best_station
     )
 
 
@@ -781,7 +792,7 @@ def test__pick_best_sampletype():
         index_cols,
         'test_pick_sampletype_input.csv',
         'test_pick_sampletype_output.csv',
-        bmp.summary._pick_best_sampletype
+        pybmp.summary._pick_best_sampletype
     )
 
 
@@ -792,7 +803,7 @@ def test__filter_onesided_BMPs():
         index_cols,
         'test_filter_onesidedbmps_input.csv',
         'test_filter_onesidedbmps_output.csv',
-        bmp.summary._filter_onesided_BMPs
+        pybmp.summary._filter_onesided_BMPs
     )
 
 
@@ -803,7 +814,7 @@ def test__filter_by_storm_count():
         index_cols,
         'test_filter_bmp-storm_counts_input.csv',
         'test_filter_storm_counts_output.csv',
-        bmp.summary._filter_by_storm_count,
+        pybmp.summary._filter_by_storm_count,
         6
     )
 
@@ -815,7 +826,7 @@ def test__filter_by_BMP_count():
         index_cols,
         'test_filter_bmp-storm_counts_input.csv',
         'test_filter_bmp_counts_output.csv',
-        bmp.summary._filter_by_BMP_count,
+        pybmp.summary._filter_by_BMP_count,
         4
     )
 
