@@ -1,4 +1,4 @@
-# Setup script for the pybmp package
+# Setup script for the pybmpdb package
 #
 # Usage: python setup.py install
 #
@@ -15,9 +15,9 @@ def getDataFiles(folder):
 
 
 
-DESCRIPTION = "pybmp: Analyze data from the International Stormwater BMP Database"
+DESCRIPTION = "pybmpdb: Analyze data from the International Stormwater BMP Database"
 LONG_DESCRIPTION = DESCRIPTION
-NAME = "pybmp"
+NAME = "pybmpdb"
 VERSION = "0.1"
 AUTHOR = "Paul Hobson (Geosyntec Consultants)"
 AUTHOR_EMAIL = "phobson@geosyntec.com"
@@ -40,8 +40,8 @@ CLASSIFIERS = [
 ]
 INSTALL_REQUIRES = ['wqio']
 PACKAGE_DATA = {
-    'pybmp.data': ['*.csv'],
-    'pybmp.tex': ['*.tex'],
+    'pybmpdb.data': ['*.csv'],
+    'pybmpdb.tex': ['*.tex'],
 }
 
 

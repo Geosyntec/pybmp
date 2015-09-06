@@ -1,1 +1,1 @@
-# pybmp: A convenient interface between wqio and the International BMP Database.
+# `pybmpdb`: A convenient interface between `wqio` and the International BMP Database.

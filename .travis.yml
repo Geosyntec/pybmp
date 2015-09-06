@@ -32,7 +32,7 @@ install:
   - pip install . --no-deps
 
 script:
-  - nosetests --with-coverage --cover-package=pybmp --verbose
+  - nosetests --with-coverage --cover-package=pybmpdb --verbose
 
 after_success:
   - if [ ${COVERAGE} = true ]; then coveralls; fi
