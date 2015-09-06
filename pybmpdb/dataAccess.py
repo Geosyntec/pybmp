@@ -91,7 +91,7 @@ class Database(object):
         filename : string
             CSV file or MS Access database containing the data.
 
-        dbtable : optional string (default = 'pybmp_flatfile')
+        dbtable : optional string (defaults to the bundled data')
             Table in the MS Access database storing the data for analysis.
             Only used if `usingdb` is True.
 
@@ -838,7 +838,7 @@ class Table(object):
             None - operates on `table.data` in place.
 
         Example:
-            >>> db = bmp.dataAccess.Database(file='bmp/data/data_for_pybmp.csv')
+            >>> db = bmp.dataAccess.Database(file='bmp/data/data_pybmpdb.csv')
             >>> table = bmp.dataAccess.Table('General', db)
             >>> table.transformParameters(['pH'], 'protons',
                   lambda x, junk: utils.pH2concentration(x[('res', 'pH')]),
@@ -934,7 +934,7 @@ class Table(object):
             None - operates on `table.data` in place
 
         Example:
-            >>> db = bmp.dataAccess.Database(file='bmp/data/data_for_pybmp.csv')
+            >>> db = bmp.dataAccess.Database(file='bmp/data/data_pybmpdb.csv')
             >>> table = bmp.dataAccess.Table('Nutrients', db)
             >>> nitro_components = [
                 'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
@@ -1214,7 +1214,7 @@ class Parameter(object):
         return paramunit
 
     def __repr__(self):
-        return "<openpybmp Parameter object>\n" + self.paramunit(usetex=False, usecomma=False)
+        return "<pybmpdb Parameter object>\n" + self.paramunit(usetex=False, usecomma=False)
 
     def __str__(self):
-        return "<openpybmp Parameter object>\n" + self.paramunit(usetex=False, usecomma=False)
+        return "<pybmpdb Parameter object>\n" + self.paramunit(usetex=False, usecomma=False)

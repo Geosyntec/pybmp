@@ -1,16 +1,16 @@
 # .coveragerc to control coverage.py
 [run]
-source = pybmp
+source = pybmpdb
 branch = True
-include = pybmp/*.py
+include = pybmpdb/*.py
 omit =
-    pybmp/tests/*
+    pybmpdb/tests/*
 
 [report]
-include = pybmp/*.py
+include = pybmpdb/*.py
 ignore_errors = True
 omit =
-    pybmp/tests/*
+    pybmpdb/tests/*
 
 # Regexes for lines to exclude from consideration
 exclude_lines =
