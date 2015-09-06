@@ -354,7 +354,6 @@ class test_DatabaseFromDB(_base_database_Mixin):
         self.known_file = self.known_dbfile
         self.known_catScreen = False
         self.db = da.Database(self.known_dbfile)
-        self.error = pyodbc.ProgrammingError
 
     @nptest.dec.skipif(skip_db)
     def test_connect(self):
@@ -372,10 +371,9 @@ class test_DatabaseFromDB(_base_database_Mixin):
             cnn.close()
 
     @nptest.dec.skipif(skip_db)
-    @raises(pyodbc.ProgrammingError)
     def test_connect_BadQuery(self):
         cmd = "JUNKJUNKJUNK"
-        self.db.connect(cmd=cmd)
+        assert_raises(self.db.connect(cmd=cmd), pyodbc.ProgrammingError))
 
     @nptest.dec.skipif(skip_db)
     def test_file(self):
