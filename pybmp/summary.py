@@ -181,8 +181,7 @@ def getSummaryData(dbpath=None, catanalysis=False, astable=False,
 
     # main dataset
     if dbpath is None:
-        #dbpath = os.path.join(sys.prefix, 'pybmp_data', 'data', 'bmpdata.csv')
-        dbpath = resource_filename("pybmp.data", 'bmpdata.csv')
+        dbpath = resource_filename("pybmpdb.data", 'bmpdata.csv')
 
     db = dataAccess.Database(dbpath, catanalysis=catanalysis)
 

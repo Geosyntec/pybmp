@@ -16,7 +16,7 @@ try:
 except ImportError:
     pyodbc = None
 
-from pybmp import dataAccess as da
+from pybmpdb import dataAccess as da
 from wqio.core import features
 
 skip_db = pyodbc is None or os.name == 'posix'
