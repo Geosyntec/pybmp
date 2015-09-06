@@ -1,10 +1,7 @@
 import sys
 import os
-if sys.version_info.major == 3:
-    from io import StringIO
-else:
-    from StringIO import StringIO
 
+from six import StringIO
 import nose
 from nose.tools import *
 import numpy as np
@@ -18,8 +15,8 @@ try:
 except ImportError:
     pyodbc = None
 
-from pybmp.bmp import dataAccess as da
-from pybmp.core import features
+from pybmp import dataAccess as da
+from wqio.core import features
 
 skip_db = pyodbc is None or os.name == 'posix'
 datadir = os.path.join(sys.prefix, 'pybmp_data', 'testing')
