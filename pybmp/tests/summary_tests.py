@@ -1,5 +1,6 @@
 import sys
 import os
+from pkg_resources import resource_filename
 pythonversion = sys.version_info.major
 
 pythonversion = sys.version_info.major
@@ -22,6 +23,16 @@ from wqio import testing
 
 
 mock_figure = mock.Mock(spec=plt.Figure)
+
+
+@nt.nottest
+def get_data_file(filename):
+    return resource_filename("wqio.data", filename)
+
+
+@nt.nottest
+def get_tex_file(filename):
+    return resource_filename("pybmp.tex", filename)
 
 
 @nt.nottest
@@ -510,10 +521,9 @@ class test_CategoricalSummary(object):
 
     @nptest.dec.skipif(pythonversion == 2)
     def test_makeReport(self):
-        texdir = '{}/pybmp_data/tex'.format(sys.prefix)
-        templatepath = '{}/draft_template.tex'.format(texdir)
-        inputpath = '{}/inputs_{}.tex'.format(texdir, self.csum.paramgroup.lower())
-        reportpath = '{}/report_{}.tex'.format(texdir, self.csum.paramgroup.lower())
+        templatepath = get_tex_file('draft_template.tex')
+        inputpath = get_tex_file('inputs_{}.tex'.format(self.csum.paramgroup.lower()))
+        reportpath = get_tex_file('report_{}.tex'.format(self.csum.paramgroup.lower()))
         self.csum.makeReport(
             self.test_templatefile,
             'testpath.tex',
@@ -724,7 +734,7 @@ class test_helpers(object):
         else:
             dbfile = 'testdata.accdb'
 
-        self.dbfile = os.path.join(sys.prefix, 'pybmp_data', 'testing', dbfile)
+        self.dbfile = get_data_file(dbfile)
         self.db = pybmp.dataAccess.Database(self.dbfile)
         self.known_pfcs = [
             'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',
@@ -734,12 +744,12 @@ class test_helpers(object):
         self.known_shape_excl = (2168, 2)
 
     def test_getSummaryData_smoke(self):
-        df, db = pybmp.summary.getSummaryData(self.dbfile)
+        df, db = pybmp.summary.getSummaryData(dbpath=self.dbfile)
         nt.assert_tuple_equal(df.shape, self.known_shape)
 
     def test_getSummaryDataExclusive_smoke(self):
         exbmps = ['15.2Apex', '7.6Apex']
-        df, db = pybmp.summary.getSummaryData(self.dbfile, excludedbmps=exbmps)
+        df, db = pybmp.summary.getSummaryData(dbpath=self.dbfile, excludedbmps=exbmps)
         nt.assert_tuple_equal(df.shape, self.known_shape_excl)
         for x in exbmps:
             nt.assert_true(x not in df.index.get_level_values('bmp').unique())
@@ -755,8 +765,8 @@ class test_helpers(object):
 
 @nt.nottest
 def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
-    infile = os.path.join(sys.prefix, 'pybmp_data', 'testing', infilename)
-    outfile = os.path.join(sys.prefix, 'pybmp_data', 'testing', outfilename)
+    infile = get_data_file(infilename)
+    outfile = get_data_file(outfilename)
 
     input_df = pandas.read_csv(infile, index_col=index_cols)
     expected_df = pandas.read_csv(outfile, index_col=index_cols).sort()

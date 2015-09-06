@@ -19,7 +19,6 @@ from statsmodels.tools.decorators import (
 )
 
 
-
 def filterlocation(location, count=5, column='bmp'):
     location.filtered_data = (
         location.filtered_data
