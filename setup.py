@@ -44,20 +44,20 @@ PACKAGE_DATA = {
     'pybmp.tex': ['*.tex'],
 }
 
-if __name__ == "__main__":
-    setup(
-        name=NAME,
-        version=VERSION,
-        author=AUTHOR,
-        author_email=AUTHOR_EMAIL,
-        url=URL,
-        description=DESCRIPTION,
-        long_description=LONG_DESCRIPTION,
-        download_url=DOWNLOAD_URL,
-        license=LICENSE,
-        packages=PACKAGES,
-        package_data=PACKAGE_DATA,
-        platforms=PLATFORMS,
-        classifiers=CLASSIFIERS,
-        install_requires=INSTALL_REQUIRES,
-    )
+
+setup(
+    name=NAME,
+    version=VERSION,
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    url=URL,
+    description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
+    download_url=DOWNLOAD_URL,
+    license=LICENSE,
+    packages=PACKAGES,
+    package_data=PACKAGE_DATA,
+    platforms=PLATFORMS,
+    classifiers=CLASSIFIERS,
+    install_requires=INSTALL_REQUIRES,
+)
