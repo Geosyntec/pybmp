@@ -58,4 +58,5 @@ setup(
     platforms=PLATFORMS,
     classifiers=CLASSIFIERS,
     install_requires=INSTALL_REQUIRES,
+    zip_safe=False,
 )
