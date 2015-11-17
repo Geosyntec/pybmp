@@ -242,6 +242,7 @@ class Database(object):
     @staticmethod
     def _strip_quals(df, qualcol):
         df[qualcol] = df[qualcol].str.strip()
+        return df
 
     @staticmethod
     def _apply_res_factors(df, rescol, qualcol, userfxn=None, quallist=None, factor=None):
@@ -260,6 +261,8 @@ class Database(object):
 
         df[rescol] *= factors
 
+        return df
+
     @staticmethod
     def _standardize_quals(df, qualcol, ndquals=None, userfxn=None):
         if ndquals is not None and userfxn is None:
@@ -272,6 +275,8 @@ class Database(object):
 
         else:
             raise ValueError("must provide exactly 1 of `ndquals` or `userfxn`")
+
+        return df
 
     def _cleanup_data(self):
 
@@ -292,23 +297,15 @@ class Database(object):
                 data.rename(columns=rename_columns)
                     .drop(drop_columns, axis=1)
                     .dropna(subset=['res'])
+                    .pipe(self._strip_quals, qualcol='qual')
+                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
+                    .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
+                    .assign(wqscreen=data['wqscreen'].apply(_process_screening))
+                    .assign(catscreen=data['catscreen'].apply(_process_screening))
+                    .assign(station=data['station'].str.lower())
+                    .assign(sampletype=data['sampletype'].apply(_process_sampletype))
+                    .assign(sampledatetime=data.apply(utils.makeTimestamp, axis=1))
             )
-
-            # clean up the flags (remove leading and trailing spaces:
-            self._strip_quals(data, 'qual')
-
-            # WQ results need to be multiplied by 2 if the qual is a certain value
-            self._apply_res_factors(data, 'res', 'qual', userfxn=_fancy_factors)
-
-            # reset all of the non-detect flags to something universal ("ND")
-            self._standardize_quals(data, 'qual', userfxn=_fancy_quals)
-
-            # process screening values:
-            data['wqscreen'] = data['wqscreen'].apply(_process_screening)
-            data['catscreen'] = data['catscreen'].apply(_process_screening)
-            data['station'] = data['station'].str.lower()
-            data['sampletype'] = data['sampletype'].apply(_process_sampletype)
-            data['sampledatetime'] = data.apply(utils.makeTimestamp, axis=1)
 
             # screen the data
             if self.catanalysis:

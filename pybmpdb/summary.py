@@ -232,11 +232,13 @@ def getSummaryData(dbpath=None, catanalysis=False, astable=False,
         exclude_params_query = "parameter not in {}".format(excludedparams)
         subset = subset.query(exclude_params_query)
 
-    subset = _pick_best_sampletype(subset)
-    subset = _pick_best_station(subset)
-    subset = _filter_by_storm_count(subset, minstorms)
-    subset = _filter_by_BMP_count(subset, minbmps)
-    subset = _filter_onesided_BMPs(subset)
+    subset = (
+        subset.pipe(_pick_best_sampletype)
+              .pipe(_pick_best_station)
+              .pipe(_filter_by_storm_count, minstorms)
+              .pipe(_filter_by_BMP_count, minbmps)
+              .pipe(_filter_onesided_BMPs)
+    )
 
     if astable:
         table = dataAccess.Table(subset, name=name, useTex=useTex)
