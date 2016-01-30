@@ -87,49 +87,37 @@ class Database(object):
 
         Parameters
         ----------
-
         filename : string
             CSV file or MS Access database containing the data.
-
         dbtable : optional string (defaults to the bundled data')
             Table in the MS Access database storing the data for analysis.
             Only used if `usingdb` is True.
-
         catanalysis : optional bool (default = False)
             Toggles the filtering for data that have been approved for BMP
             Category-level analysis
 
         Attributes
         ----------
-
-        self.dbfile : string
+        dbfile : string
             Full path to the database file.
-
-        self.driver : string
+        driver : string
             ODBC-compliant Microsoft Access driver string.
-
-        self.category_type : string
+        category_type : string
             See Input section.
-
-        self.usingdb : bool
+        usingdb : bool
             See Input section.
-
-        self.excluded_parameters : list of string or None
+        excluded_parameters : list of string or None
             See `parametersToExclude` in Input section.
-
-        self.data : pandas DataFrame
+        data : pandas DataFrame
             DataFrame of all of the data found in the DB or CSV file.
 
         Methods
         -------
-
-        (see individual docstrings for more info):
-
-        - self.connect
-        - self.redefineBMPCategory
-        - self.convertTablesToCSV
-        - self.getAllData
-        - self.getGroupData
+        connect
+        redefineBMPCategory
+        convertTablesToCSV
+        getAllData
+        getGroupData
 
         '''
         self.file = filename
