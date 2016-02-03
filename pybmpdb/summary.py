@@ -142,7 +142,8 @@ def getSummaryData(dbpath=None, catanalysis=False, astable=False,
                    minstorms=3, minbmps=3, name=None, useTex=False,
                    excludedbmps=None, excludedparams=None,
                    **selection):
-    '''Select offical data from database.
+    """
+    Select offical data from database.
 
     Parameters
     ----------
@@ -177,7 +178,7 @@ def getSummaryData(dbpath=None, catanalysis=False, astable=False,
     -------
     subset : pandas.DataFrame or bmpTable
 
-    '''
+    """
 
     # main dataset
     if dbpath is None:
@@ -216,10 +217,9 @@ def getSummaryData(dbpath=None, catanalysis=False, astable=False,
     # retention ponds and wetland basins. Samples of an unknown
     # type are excluded
     querytxt = (
-    "(sampletype == 'composite') | ("
-        "(category in {}) | "
-        "(paramgroup == 'Biological') "
-    ") & (sampletype != 'unknown')"
+        "(sampletype == 'composite') | "
+        "((category in {}) | (paramgroup == 'Biological')) & "
+        "(sampletype != 'unknown')"
     ).format(grab_BMPs)
     subset = table.data.query(querytxt)
 
