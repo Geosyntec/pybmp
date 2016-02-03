@@ -1,0 +1,53 @@
+package:
+  name: pybmpdb
+  version: 0.1.x
+
+source:
+  path: ../../
+
+#  patches:
+   # List any patch files here
+   # - fix.patch
+
+build:
+  number: 1
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - seaborn
+    - wqio
+    - pyodbc
+
+  run:
+    - python
+    - setuptools
+    - wqio
+    - pyodbc
+    - seaborn
+    - statsmodels
+    - openpyxl
+    - xlrd
+    - six
+
+test:
+  imports:
+    - pybmpdb
+
+  commands:
+    - python -c "import pybmpdb; pybmpdb.test()"
+
+  requires:
+    - nose
+    - mock
+    - wqio
+
+about:
+  home: https://github.com/Geosyntec/pybmpdb.git
+  license:  BSD License
+  summary: 'Connector for the International BMP Database to wqio'
+
+# See
+# http://docs.continuum.io/conda/build.html for
+# more information about meta.yaml/configure
