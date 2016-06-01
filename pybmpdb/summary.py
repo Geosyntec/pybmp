@@ -138,7 +138,7 @@ def _filter_by_BMP_count(dataframe, minbmps):
     return data
 
 
-def getSummaryData(dbpath=None, catanalysis=False, astable=False,
+def getSummaryData(dbpath=None, catanalysis=False,
                    minstorms=3, minbmps=3, name=None, useTex=False,
                    excludedbmps=None, excludedparams=None,
                    **selection):
@@ -161,10 +161,6 @@ def getSummaryData(dbpath=None, catanalysis=False, astable=False,
         The minimum number of BMPs each group defined
         by category, station, and parameter should have.
         Groups with too few BMPs will be filtered out.
-    astable : optional bool (default = False)
-        Toggles whether the database will be returned
-        as a pandas.DataFrame (default) or a bmp.Table
-        object.
     excludedbmps : optional list or None (default)
         List of BMP Names to exclude form the result.
     name : optional string or None (default)

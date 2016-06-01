@@ -4,7 +4,7 @@ from pkg_resources import resource_filename
 pythonversion = sys.version_info.major
 
 from six import StringIO
-import mock
+from unittest import mock
 import nose.tools as nt
 import numpy as np
 import numpy.testing as nptest
@@ -14,10 +14,12 @@ import pandas.util.testing as pdtest
 
 import pybmpdb
 from wqio import utils
-from wqio import testing
+import wqio.testing as helpers
 
 
 mock_figure = mock.Mock(spec=plt.Figure)
+
+skip_db = True # pyodbc is None or os.name == 'posix'
 
 
 @nt.nottest
@@ -491,7 +493,7 @@ class test_CategoricalSummary(object):
             self.csum._make_input_file_IO(inputIO)
             input_string = inputIO.getvalue()
 
-        testing.assert_bigstring_equal(
+        helpers.assert_bigstring_equal(
             input_string,
             self.known_latex_input_content,
             'test__make_input_file_IO_res.tex',
@@ -507,7 +509,7 @@ class test_CategoricalSummary(object):
                     templateIO, 'testpath.tex', reportIO, 'test report title'
                 )
 
-                testing.assert_bigstring_equal(
+                helpers.assert_bigstring_equal(
                     reportIO.getvalue(),
                     self.known_latex_report_content,
                     'test_reportIO.tex',
@@ -528,7 +530,7 @@ class test_CategoricalSummary(object):
         )
 
         with open(reportpath, 'r') as rp:
-            testing.assert_bigstring_equal(
+            helpers.assert_bigstring_equal(
                 rp.read(),
                 self.known_latex_report_content,
                 'test_report.tex',
@@ -738,10 +740,12 @@ class test_helpers(object):
         self.known_shape = (2250, 2)
         self.known_shape_excl = (2168, 2)
 
+    @nptest.dec.skipif(skip_db)
     def test_getSummaryData_smoke(self):
         df, db = pybmpdb.summary.getSummaryData(dbpath=self.dbfile)
         nt.assert_tuple_equal(df.shape, self.known_shape)
 
+    @nptest.dec.skipif(skip_db)
     def test_getSummaryDataExclusive_smoke(self):
         exbmps = ['15.2Apex', '7.6Apex']
         df, db = pybmpdb.summary.getSummaryData(dbpath=self.dbfile, excludedbmps=exbmps)
@@ -752,7 +756,7 @@ class test_helpers(object):
     def test_setMPLStyle_smoke(self):
         pybmpdb.summary.setMPLStyle()
 
-    @nptest.dec.skipif(os.name == 'posix')
+    @nptest.dec.skipif(skip_db)
     def test_getPFCs(self):
         pfcs = pybmpdb.summary.getPFCs(self.db)
         nt.assert_list_equal(pfcs, self.known_pfcs)

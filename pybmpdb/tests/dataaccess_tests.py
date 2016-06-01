@@ -17,9 +17,9 @@ except ImportError:
     pyodbc = None
 
 from pybmpdb import dataAccess as da
-from wqio.core import features
+from wqio import features
 
-skip_db = pyodbc is None or os.name == 'posix'
+skip_db = True # pyodbc is None or os.name == 'posix'
 
 @nottest
 def get_data_file(filename):

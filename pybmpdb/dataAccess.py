@@ -443,9 +443,9 @@ class Database(object):
 
         '''
         good_keys = [
-            'category', 'site', 'bmp', 'storm',
-            'paramgroup', 'units', 'parameter',
-            'sampletype', 'epazone', 'state',
+            'category', 'site', 'bmp', 'storm', 'sampledatetime',
+            'paramgroup', 'units', 'parameter', 'sampletype',
+            'epazone', 'state',
         ]
 
         data = self.data.copy()
@@ -470,7 +470,7 @@ class Database(object):
 
 
 class Table(object):
-    '''
+    """
     Object representing a table in the BMP Database. You can, but
     /shouldn't/ instantiate this yourself. Instead, it is recommended
     to use one of the methods of the `Database` object to create your
@@ -519,7 +519,7 @@ class Table(object):
     getLocations
     getDatasets
 
-    '''
+    """
 
     def __init__(self, dataframe, name=None, useTex=False):
         # basic stuff
@@ -730,58 +730,69 @@ class Table(object):
         )
 
     def redefineBMPCategory(self, bmpname, criteria, dropold=True):
-        '''
+        """
         Redefine a selection of BMPs into another or new category
-        Input:
-            bmpcode : string
-                The new abbreviation/code for your new BMP category that will
-                appear in the dataframe.
 
-            bmpname : string
-                The longer-form name/description of the BMP category that will
-                be created.
+        Parameters
+        ----------
+        bmpcode : string
+            The new abbreviation/code for your new BMP category that will
+            appear in the dataframe.
 
-            critera : function/lambda expression
-                This should return True/False in a manner consitent with the
-                `.select()` method of a pandas dataframe. See that docstring
-                for more info.
+        bmpname : string
+            The longer-form name/description of the BMP category that will
+            be created.
 
-            dropold : optional bool (defaul is True)
-                Toggles the replacement (True) or addition (False) of the data
-                of the redefined BMPs into the the `data` dataframe.
+        critera : function/lambda expression
+            This should return True/False in a manner consitent with the
+            `.select()` method of a pandas dataframe. See that docstring
+            for more info.
 
-        Returns:
-            None
+        dropold : optional bool (defaul is True)
+            Toggles the replacement (True) or addition (False) of the data
+            of the redefined BMPs into the the `data` dataframe.
 
-        Notes:
-            The standard dataframe present in `Database.data` has the following
-            indicies:
-                Level - Name
-                    0 - category (determined by `category_type`)
-                    1 - epazone
-                    2 - state
-                    3 - site
-                    4 - bmp
-                    5 - storm
-                    6 - sampletype
-                    7 - paramgroup
-                    8 - units
-                    9 - parameter
-            So if you were creating a selection based on a set of Site IDs, your
-            lambda expression would look like this:
-                >>> criteria = lambda row: row[1] in my_site_id_list
+        Returns
+        -------
+        None
 
-        Example:
-            >>> # import and create `Database` object
-            >>> import bmp
-            >>> db = bmp.dataAccess.Database()
-            >>> # replace tree box planters original BMP category (MD)
-            >>> # with "TreeBox"
-            >>> TB_bmps = [-1098775618, 95902823, 1053525776, 1495211473]
-            >>> criteria = lambda row: row[3] in TB_bmps
-            >>> db.redefineBMPCategory('TB', 'Tree box planter', criteria)
-            >>> print(db.data.index.get_level_values('category').unique()) # that it worked
-        '''
+        Notes
+        -----
+        The standard dataframe present in `Database.data` has the
+        following indicies:
+
+        | Level | Name                                     |
+        |-------|------------------------------------------|
+        | 0     | category (determined by `category_type`) |
+        | 1     | epazone                                  |
+        | 2     | state                                    |
+        | 3     | site                                     |
+        | 4     | bmp                                      |
+        | 5     | storm                                    |
+        | 6     | sampletype                               |
+        | 7     | paramgroup                               |
+        | 8     | units                                    |
+        | 9     | parameter                                |
+
+        So if you were creating a selection based on a set of Site IDs, your
+        lambda expression would look like this:
+
+            ``criteria = lambda row: row[1] in my_site_id_list``
+
+        Examples
+        --------
+        >>> # import and create `Database` object
+        >>> import bmp
+        >>> db = bmp.dataAccess.Database()
+        >>> # replace tree box planters original BMP category (MD)
+        >>> # with "TreeBox"
+        >>> TB_bmps = [-1098775618, 95902823, 1053525776, 1495211473]
+        >>> criteria = lambda row: row[3] in TB_bmps
+        >>> db.redefineBMPCategory('TB', 'Tree box planter', criteria)
+        >>> # show that it worked
+        >>> print(db.data.index.get_level_values('category').unique())
+        """
+
         self.data = utils.redefineIndexLevel(
             self.data, 'category', bmpname,
             criteria=criteria, dropold=dropold
@@ -789,46 +800,50 @@ class Table(object):
 
     def transformParameters(self, existingparams, newparam, resfxn, qualfxn,
                             newunits, indexMods=None):
-        '''
-        Apply an arbitrary transformation to a parameter in `table.data`. For
-        example, converting pH into H+ concentration.
+        """
+        Apply an arbitrary transformation to a parameter in
+        ``table.data``. For example, converting pH into H+
+        concentration.
 
-        Input:
-            existingparams : list of strings
-                List of the existing parameters that will be used to compute
-                the new values
+        Parameters
+        ----------
+        existingparams : list of strings
+            List of the existing parameters that will be used to compute
+            the new values
 
-            newparam : string
-                Name of the new parameter to be generated
+        newparam : string
+            Name of the new parameter to be generated
 
-            resfxn : function
-                This is function (or lambda expression) that will compute or
-                select the value of `newparam` based on the values of
-                `existingparams`. Function must assume to be operating on a
-                pandas.DataFrame row with the elements of `existingparams`
-                in columns.
+        resfxn : function
+            This is function (or lambda expression) that will compute or
+            select the value of `newparam` based on the values of
+            `existingparams`. Function must assume to be operating on a
+            pandas.DataFrame row with the elements of `existingparams`
+            in columns.
 
-            qualfxn : function
-                Same as `resfxn`, but for selecting the final qualifier of the
-                `newparam` results
+        qualfxn : function
+            Same as `resfxn`, but for selecting the final qualifier of the
+            `newparam` results
 
-            newunits : string
-                Units of the newly computed values
+        newunits : string
+            Units of the newly computed values
 
-            indexMods : optional dict (keys = index level names)
-                Dictionary of index level name whose values are the new values
-                of those levels where parameter=`newparam`.
+        indexMods : optional dict (keys = index level names)
+            Dictionary of index level name whose values are the new values
+            of those levels where parameter=`newparam`.
 
-        Returns:
-            None - operates on `table.data` in place.
+        Returns
+        -------
+        None
 
-        Example:
-            >>> db = bmp.dataAccess.Database(file='bmp/data/data_pybmpdb.csv')
-            >>> table = bmp.dataAccess.Table('General', db)
-            >>> table.transformParameters(['pH'], 'protons',
-                  lambda x, junk: utils.pH2concentration(x[('res', 'pH')]),
-                  lambda x, junk: x[('qual', 'pH')], 'mg/L')
-        '''
+        Example
+        -------
+        >>> db = bmp.dataAccess.Database(file='bmp/data/data_pybmpdb.csv')
+        >>> table = bmp.dataAccess.Table('General', db)
+        >>> table.transformParameters(['pH'], 'protons',
+        ...     lambda x, junk: utils.pH2concentration(x[('res', 'pH')]),
+        ...     lambda x, junk: x[('qual', 'pH')], 'mg/L')
+        """
 
         index_name_cache = self.data.index.names
 
@@ -896,38 +911,42 @@ class Table(object):
         ]).set_index(index_name_cache)
 
     def unionParamsWithPreference(self, existingparams, newparam, newunits):
-        '''
+        """
         Looks as instances of two different analytes, picks the best one, and
         the appends a new row with the preferred result under a new parameter
         name. The best example of this is taking NO3+NO2 and NO3 data, and
         "unioning" them to get NOx data -- NO3+NO2 is the best to use, but if
         it's not available, fall back to NO3 since NO2 is typically small.
 
-        Input:
-            existingparams : list of string
-                List of the parameters you wish to merge (currently limited
-                to 2)
+        Parameters
+        ----------
+        existingparams : list of string
+            List of the parameters you wish to merge (currently limited
+            to 2)
 
-            newparam : string
-                Name of the new parameter you're creating (e.g., NOx in the
-                example above)
+        newparam : string
+            Name of the new parameter you're creating (e.g., NOx in the
+            example above)
 
-            newunits : string
-                Units of the new value
+        newunits : string
+            Units of the new value
 
         Returns:
             None - operates on `table.data` in place
 
-        Example:
-            >>> db = bmp.dataAccess.Database(file='bmp/data/data_pybmpdb.csv')
-            >>> table = bmp.dataAccess.Table('Nutrients', db)
-            >>> nitro_components = [
-                'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
-                'Nitrogen, Nitrate (NO3) as N'
-            ]
-            >>> nitro_combined = 'Nitrogen, NOx as N'
-            >>> table.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
-        '''
+        Examples
+        -------
+        >>> db = bmp.dataAccess.Database(file='bmp/data/data_pybmpdb.csv')
+        >>> table = bmp.dataAccess.Table('Nutrients', db)
+        >>> nitro_components = [
+            'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
+            'Nitrogen, Nitrate (NO3) as N'
+        ]
+        >>> nitro_combined = 'Nitrogen, NOx as N'
+        >>> table.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
+
+        """
+
         if len(existingparams) != 2:
             raise NotImplementedError('existingparams must be a sequence of length = 2')
 
@@ -1089,14 +1108,11 @@ class Table(object):
 
         '''
         _check_levelnames(levels)
-        showprogress = kwargs.pop('showprogress', False)
 
         grouplevels = ['parameter']
         grouplevels.extend(levels)
 
         datagroups = self.data.groupby(level=grouplevels)
-
-        pbar = utils.ProgressBar(datagroups)#, labelfxn=lambda g: print(g[0]))
 
         datasets = []
         for dsnum, (key, dsdata) in enumerate(datagroups):
@@ -1128,8 +1144,6 @@ class Table(object):
             ds.definition['parameter'] = self.parameter_lookup[param_name]
 
             datasets.append(ds)
-            if showprogress:
-                pbar.animate(dsnum + 1)
 
         return datasets
 
