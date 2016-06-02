@@ -17,7 +17,7 @@ before_install:
   - conda update --yes conda
 
 install:
-  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION pytest
+  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION pytest nose
   - source activate test
   - conda install --yes coverage docopt requests pyyaml wqio --channel=phobson
   - pip install coveralls
