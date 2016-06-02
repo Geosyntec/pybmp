@@ -1,6 +1,6 @@
 package:
   name: pybmpdb
-  version: 0.1.x
+  version: "0.1.x"
 
 source:
   path: ../../
@@ -10,37 +10,38 @@ source:
    # - fix.patch
 
 build:
-  number: 1
+  number: 2
+  script: python setup.py install
 
 requirements:
   build:
     - python
     - setuptools
+    - pandas
+    - numexpr
     - seaborn
-    - wqio
     - pyodbc
+    - wqio 0.3.2
 
   run:
     - python
     - setuptools
-    - wqio
+    - pandas
+    - numexpr
     - pyodbc
     - seaborn
     - statsmodels
     - openpyxl
     - xlrd
     - six
+    - wqio 0.3.2
 
 test:
   imports:
     - pybmpdb
 
-  commands:
-    - python -c "import pybmpdb; pybmpdb.test()"
-
   requires:
     - nose
-    - mock
     - wqio
 
 about:

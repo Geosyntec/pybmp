@@ -1,6 +1,6 @@
 package:
   name: pybmpdb
-  version: !!str 0.1.2
+  version: "0.1.2"
 
 source:
   git_url: https://github.com/Geosyntec/pybmpdb.git
@@ -11,36 +11,37 @@ source:
 
 build:
   number: 1
+  script: python setup.py install
 
 requirements:
   build:
     - python
     - setuptools
+    - pandas
+    - numexpr
     - seaborn
     - pyodbc
-    - wqio
+    - wqio 0.3.2
 
   run:
     - python
     - setuptools
-    - wqio
-    - seaborn
+    - pandas
+    - numexpr
     - pyodbc
+    - seaborn
     - statsmodels
     - openpyxl
     - xlrd
     - six
+    - wqio 0.3.2
 
 test:
   imports:
     - pybmpdb
 
-  commands:
-    - python -c "import pybmpdb; pybmpdb.test()"
-
   requires:
     - nose
-    - mock
     - wqio
 
 about:

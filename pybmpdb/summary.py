@@ -181,8 +181,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
         dbpath = resource_filename("pybmpdb.data", 'bmpdata.csv')
 
     db = dataAccess.Database(dbpath, catanalysis=catanalysis)
-    import pdb
-    pdb.set_trace()
+
     # astable must be true here. The input value is respected later
     table = db.selectData(astable=True, useTex=useTex, **selection)
 
