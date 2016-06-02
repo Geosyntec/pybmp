@@ -62,11 +62,13 @@ def _process_sampletype(sampletype):
 
 
 def _check_station(station):
-    if station in ['reference', 'subsurface']:
+    if station.lower() in ['reference', 'subsurface']:
         raise NotImplementedError
 
-    if station not in ['inflow', 'outflow']:
+    if station.lower() not in ['inflow', 'outflow']:
         raise ValueError('`station` must be "inflow" or "outflow"')
+
+    return station.lower()
 
 
 def _check_levelnames(levels):
