@@ -17,9 +17,10 @@ except ImportError:
     pyodbc = None
 
 from pybmpdb import dataAccess as da
-from wqio.core import features
+from wqio import features
 
-skip_db = pyodbc is None or os.name == 'posix'
+skip_db = True # pyodbc is None or os.name == 'posix'
+
 
 @nottest
 def get_data_file(filename):
@@ -228,12 +229,13 @@ class _base_database_Mixin(object):
         self.known_top_col_level = ['Inflow', 'Outflow']
         self.known_bottom_col_level = ['DL', 'res', 'qual']
         self.known_col_names = ['station', 'quantity']
-        self.known_datashape = (3094, 3)
+        self.known_datashape = (3094, 2)
 
         self.known_index_names = [
-            'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
-            'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
-            'wqscreen', 'catscreen',  'balanced', 'PDFID', 'WQID'
+            'category', 'epazone', 'state', 'site', 'bmp', 'station',
+            'storm', 'sampletype', 'watertype', 'paramgroup', 'units',
+            'parameter', 'wqscreen', 'catscreen',  'balanced', 'PDFID',
+            'WQID', 'sampledatetime'
         ]
         self.known_bmpcats = ['BR', 'BS', 'MD']
         self.known_group = 'Metals'
@@ -443,9 +445,10 @@ class _base_tableMixin(object):
         self.known_csvfile = get_data_file('testdata.csv')
         self.known_bmpcatsrc = get_data_file('testbmpcats.csv')
         self.known_index_names = [
-            'category', 'epazone', 'state', 'site','bmp', 'station', 'storm',
-            'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
-            'wqscreen', 'catscreen', 'balanced', 'PDFID', 'WQID'
+            'category', 'epazone', 'state', 'site','bmp', 'station',
+            'storm', 'sampletype', 'watertype', 'paramgroup', 'units',
+            'parameter', 'wqscreen', 'catscreen', 'balanced', 'PDFID',
+            'WQID', 'sampledatetime',
         ]
         self.known_getData_row_index_names = [
             'epazone', 'state', 'site', 'bmp', 'storm',

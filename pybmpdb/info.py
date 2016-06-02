@@ -3,6 +3,7 @@
 __all__ = ['getUnits', 'getTexParam', 'getTexUnit',
            'getNormalization', 'getConversion']
 
+
 def getUnits(param):
     '''
     Returns the standard units for a given parameter
@@ -36,6 +37,7 @@ def getNormalization(unit):
     else:
         return units[unit.strip()]['factor']
 
+
 def getConversion(param):
     '''
     Returns the factor by which you should divide a *normalized*
@@ -43,6 +45,7 @@ def getConversion(param):
     (e.g., g/L -> ug/L for Dissolved Lead)
     '''
     return units[parameters[param.strip().lower()]['units']]['factor']
+
 
 def addParameter(name, units, tex=None):
     if tex is None:
@@ -53,6 +56,7 @@ def addParameter(name, units, tex=None):
     }
     parameters[name.lower()] = values
     return parameters
+
 
 def addUnit(name, factor, texname=None, unicodename=None):
     if texname is None:
