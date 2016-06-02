@@ -1,38 +1,35 @@
 import sys
 import os
+from io import StringIO
 from pkg_resources import resource_filename
-pythonversion = sys.version_info.major
+PYTHON2 = sys.version_info.major == 2
 
-from six import StringIO
 from unittest import mock
-import nose.tools as nt
-import numpy as np
+import pytest
 import numpy.testing as nptest
+import pandas.util.testing as pdtest
+import wqio.testing as helpers
+
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas
-import pandas.util.testing as pdtest
 
 import pybmpdb
-from wqio import utils
-import wqio.testing as helpers
 
 
 mock_figure = mock.Mock(spec=plt.Figure)
 
-skip_db = True # pyodbc is None or os.name == 'posix'
+SKIP_DB = True # pyodbc is None or os.name == 'posix'
 
 
-@nt.nottest
 def get_data_file(filename):
     return resource_filename("wqio.data", filename)
 
 
-@nt.nottest
 def get_tex_file(filename):
     return resource_filename("pybmpdb.tex", filename)
 
 
-@nt.nottest
 class mock_parameter(object):
     def __init__(self):
         self.name = 'Carbon Dioxide'
@@ -43,7 +40,6 @@ class mock_parameter(object):
         return 'Carbon Dioxide (mg/L)'
 
 
-@nt.nottest
 class mock_location(object):
     def __init__(self, include):
         self.N = 25
@@ -67,10 +63,7 @@ class mock_location(object):
         self.include = include
         self.exclude = not self.include
 
-    pass
 
-
-@nt.nottest
 class mock_dataset(object):
     def __init__(self, infl_include, effl_include):
         self.influent = mock_location(infl_include)
@@ -222,45 +215,40 @@ class _base_DatasetSummary_Mixin(object):
         \end{figure} \clearpage""" + '\n'
 
     def test_paramgroup(self):
-        nt.assert_true(hasattr(self.ds_sum, 'paramgroup'))
-        nt.assert_true(isinstance(self.ds_sum.paramgroup, str))
-        nt.assert_equal(self.ds_sum.paramgroup, self.known_paramgroup)
+        assert isinstance(self.ds_sum.paramgroup, str)
+        assert self.ds_sum.paramgroup == self.known_paramgroup
 
     def test_ds(self):
-        nt.assert_true(hasattr(self.ds_sum, 'ds'))
-        nt.assert_true(isinstance(self.ds_sum.ds, mock_dataset))
+        assert isinstance(self.ds_sum.ds, mock_dataset)
 
     def test_parameter(self):
-        nt.assert_true(hasattr(self.ds_sum, 'parameter'))
-        nt.assert_true(isinstance(self.ds_sum.parameter, mock_parameter))
+        assert isinstance(self.ds_sum.parameter, mock_parameter)
 
     def test_bmp(self):
-        nt.assert_true(hasattr(self.ds_sum, 'bmp'))
-        nt.assert_true(isinstance(self.ds_sum.bmp, str))
-        nt.assert_equal(self.ds_sum.bmp, self.known_bmp)
+        assert isinstance(self.ds_sum.bmp, str)
+        assert self.ds_sum.bmp == self.known_bmp
 
     def test_latex_file_name(self):
-        nt.assert_true(hasattr(self.ds_sum, 'latex_file_name'))
-        nt.assert_true(isinstance(self.ds_sum.latex_file_name, str))
-        nt.assert_equal(self.ds_sum.latex_file_name, self.known_latex_file_name)
+        assert isinstance(self.ds_sum.latex_file_name, str)
+        assert self.ds_sum.latex_file_name == self.known_latex_file_name
 
     def test__tex_table_row_basic(self):
         r = self.ds_sum._tex_table_row('The Medians', 'median')
-        nt.assert_equal(r, self.known_r_basic)
+        assert r == self.known_r_basic
 
     def test__tex_table_row_forceint(self):
         r = self.ds_sum._tex_table_row('Counts', 'N', forceint=True,
                                        sigfigs=1)
-        nt.assert_equal(r, self.known_r_forceint)
+        assert r == self.known_r_forceint
 
     def test__tex_table_row_advanced(self):
         r = self.ds_sum._tex_table_row('Mean CI', 'mean_conf_interval', rule='top',
                                    twoval=True, ci=True, sigfigs=2)
-        nt.assert_equal(r, self.known_r_advanced)
+        assert r == self.known_r_advanced
 
     def test__text_table_row_twoattrs(self):
         r = self.ds_sum._tex_table_row('Quartiles', ['pctl25', 'pctl75'], twoval=True)
-        nt.assert_equal(r, self.known_r_twoattrs)
+        assert r == self.known_r_twoattrs
 
     def test__make_tex_figure(self):
         fig = self.ds_sum._make_tex_figure('testfig.png', 'test caption')
@@ -270,7 +258,7 @@ class _base_DatasetSummary_Mixin(object):
             \includegraphics[scale=1.00]{testfig.png}
             \caption{test caption}
         \end{figure} \clearpage""" + '\n'
-        nt.assert_equal(fig, known_fig)
+        assert fig == known_fig
 
     def test_makeTexInput(self):
         if self.scenario == 'TT':
@@ -282,18 +270,15 @@ class _base_DatasetSummary_Mixin(object):
 
         tstring = self.ds_sum.makeTexInput('test table title')
 
-        try:
-            nt.assert_equal(tstring, known_tstring)
-        except:
-            with open('{}_out_test.test'.format(self.scenario), 'w') as test:
-                test.write(tstring)
-
-            with open('{}_out_known.test'.format(self.scenario), 'w') as known:
-                known.write(known_tstring)
-            raise
+        helpers.assert_bigstring_equal(
+            tstring,
+            known_tstring,
+            '{}_out_test.test'.format(self.scenario),
+            '{}_out_known.test'.format(self.scenario)
+        )
 
 
-class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
+class Test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
     def setup(self):
         self.scenario = 'TT'
         self.ds = mock_dataset(True, True)
@@ -366,7 +351,7 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
             \end{tabular}
         \end{table}""" + '\n'
         try:
-            nt.assert_equal(table, known_table)
+            assert (table == known_table)
         except:
             with open('make_tex_table_res.test', 'w') as f:
                 f.write(table)
@@ -375,7 +360,7 @@ class test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
             raise
 
 
-class test_DatasetSummary_TF(_base_DatasetSummary_Mixin):
+class Test_DatasetSummary_TF(_base_DatasetSummary_Mixin):
     def setup(self):
         self.scenario = 'TF'
         self.ds = mock_dataset(True, False)
@@ -397,7 +382,7 @@ class test_DatasetSummary_TF(_base_DatasetSummary_Mixin):
                 Counts & 25 & NA \\'''
 
 
-class test_DatasetSummary_FT(_base_DatasetSummary_Mixin):
+class Test_DatasetSummary_FT(_base_DatasetSummary_Mixin):
     def setup(self):
         self.scenario = 'FT'
         self.ds = mock_dataset(False, True)
@@ -419,7 +404,7 @@ class test_DatasetSummary_FT(_base_DatasetSummary_Mixin):
                 Counts & NA & 25 \\'''
 
 
-class test_DatasetSummary_FF(_base_DatasetSummary_Mixin):
+class Test_DatasetSummary_FF(_base_DatasetSummary_Mixin):
     def setup(self):
         self.scenario = 'FF'
         self.ds = mock_dataset(False, False)
@@ -476,18 +461,16 @@ class test_CategoricalSummary(object):
         #    os.remove(self.csum())
 
     def test_datasets(self):
-        nt.assert_true(hasattr(self.csum, 'datasets'))
         for ds in self.csum.datasets:
-            nt.assert_true(isinstance(ds, mock_dataset))
+            assert isinstance(ds, mock_dataset)
 
-        nt.assert_equal(self.known_dataset_count, len(self.csum.datasets))
+        assert self.known_dataset_count == len(self.csum.datasets)
 
     def test_paramgroup(self):
-        nt.assert_true(hasattr(self.csum, 'paramgroup'))
-        nt.assert_true(isinstance(self.csum.paramgroup, str))
-        nt.assert_equal(self.csum.paramgroup, self.known_paramgroup)
+        assert isinstance(self.csum.paramgroup, str)
+        assert self.csum.paramgroup == self.known_paramgroup
 
-    @nptest.dec.skipif(pythonversion == 2)
+    @pytest.mark.skipif(PYTHON2, reason='legacy python')
     def test__make_input_file_IO(self):
         with StringIO() as inputIO:
             self.csum._make_input_file_IO(inputIO)
@@ -501,7 +484,7 @@ class test_CategoricalSummary(object):
         )
 
 
-    @nptest.dec.skipif(pythonversion == 2)
+    @pytest.mark.skipif(PYTHON2, reason='legacy python')
     def test__make_report_IO(self):
         with StringIO() as reportIO:
             with open(self.test_templatefile, 'r') as templateIO:
@@ -516,7 +499,7 @@ class test_CategoricalSummary(object):
                     'test_reportIO_expected.tex'
                 )
 
-    @nptest.dec.skipif(pythonversion == 2)
+    @pytest.mark.skipif(PYTHON2, reason='legacy python')
     def test_makeReport(self):
         templatepath = get_tex_file('draft_template.tex')
         inputpath = get_tex_file('inputs_{}.tex'.format(self.csum.paramgroup.lower()))
@@ -724,7 +707,7 @@ input_file_string = r'''\section{Carbon Dioxide}
 \clearpage
 '''
 
-class test_helpers(object):
+class Test_helpers(object):
     def setup(self):
         if os.name == 'posix':
             dbfile = 'testdata.csv'
@@ -740,29 +723,28 @@ class test_helpers(object):
         self.known_shape = (2250, 2)
         self.known_shape_excl = (2168, 2)
 
-    @nptest.dec.skipif(skip_db)
+    @pytest.mark.skipif(SKIP_DB, reason='no viable DN')
     def test_getSummaryData_smoke(self):
         df, db = pybmpdb.summary.getSummaryData(dbpath=self.dbfile)
-        nt.assert_tuple_equal(df.shape, self.known_shape)
+        assert df.shape == self.known_shape
 
-    @nptest.dec.skipif(skip_db)
+    @pytest.mark.skipif(SKIP_DB, reason='no viable DN')
     def test_getSummaryDataExclusive_smoke(self):
         exbmps = ['15.2Apex', '7.6Apex']
         df, db = pybmpdb.summary.getSummaryData(dbpath=self.dbfile, excludedbmps=exbmps)
-        nt.assert_tuple_equal(df.shape, self.known_shape_excl)
+        assert df.shape == self.known_shape_excl
         for x in exbmps:
-            nt.assert_true(x not in df.index.get_level_values('bmp').unique())
+            assert x not in df.index.get_level_values('bmp').unique()
 
     def test_setMPLStyle_smoke(self):
         pybmpdb.summary.setMPLStyle()
 
-    @nptest.dec.skipif(skip_db)
+    @pytest.mark.skipif(SKIP_DB, reason='no viable DN')
     def test_getPFCs(self):
         pfcs = pybmpdb.summary.getPFCs(self.db)
-        nt.assert_list_equal(pfcs, self.known_pfcs)
+        assert pfcs == self.known_pfcs
 
 
-@nt.nottest
 def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
     infile = get_data_file(infilename)
     outfile = get_data_file(outfilename)
