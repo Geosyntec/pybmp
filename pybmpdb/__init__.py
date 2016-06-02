@@ -7,3 +7,5 @@ from .summary import (
     parameterBoxplots,
     bmpStatSummary
 )
+
+from .tests import test
