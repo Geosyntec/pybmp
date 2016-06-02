@@ -324,7 +324,14 @@ class Database(object):
         # group the data based on the index
         agg_rules = {'res': 'mean', 'qual': 'min', 'sampledatetime': 'min'}
 
-        return self._data_cleaned.groupby(by=row_headers).agg(agg_rules)
+        agged = (
+            self._data_cleaned
+                .groupby(by=row_headers)
+                .agg(agg_rules)
+                .set_index('sampledatetime', append=True)
+        )
+
+        return agged
 
     def connect(self, cmd=None, commit=False):
         '''

@@ -181,7 +181,8 @@ def getSummaryData(dbpath=None, catanalysis=False,
         dbpath = resource_filename("pybmpdb.data", 'bmpdata.csv')
 
     db = dataAccess.Database(dbpath, catanalysis=catanalysis)
-
+    import pdb
+    pdb.set_trace()
     # astable must be true here. The input value is respected later
     table = db.selectData(astable=True, useTex=useTex, **selection)
 
@@ -236,11 +237,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
               .pipe(_filter_onesided_BMPs)
     )
 
-    if astable:
-        table = dataAccess.Table(subset, name=name, useTex=useTex)
-        return table, db
-    else:
-        return subset, db
+    return subset, db
 
 
 def setMPLStyle(serif=False):
