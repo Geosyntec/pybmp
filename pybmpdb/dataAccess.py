@@ -588,19 +588,16 @@ class Table(object):
         '''
         # groups the data by parameter, tex, and units
         parameter_unit_levels = ['parameter', 'units']
-        paramgroups = self.data.groupby(level=parameter_unit_levels)
+        params_df = self.data.reset_index()[parameter_unit_levels].drop_duplicates()
 
-        # pull out any one of the groups and the get the index values
-        paramunit_df = paramgroups.nth(0)
-        param_index = paramunit_df.index.get_level_values('parameter')
-        if not param_index.is_unique:
-            raise utils.DataError('dataframe does not have consistent units')
+        if params_df.shape[0] > params_df['parameter'].unique().shape[0]:
+            raise ValueError('dataframe does not have consistent units')
 
         # initalize the results list
         parameters = []
-        for row in paramunit_df.index:
-            basic_param = row[self.index['parameter']]
-            basic_unit = info.getUnits(basic_param)
+        for row in params_df.to_dict(orient='records'):
+            basic_param = row['parameter']
+            basic_unit = row['units']
             if self.useTex:
                 p = wqio.Parameter(
                     name=info.getTexParam(basic_param),
