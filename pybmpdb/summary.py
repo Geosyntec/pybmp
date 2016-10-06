@@ -8,15 +8,13 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import pandas
 import openpyxl
-
-from wqio import utils
-from wqio import Parameter
-
-from . import dataAccess, info
-
 from statsmodels.tools.decorators import (
     resettable_cache, cache_readonly, cache_writable
 )
+
+import wqio
+
+from . import dataAccess, info, utils
 
 
 def filterlocation(location, count=5, column='bmp'):
@@ -184,6 +182,9 @@ def getSummaryData(dbpath=None, catanalysis=False,
 
     # astable must be true here. The input value is respected later
     table = db.selectData(astable=True, useTex=useTex, **selection)
+    # -> db.data -> db._group_data()
+    # ---> db._data_cleaned -> db._cleanup_data() -- selects balanced data for cat-level analysiw
+    # -----> db._data_fromdb -> "raw data"
 
     # combine NO3+NO2 and NO3 into NOx
     nitro_components = [
@@ -363,8 +364,8 @@ class DatasetSummary(object):
 
         if fromdataset:
             if self.ds.effluent.include and self.ds.influent.include:
-                val = utils.sigFigs(getattr(self.ds, attribute), sigfigs,
-                                    pval=pval, tex=tex, forceint=forceint)
+                val = wqio.utils.sigFigs(getattr(self.ds, attribute), sigfigs,
+                                         pval=pval, tex=tex, forceint=forceint)
             else:
                 val = 'NA'
 
@@ -385,16 +386,16 @@ class DatasetSummary(object):
                     if val is not None:
                         if twoval:
                             thisstring = '{}; {}'.format(
-                                utils.sigFigs(val[0], sigfigs, pval=pval,
+                                wqio.utils.sigFigs(val[0], sigfigs, pval=pval,
                                               tex=tex, forceint=forceint),
-                                utils.sigFigs(val[1], sigfigs, pval=pval,
+                                wqio.utils.sigFigs(val[1], sigfigs, pval=pval,
                                               tex=tex, forceint=forceint)
                             )
 
                             if ci:
                                 thisstring = '({})'.format(thisstring)
                         else:
-                            thisstring = utils.sigFigs(
+                            thisstring = wqio.utils.sigFigs(
                                 val, sigfigs, pval=pval,
                                 tex=tex, forceint=forceint
                             )
@@ -776,7 +777,7 @@ def parameterBoxplots(datacollection, prefix, bacteria=False):
         ax.set_xticklabels([x.replace('/', '/\n') for x in bmplabels])
         ax.set_ylabel(param.paramunit())
         ax.set_xlabel('')
-        utils.figutils.rotateTickLabels(ax, 45, 'x')
+        wqio.viz.rotateTickLabels(ax, 45, 'x')
         ax.set_xlim(left=1, right=bmppositions.max()+1)
         if infl_proxy is not None:
             ax.legend(

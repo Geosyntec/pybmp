@@ -22,7 +22,7 @@ SKIP_DB = True # pyodbc is None or os.name == 'posix'
 
 
 def get_data_file(filename):
-    return resource_filename("wqio.data", filename)
+    return resource_filename("wqio.tests._data", filename)
 
 
 @pytest.mark.parametrize(('value', 'expected'), [

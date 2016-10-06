@@ -1,5 +1,6 @@
 import os
 import itertools
+from textwrap import dedent
 
 try:
     import pyodbc
@@ -151,49 +152,50 @@ class Database(object):
         if self.dbtable is not None:
             self._sqlquery = "select * from [{}]".format(self.dbtable)
         elif self._sqlquery is None:
-            self._sqlquery = (
-                "select\n"
-                "    [src].[Analysis_Category] as [category],\n"
-                "    [src].[BMP Cat Code] as [bmpcat],\n"
-                "    [src].[TBMPT 2009] as [bmptype],\n"
-                "    [src].[EPA Rain Zone] as [epazone],\n"
-                "    [src].[State] as [state],\n"
-                "    [src].[Country] as [country],\n"
-                "    [src].[SITENAME] as [site],\n"
-                "    [src].[BMPName] as [bmp],\n"
-                "    [src].[PDF ID] as [PDFID],\n"
-                "    [src].[WQID],\n"
-                "    [src].[MSNAME] as [monitoringstation],\n"
-                "    [src].[Storm #] as [storm],\n"
-                "    [src].[SAMPLEDATE] as [sampledate],\n"
-                "    [src].[SAMPLETIME] as [sampletime],\n"
-                "    [src].[Group] as [paramgroup],\n"
-                "    [src].[Analysis Sample Fraction] as [fraction],\n"
-                "    [src].[WQX Parameter] as [raw_parameter],\n"
-                "    [src].[Common Name] as [parameter],\n"
-                "    [src].[WQ UNITS] as [wq_units],\n"
-                "    [src].[QUAL] as [wq_qual],\n"
-                "    [src].[WQ Analysis Value] as [wq_value],\n"
-                "    [src].[DL] as [DL],\n"
-                "    [src].[Monitoring Station Type] as [station],\n"
-                "    [src].[SGTCodeDescp] as [watertype],\n"
-                "    [src].[STCODEDescp] as [sampletype],\n"
-                "    [src].[Use in BMP WQ Analysis] as [wqscreen],\n"
-                "    [src].[Use in BMP Category Analysis] as [catscreen],\n"
-                "    [src].[Infl_Effl_Balance] as [balanced]\n"
-                "from [bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014] as [src]\n"
-                "where [src].[Common Name] is not null\n"
-                "order by\n"
-                "    [src].[TBMPT 2009],\n"
-                "    [src].[CATEGORY],\n"
-                "    [src].[SITENAME],\n"
-                "    [src].[BMPName],\n"
-                "    [src].[Storm #],\n"
-                "    [src].[SAMPLEDATE],\n"
-                "    [src].[Common Name],\n"
-                "    [src].[WQX Parameter],\n"
-                "    [src].[Analysis Sample Fraction],\n"
-                "    [src].[Monitoring Station Type];"
+            self._sqlquery = dedent("""
+                select
+                    [src].[Analysis_Category] as [category],
+                    [src].[BMP Cat Code] as [bmpcat],
+                    [src].[TBMPT 2009] as [bmptype],
+                    [src].[EPA Rain Zone] as [epazone],
+                    [src].[State] as [state],
+                    [src].[Country] as [country],
+                    [src].[SITENAME] as [site],
+                    [src].[BMPName] as [bmp],
+                    [src].[PDF ID] as [PDFID],
+                    [src].[WQID],
+                    [src].[MSNAME] as [monitoringstation],
+                    [src].[Storm #] as [storm],
+                    [src].[SAMPLEDATE] as [sampledate],
+                    [src].[SAMPLETIME] as [sampletime],
+                    [src].[Group] as [paramgroup],
+                    [src].[Analysis Sample Fraction] as [fraction],
+                    [src].[WQX Parameter] as [raw_parameter],
+                    [src].[Common Name] as [parameter],
+                    [src].[WQ UNITS] as [wq_units],
+                    [src].[QUAL] as [wq_qual],
+                    [src].[WQ Analysis Value] as [wq_value],
+                    [src].[DL] as [DL],
+                    [src].[Monitoring Station Type] as [station],
+                    [src].[SGTCodeDescp] as [watertype],
+                    [src].[STCODEDescp] as [sampletype],
+                    [src].[Use in BMP WQ Analysis] as [wqscreen],
+                    [src].[Use in BMP Category Analysis] as [catscreen],
+                    [src].[Infl_Effl_Balance] as [balanced]
+                from [bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014] as [src]
+                where [src].[Common Name] is not null
+                order by
+                    [src].[TBMPT 2009],
+                    [src].[CATEGORY],
+                    [src].[SITENAME],
+                    [src].[BMPName],
+                    [src].[Storm #],
+                    [src].[SAMPLEDATE],
+                    [src].[Common Name],
+                    [src].[WQX Parameter],
+                    [src].[Analysis Sample Fraction],
+                    [src].[Monitoring Station Type];
+                """
             )
         return self._sqlquery
     @sqlquery.setter
@@ -298,19 +300,23 @@ class Database(object):
             )
 
             # screen the data
+            qrystring = "catscreen == 'yes' and balanced  == '='"
             if self.catanalysis:
-                qrystring = (
-                    "catscreen == 'yes' and "
-                    "bmpcat    != 'EXC' and "
-                    "balanced  == '='"
-                )
-                data = data.query(qrystring)
+                data += " and bmpcat    != 'EXC'"
+
+            data = data.query(qrystring)
+
 
             # normalize the units
-            data = utils.normalize_units2(data, info.getNormalization,
-                                          info.getConversion, info.getUnits,
-                                          paramcol='parameter', rescol='res',
-                                          unitcol='units', dlcol=None)
+            data = utils.normalize_units2(
+                data, info.getNormalization,
+                info.getConversion,
+                info.getUnits,
+                paramcol='parameter',
+                rescol='res',
+                unitcol='units',
+                dlcol=None
+            )
 
         return data
 
@@ -730,7 +736,7 @@ class Table(object):
             >>> db.redefineIndexLevel('epazone', 9999, criteria, dropold=True)
             >>> print(db.data.index.get_level_values('epazone').unique()) # that it worked
         '''
-        self.data = utils.redefineIndexLevel(
+        self.data = utils.redefine_index_level(
             self.data, levelname, value,
             criteria=criteria, dropold=dropold
         )
@@ -799,7 +805,7 @@ class Table(object):
         >>> print(db.data.index.get_level_values('category').unique())
         """
 
-        self.data = utils.redefineIndexLevel(
+        self.data = utils.redefine_index_level(
             self.data, 'category', bmpname,
             criteria=criteria, dropold=dropold
         )
@@ -896,7 +902,7 @@ class Table(object):
             # add the units into indexMod, apply all changes
             indexMods['units'] = newunits
             for levelname, value in indexMods.items():
-                selection = utils.redefineIndexLevel(
+                selection = utils.redefine_index_level(
                     selection,
                     levelname,
                     value,
@@ -1028,10 +1034,6 @@ class Table(object):
                 to make the `Location` objects. It is not recommended to use
                 anything lower than 3.
 
-            showprogress : option bool (default = False)
-                If True, an ASCII progress bar will be displayed as datasets
-                are created.
-
         Returns:
             datasets : list of Location objects.
 
@@ -1045,15 +1047,12 @@ class Table(object):
         '''
         _check_station(station)
         _check_levelnames(levels)
-        showprogress = kwargs.pop('showprogress', False)
 
         grouplevels = ['parameter', 'station']
         grouplevels.extend(levels)
 
         data = self.data.query("station in ['inflow', 'outflow']")
         datagroups = data.groupby(level=grouplevels)
-
-        pbar = utils.ProgressBar(datagroups)
 
         locations = []
         for locnum, (key, locdata) in enumerate(datagroups):
@@ -1072,9 +1071,6 @@ class Table(object):
                 'name': self._make_name(key),
                 'definition': defn
             })
-
-            if showprogress:
-                pbar.animate(locnum)
 
         return locations
 
@@ -1097,10 +1093,6 @@ class Table(object):
                 The absolute minimum number if datapoints required to attempt
                 to make the `Location` objects. It is not recommended to use
                 anything lower than 3.
-
-            showprogress : option bool (default = False)
-                If True, an ASCII progress bar will be displayed as datasets
-                are created.
 
         Returns:
             datasets : list of Dataset objects.

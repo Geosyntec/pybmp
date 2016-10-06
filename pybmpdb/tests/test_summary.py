@@ -8,7 +8,7 @@ from unittest import mock
 import pytest
 import numpy.testing as nptest
 import pandas.util.testing as pdtest
-import wqio.testing as helpers
+from wqio.tests import helpers
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,7 +23,7 @@ SKIP_DB = True # pyodbc is None or os.name == 'posix'
 
 
 def get_data_file(filename):
-    return resource_filename("wqio.data", filename)
+    return resource_filename("wqio.tests._data", filename)
 
 
 def get_tex_file(filename):
