@@ -12,6 +12,7 @@ import pandas
 from pandas.io import sql
 
 from . import info
+
 import wqio
 from wqio import utils
 
@@ -274,6 +275,15 @@ class Database(object):
 
         data = self._data_fromdb.copy()
         if self.usingdb:
+            units_norm = {
+                u['unicode']: info.getNormalization(u['name'])
+                for u in info.units
+            }
+
+            target_units = {
+                p['name'].lower(): info.getUnitsFromParam(p['name'], attr='unicode')
+                for p in info.parameters
+            }
 
             # rename columns:
             rename_columns = {
@@ -287,7 +297,6 @@ class Database(object):
             drop_columns = ['monitoringstation']
             data = (
                 data.rename(columns=rename_columns)
-                    .drop(drop_columns, axis=1)
                     .dropna(subset=['res'])
                     .pipe(self._strip_quals, qualcol='qual')
                     .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
@@ -297,25 +306,10 @@ class Database(object):
                     .assign(station=data['station'].str.lower())
                     .assign(sampletype=data['sampletype'].apply(_process_sampletype))
                     .assign(sampledatetime=data.apply(utils.makeTimestamp, axis=1))
-            )
-
-            # screen the data
-            qrystring = "catscreen == 'yes' and balanced  == '='"
-            if self.catanalysis:
-                data += " and bmpcat    != 'EXC'"
-
-            data = data.query(qrystring)
-
-
-            # normalize the units
-            data = utils.normalize_units2(
-                data, info.getNormalization,
-                info.getConversion,
-                info.getUnits,
-                paramcol='parameter',
-                rescol='res',
-                unitcol='units',
-                dlcol=None
+                    .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
+                    .assign(parameter=lambda df: df['parameter'].str.lower().str.strip())
+                    .pipe(utils.normalize_units, units_norm, target_units, paramcol='parameter', rescol='res', unitcol='units')
+                    .drop(drop_columns, axis=1)
             )
 
         return data
@@ -615,8 +609,8 @@ class Table(object):
             basic_unit = row['units']
             if self.useTex:
                 p = wqio.Parameter(
-                    name=info.getTexParam(basic_param),
-                    units=info.getTexUnit(basic_unit)
+                    name=info.getParam(basic_param, attr='tex'),
+                    units=info.getUnits(basic_unit, attr='tex')
                 )
             else:
                 p = wqio.Parameter(name=basic_param, units=basic_unit)
@@ -871,7 +865,6 @@ class Table(object):
         selection = self.data.query("parameter in {}".format(existingparams))
 
         # put the station into the row index and pivot the param into columns
-        #selection = selection.stack(level='station')
         selection = selection.unstack(level='parameter')
 
         # compute the right values
@@ -910,10 +903,10 @@ class Table(object):
                     dropold=True
                 )
 
-        if newunits not in info.units.keys():
+        if newunits not in [u['name'] for u in info.units]:
             info.units = info.addUnit(newunits, 1)
 
-        if newparam not in info.parameters.keys():
+        if newparam not in [p['name'] for p in info.parameters]:
             info.parameters = info.addParameter(newparam, newunits)
 
         # return the *full* dataset (preserving original params)
@@ -1135,7 +1128,7 @@ class Table(object):
 
             ds.definition = dict(zip(grouplevels, key))
             if self.useTex:
-                param_name = info.getTexParam(ds.definition['parameter'])
+                param_name = info.getParam(ds.definition['parameter'], attr='tex')
             else:
                 param_name = ds.definition['parameter']
 
@@ -1176,9 +1169,9 @@ class Parameter(object):
 
     def __init__(self, name):
         self.name = name
-        self.tex = info.getTexParam(self.name)
-        self.std_units = info.getUnits(self.name)
-        self.units = info.getTexUnit(self.std_units)
+        self.tex = info.getParam(self.name, attr='tex')
+        self.std_units = info.getUnitsFromParam(self.name)
+        self.units = info.getUnits(self.std_units, attr='tex')
 
     def paramunit(self, usetex=True, usecomma=False):
         '''

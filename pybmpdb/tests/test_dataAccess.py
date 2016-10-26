@@ -16,7 +16,7 @@ except ImportError:
     pyodbc = None
 
 from pybmpdb import dataAccess as da
-from wqio import features
+import wqio
 
 SKIP_DB = True # pyodbc is None or os.name == 'posix'
 
@@ -417,7 +417,7 @@ class _base_tableMixin(object):
     def test_parameters(self):
         for p in self.table.parameters:
             assert p.name in self.known_parameters
-            assert isinstance(p, features.Parameter)
+            assert isinstance(p, wqio.Parameter)
 
     def test_parameter_lookup(self):
         assert isinstance(self.table.parameter_lookup, dict)
@@ -502,8 +502,8 @@ class _base_tableMixin(object):
         locations = self.table.getLocations('inflow')
         assert isinstance(locations, list)
         for loc in locations:
-            assert isinstance(loc['definition']['parameter'], features.Parameter)
-            assert isinstance(loc['location'], features.Location)
+            assert isinstance(loc['definition']['parameter'], wqio.Parameter)
+            assert isinstance(loc['location'], wqio.Location)
 
     def test_getLocations_form_category(self):
         locations = self.table.getLocations('inflow', 'category')
@@ -529,13 +529,13 @@ class _base_tableMixin(object):
         datasets = self.table.getDatasets()
         assert isinstance(datasets, list)
         for ds in datasets:
-            assert isinstance(ds, features.Dataset)
+            assert isinstance(ds, wqio.Dataset)
 
     def test_getDatasets_form_default(self):
         datasets = self.table.getDatasets()
         for ds in datasets:
             assert sorted(['parameter']) == sorted(list(ds.definition.keys()))
-            assert isinstance(ds.definition['parameter'], features.Parameter)
+            assert isinstance(ds.definition['parameter'], wqio.Parameter)
 
     def test_getDatasets_form_category(self):
         datasets = self.table.getDatasets('category')
@@ -597,7 +597,7 @@ class _base_tableMixin(object):
 
     def test_to_DataCollection(self):
         dc = self.table.to_DataCollection()
-        assert isinstance(dc, features.DataCollection)
+        assert isinstance(dc, wqio.DataCollection)
 
     def test__check_for_parameters(self):
         assert self.table._check_for_parameters(self.known_parameters)
