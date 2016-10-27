@@ -18,18 +18,71 @@ except ImportError:
 from pybmpdb import dataAccess as da
 import wqio
 
-SKIP_DB = (pyodbc is None) or (os.name == 'posix')
+NO_ACCESS = (pyodbc is None) or (os.name == 'posix')
 
 
 def get_data_file(filename):
     return resource_filename("pybmpdb.tests._data", filename)
 
 
-@pytest.mark.skipif(SKIP_DB, reason='No Access drivers')
+@pytest.fixture
+def db_quals():
+    return ['U', 'UJ']
+
+
+@pytest.fixture
+def db_fromcsv():
+    dbfile = get_data_file('bmpdata.csv')
+    db = da.Database(dbfile, useTex=False)
+    return db
+
+
+@pytest.fixture
+def db_fromaccess():
+    dbfile = get_data_file('bmpdata.accdb')
+    db = da.Database(dbfile, dbtable='bmp_data', useTex=False)
+    return db
+
+
+@pytest.fixture
+def expected_parameters():
+    parameters = [
+        'Cadmium, Dissolved', 'Cadmium, Total',
+        'Copper, Dissolved', 'Copper, Total',
+        'Lead, Dissolved', 'Lead, Total',
+        'Kjeldahl nitrogen (TKN)',
+        'Kjeldahl nitrogen, Suspended',
+        'Kjeldahl nitrogen, Dissolved',
+        'Nitrogen, Nitrate (NO3) as N',
+        'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
+        'Phosphorus as P, Dissolved',
+        'Phosphorus as P, Total',
+        'Total suspended solids',
+        'Escherichia coli',
+    ]
+    return parameters
+
+
+@pytest.fixture
+def expected_index_names():
+    index_names = [
+        'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
+        'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
+        'fraction', 'initialscreen', 'wqscreen', 'catscreen', 'balanced',
+        'PDFID', 'WQID', 'bmptype', 'sampledatetime'
+    ]
+    return index_names
+
+
+@pytest.mark.skipif('NO_ACCESS', reason='No Access drivers')
 def test_db_connection():
     dbfile = get_data_file('bmpdata.accdb')
-    with da.db_connection(dbfile) as cnn:
+    try:
+        cnn = da.db_connection(dbfile)
         assert isinstance(cnn, pyodbc.Connection)
+        cnn.close()
+    except:
+        raise
 
 
 @pytest.mark.parametrize(('value', 'expected'), [
@@ -110,11 +163,6 @@ def test__fancy_factors(row, expected):
 def test__fancy_quals(row, expected):
     result = da._fancy_quals(row)
     assert result == expected
-
-
-@pytest.fixture
-def db_quals():
-    return ['U', 'UJ']
 
 
 def test_Database_strip_quals(db_quals):
@@ -199,46 +247,11 @@ def test_Database_standardize_quals(db_quals):
     pdtest.assert_frame_equal(df_raw, df_final)
 
 
-@pytest.fixture
-def db_fromcsv():
-    known_csvfile = get_data_file('bmpdata.csv')
-    db = da.Database(known_csvfile, useTex=False)
-    return db
-
-
-@pytest.fixture
-def expected_parameters():
-    parameters = [
-        'Cadmium, Dissolved', 'Cadmium, Total',
-        'Copper, Dissolved', 'Copper, Total',
-        'Lead, Dissolved', 'Lead, Total',
-        'Kjeldahl nitrogen (TKN)',
-        'Kjeldahl nitrogen, Suspended',
-        'Kjeldahl nitrogen, Dissolved',
-        'Nitrogen, Nitrate (NO3) as N',
-        'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
-        'Phosphorus as P, Dissolved',
-        'Phosphorus as P, Total',
-        'Total suspended solids',
-        'Escherichia coli',
-    ]
-    return parameters
-
-
-@pytest.fixture
-def expected_index_names():
-    index_names = [
-        'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
-        'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
-        'fraction', 'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-        'PDFID', 'WQID', 'bmptype', 'sampledatetime'
-    ]
-    return index_names
-
-
 @pytest.mark.parametrize(('db', 'expected_driver'), [
     (db_fromcsv(), None),
-    #(db_fromaccess(), r'{Microsoft Access Driver (*.mdb, *.accdb)}'),
+     pytest.mark.skipif('NO_ACCESS')(
+        (db_fromaccess(), r'{Microsoft Access Driver (*.mdb, *.accdb)}')
+    ),
 ])
 def test_driver(db, expected_driver):
     assert db.driver == expected_driver
@@ -246,7 +259,7 @@ def test_driver(db, expected_driver):
 
 @pytest.mark.parametrize(('db', 'expected'), [
     (db_fromcsv(), False),
-    #(db_fromaccess(), True),
+    pytest.mark.skipif('NO_ACCESS')((db_fromaccess(), True)),
 ])
 def test_usingdb(db, expected):
     assert db.usingdb == expected
@@ -254,7 +267,7 @@ def test_usingdb(db, expected):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_file(db):
     assert hasattr(db, 'file')
@@ -262,7 +275,7 @@ def test_file(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_data_attr(db, expected_index_names):
     expected_datashape = (16273, 2)
@@ -275,7 +288,7 @@ def test_data_attr(db, expected_index_names):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_select_form(db):
     data = db.select(paramgroup='Metals')
@@ -289,7 +302,7 @@ def test_select_form(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_sqlquery_setter(db):
     new_query = 'test'
@@ -299,15 +312,15 @@ def test_sqlquery_setter(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test__source_data(db):
-    assert isinstance(db._source_data, pandas.DataFrame)
+def test__data_raw(db):
+    assert isinstance(db._data_raw, pandas.DataFrame)
 
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test__data_cleaned(db):
     assert isinstance(db._data_cleaned, pandas.DataFrame)
@@ -315,7 +328,7 @@ def test__data_cleaned(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_dbtable(db):
     assert db.dbtable == None
@@ -325,7 +338,7 @@ def test_dbtable(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_select_raise(db):
     with pytest.raises(ValueError):
@@ -334,7 +347,7 @@ def test_select_raise(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_select_single_args(db):
     parameter = 'Copper, Total'
@@ -354,7 +367,7 @@ def test_select_single_args(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_select_list_args(db):
     parameters = ['Copper, Total', 'Lead, Total']
@@ -366,7 +379,7 @@ def test_select_list_args(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_params(db, expected_parameters):
     for p in db.params:
@@ -375,7 +388,7 @@ def test_params(db, expected_parameters):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_parameters(db):
     for p in db.parameters:
@@ -385,7 +398,7 @@ def test_parameters(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_parameter_lookup(db):
     assert isinstance(db.parameter_lookup, dict)
@@ -394,7 +407,7 @@ def test_parameter_lookup(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_index(db, expected_index_names):
     assert len(db.index.keys()) == len(expected_index_names)
@@ -404,7 +417,7 @@ def test_index(db, expected_index_names):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_index_values(db):
     expected_categories = [
@@ -421,7 +434,7 @@ def test_index_values(db):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test_index_vals_raises(db):
     with pytest.raises(KeyError):
@@ -430,7 +443,7 @@ def test_index_vals_raises(db):
 
 @pytest.mark.parametrize('dbfxn', [
     db_fromcsv,
-    #db_fromaccess,
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
 ])
 def test_transformParameters(dbfxn):
     db = dbfxn()
@@ -449,7 +462,7 @@ def test_transformParameters(dbfxn):
 
 @pytest.mark.parametrize('dbfxn', [
     db_fromcsv,
-    #db_fromaccess,
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
 ])
 def test_unionParamsWithPreference(dbfxn):
     db = dbfxn()
@@ -465,7 +478,7 @@ def test_unionParamsWithPreference(dbfxn):
 
 @pytest.mark.parametrize('dbfxn', [
     db_fromcsv,
-    #db_fromaccess,
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
 ])
 def test_redefineIndexLevel_DropOldTrue(dbfxn):
     db = dbfxn()
@@ -482,7 +495,7 @@ def test_redefineIndexLevel_DropOldTrue(dbfxn):
 
 @pytest.mark.parametrize('dbfxn', [
     db_fromcsv,
-    #db_fromaccess,
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
 ])
 def test_redefineIndexLevel_DropOldFalse(dbfxn):
     db = dbfxn()
@@ -499,7 +512,7 @@ def test_redefineIndexLevel_DropOldFalse(dbfxn):
 
 @pytest.mark.parametrize('dbfxn', [
     db_fromcsv,
-    #db_fromaccess,
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
 ])
 def test_redefineBMPCategory_DropOldTrue(dbfxn):
     db = dbfxn()
@@ -516,7 +529,7 @@ def test_redefineBMPCategory_DropOldTrue(dbfxn):
 
 @pytest.mark.parametrize('dbfxn', [
     db_fromcsv,
-    #db_fromaccess,
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
 ])
 def test_redefineBMPCategory_DropOldFalse(dbfxn):
     db = dbfxn()
@@ -533,7 +546,7 @@ def test_redefineBMPCategory_DropOldFalse(dbfxn):
 
 @pytest.mark.parametrize('dbfxn', [
     db_fromcsv,
-    #db_fromaccess,
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
 ])
 def test_to_DataCollection(dbfxn):
     db = dbfxn()
@@ -543,7 +556,7 @@ def test_to_DataCollection(dbfxn):
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
-    #db_fromaccess(),
+    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
 def test__check_for_parameters(db, expected_parameters):
     assert db._check_for_parameters(expected_parameters)
@@ -553,7 +566,7 @@ def test__check_for_parameters(db, expected_parameters):
 
 @pytest.mark.parametrize(('db', 'should_raise'), [
     (db_fromcsv(), True),
-    #(db_fromaccess(), False),
+    pytest.mark.skipif('NO_ACCESS')((db_fromaccess(), False)),
 ])
 def test_dbtable_to_csv(db, should_raise):
     outputfile = get_data_file('testoutput.csv')
@@ -564,7 +577,7 @@ def test_dbtable_to_csv(db, should_raise):
         db.dbtable_to_csv('bmpcats', filepath=outputfile)
 
 
-#@pytest.mark.skipif(SKIP_DB, reason='No viable DB')
+#@pytest.mark.skipif(NO_ACCESS, reason='No viable DB')
 #class Test_DatabaseFromDB(_base_database_Mixin):
 #    def setup(self):
 #        self.mainsetup()

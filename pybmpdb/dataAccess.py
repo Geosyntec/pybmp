@@ -86,7 +86,7 @@ def _check_levelnames(levels):
             raise ValueError(msg)
 
 
-@contextmanager
+#@contextmanager
 def db_connection(dbfile, driver=None):
     if driver is None:
         driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
@@ -94,12 +94,12 @@ def db_connection(dbfile, driver=None):
     connection_string = r'Driver={};DBQ={}'.format(driver, os.path.abspath(dbfile))
     try:
         cnn = pyodbc.connect(connection_string)
-        yield cnn
+        return cnn
     except:
         msg = "Unable to connect to {} using {}"
         raise RuntimeError(msg.format(dbfile, driver))
 
-    cnn.close()
+    #cnn.close()
 
 
 class Database(object):
@@ -149,17 +149,33 @@ class Database(object):
         self.useTex = useTex
 
         # property initialization
-        self.__from_source = None
+        self.__data_raw = None
         self.__data_cleaned = None
-        self._data = None
+        self.__data_final = None
         if self.usingdb:
             self._sqlquery = sqlquery
+            if dbtable is None:
+                dbtable = 'bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014'
             self._dbtable = dbtable
             self.driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
         else:
             self._sqlquery = None
             self._dbtable = None
             self.driver = None
+
+        self._row_headers = [
+            'category', 'epazone', 'state', 'site', 'bmp',
+            'station', 'storm', 'sampletype', 'watertype',
+            'paramgroup', 'units', 'parameter', 'fraction',
+            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
+            'PDFID', 'WQID', 'bmptype',
+        ]
+
+        self.agg_rules = {
+            'res': 'mean',
+            'qual': 'min',
+            'sampledatetime': 'min'
+        }
 
     @property
     def dbtable(self):
@@ -224,12 +240,20 @@ class Database(object):
         self._sqlquery = value
 
     @property
-    def _source_data(self):
-        if self.__from_source is None:
+    def _data_raw(self):
+        if self.__data_raw is None:
             if self.usingdb:
                 # SQL query text, execution, data retrieval
-                with db_connection(self.file, self.driver) as cnn:
-                    df = sql.read_sql(self.sqlquery, cnn)
+                try:
+                    cnn = db_connection(self.file, self.driver)
+                    try:
+                        df = sql.read_sql(self.sqlquery, cnn)
+                        cnn.close()
+                    except:
+                        cnn.close()
+                        raise
+                except:
+                    raise
             else:
                 df = pandas.read_csv(self.file, parse_dates=['sampledate'], encoding='utf-8')
 
@@ -242,24 +266,80 @@ class Database(object):
                 'state', 'country',
             ]
 
-            self.__from_source = (
+            self.__data_raw = (
                 df.fillna({'wq_qual': '='})
                   #.pipe(wqio.utils.categorize_columns, *categoricals)
             )
 
-        return self.__from_source
+        return self.__data_raw
 
     @property
     def _data_cleaned(self):
         if self.__data_cleaned is None:
-            self.__data_cleaned = self._cleanup_data()
+            units_norm = {
+                u['unicode']: info.getNormalization(u['name'])
+                for u in info.units
+            }
+
+            target_units = {
+                p['name'].lower(): info.getUnitsFromParam(p['name'], attr='unicode')
+                for p in info.parameters
+            }
+
+            # rename columns:
+            rename_columns = {
+                'wq_qual': 'qual',
+                'wq_value': 'res',
+                'wq_units': 'units',
+                'raw_parameter': 'general_parameter',
+                'category': 'category'
+            }
+
+            biofilters = {
+                'Biofilter - Grass Swale': 'Grass Swale',
+                'Biofilter - Grass Strip': 'Grass Strip',
+            }
+
+            drop_columns = ['monitoringstation', '_parameter']
+            self.__data_cleaned = (
+                self._data_raw
+                    .rename(columns=rename_columns)
+                    .dropna(subset=['res'])
+                    .pipe(self._strip_quals, qualcol='qual')
+                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
+                    .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
+                    .assign(initialscreen=lambda df: df['initialscreen'].apply(_process_screening))
+                    .assign(wqscreen=lambda df: df['wqscreen'].apply(_process_screening))
+                    .assign(catscreen=lambda df: df['catscreen'].apply(_process_screening))
+                    .assign(station=lambda df: df['station'].str.lower())
+                    .assign(sampletype=lambda df: df['sampletype'].apply(_process_sampletype))
+                    .assign(sampledatetime=lambda df: df.apply(utils.makeTimestamp, axis=1))
+                    .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
+                    .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
+                    .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
+                    .replace({'category': biofilters})
+                    .pipe(utils.normalize_units, units_norm, target_units, paramcol='_parameter', rescol='res', unitcol='units', napolicy='raise')
+                    .drop(drop_columns, axis=1)
+                    .query("res > 0")
+            )
+
         return self.__data_cleaned
 
     @property
+    def _data_final(self):
+        if self.__data_final is None:
+            self.__data_final = (
+                self._data_cleaned
+                    .groupby(by=self._row_headers)
+                    .agg(self.agg_rules)
+                    .set_index('sampledatetime', append=True)
+            )
+
+        return self.__data_final
+
+    @property
     def data(self):
-        if self._data is None:
-            self._data = self._group_data()
-        return self._data
+        return self._data_final
     @data.setter
     def data(self, df):
         self._data = df
@@ -386,87 +466,6 @@ class Database(object):
             parameter_names = [parameter_names]
         return np.all([p in self.params for p in parameter_names])
 
-    def _cleanup_data(self):
-
-        row_headers = [
-            'category', 'epazone', 'state', 'site', 'bmp',
-            'station', 'storm', 'sampletype', 'watertype',
-            'paramgroup', 'units', 'parameter', 'fraction',
-            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-            'PDFID', 'WQID', 'bmptype',
-        ]
-
-        units_norm = {
-            u['unicode']: info.getNormalization(u['name'])
-            for u in info.units
-        }
-
-        target_units = {
-            p['name'].lower(): info.getUnitsFromParam(p['name'], attr='unicode')
-            for p in info.parameters
-        }
-
-        # rename columns:
-        rename_columns = {
-            'wq_qual': 'qual',
-            'wq_value': 'res',
-            'wq_units': 'units',
-            'raw_parameter': 'general_parameter',
-            'category': 'category'
-        }
-
-        biofilters = {
-            'Biofilter - Grass Swale': 'Grass Swale',
-            'Biofilter - Grass Strip': 'Grass Strip',
-        }
-
-        drop_columns = ['monitoringstation', '_parameter']
-        data = (
-            self._source_data
-                .rename(columns=rename_columns)
-                .dropna(subset=['res'])
-                .pipe(self._strip_quals, qualcol='qual')
-                .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
-                .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
-                .assign(initialscreen=lambda df: df['initialscreen'].apply(_process_screening))
-                .assign(wqscreen=lambda df: df['wqscreen'].apply(_process_screening))
-                .assign(catscreen=lambda df: df['catscreen'].apply(_process_screening))
-                .assign(station=lambda df: df['station'].str.lower())
-                .assign(sampletype=lambda df: df['sampletype'].apply(_process_sampletype))
-                .assign(sampledatetime=lambda df: df.apply(utils.makeTimestamp, axis=1))
-                .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
-                .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
-                .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
-                .replace({'category': biofilters})
-                .pipe(utils.normalize_units, units_norm, target_units, paramcol='_parameter', rescol='res', unitcol='units', napolicy='raise')
-                .drop(drop_columns, axis=1)
-                .query("res > 0")
-        )
-
-        return data
-
-    def _group_data(self):
-        # columns to be the index
-        row_headers = [
-            'category', 'epazone', 'state', 'site', 'bmp',
-            'station', 'storm', 'sampletype', 'watertype',
-            'paramgroup', 'units', 'parameter', 'fraction',
-            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-            'PDFID', 'WQID', 'bmptype',
-        ]
-
-        # group the data based on the index
-        agg_rules = {'res': 'mean', 'qual': 'min', 'sampledatetime': 'min'}
-
-        agged = (
-            self._data_cleaned
-                .groupby(by=row_headers)
-                .agg(agg_rules)
-                .set_index('sampledatetime', append=True)
-        )
-
-        return agged
-
     def connect(self, cmd=None, commit=False):
         '''
         Connects to the database using pyodbc. Executes a command if provided.
@@ -546,9 +545,20 @@ class Database(object):
             raise NotImplementedError('`Database` source is not an Access Database')
         if filepath is None:
             filepath = 'bmp/data/{0}.csv'
+
         cmd = "select * from [{0}]".format(tablename)
-        with db_connection(self.file, self.driver) as cnn:
-            sql.read_frame(cmd, cnn).to_csv(filepath, index=False, encoding='utf-8')
+        try:
+            cnn = db_connection(self.file, self.driver)
+            try:
+                df = sql.read_sql(cmd, cnn)
+                cnn.close()
+            except:
+                cnn.close()
+                raise
+        except:
+            raise
+
+        df.to_csv(filepath, index=False, encoding='utf-8')
 
     def select(self, **kwargs):
         """Select data from the database.
