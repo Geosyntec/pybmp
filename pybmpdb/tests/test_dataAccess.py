@@ -18,11 +18,13 @@ except ImportError:
 from pybmpdb import dataAccess as da
 import wqio
 
-NO_ACCESS = (pyodbc is None) or (os.name == 'posix')
-
 
 def get_data_file(filename):
     return resource_filename("pybmpdb.tests._data", filename)
+
+
+_no_access_file = not os.path.exists(get_data_file('bmpdata.accdb'))
+NO_ACCESS = (pyodbc is None) or (os.name == 'posix') or _no_access_file
 
 
 @pytest.fixture
@@ -326,12 +328,12 @@ def test__data_cleaned(db):
     assert isinstance(db._data_cleaned, pandas.DataFrame)
 
 
-@pytest.mark.parametrize('db', [
-    db_fromcsv(),
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
+@pytest.mark.parametrize(('db', 'expected'), [
+    (db_fromcsv(), None),
+    pytest.mark.skipif('NO_ACCESS')((db_fromaccess(), 'bmp_data')),
 ])
-def test_dbtable(db):
-    assert db.dbtable == None
+def test_dbtable(db, expected):
+    assert db.dbtable == expected
     db.dbtable = 'test'
     assert db.dbtable == 'test'
 
@@ -564,6 +566,7 @@ def test__check_for_parameters(db, expected_parameters):
     assert not (db._check_for_parameters(['junk', 'garbage']))
 
 
+@pytest.mark.skipif('True')
 @pytest.mark.parametrize(('db', 'should_raise'), [
     (db_fromcsv(), True),
     pytest.mark.skipif('NO_ACCESS')((db_fromaccess(), False)),
@@ -575,55 +578,3 @@ def test_dbtable_to_csv(db, should_raise):
             db.dbtable_to_csv('bmpcats', filepath=outputfile)
     else:
         db.dbtable_to_csv('bmpcats', filepath=outputfile)
-
-
-#@pytest.mark.skipif(NO_ACCESS, reason='No viable DB')
-#class Test_DatabaseFromDB(_base_database_Mixin):
-#    def setup(self):
-#        self.mainsetup()
-#        self.known_driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
-#        self.known_bmpcatsrc = 'bmpcats'
-#        self.known_usingdb = True
-#        self.known_file = self.known_dbfile
-#        self.known_catScreen = False
-#        db = da.Database(self.known_dbfile)
-
-#    def test_connect(self):
-#        if self.db.usingdb:
-#            with self.db.connect() as cnn:
-#                assert isinstance(cnn, pyodbc.Connection)
-
-#    def test_connect_GoodQuery(self):
-#        cmd = "select 5 as N"
-#        try:
-#            cnn = self.db.connect(cmd=cmd)
-#        finally:
-#            cnn.close()
-
-#    def test_connect_BadQuery(self):
-#        cmd = "JUNKJUNKJUNK"
-#        with pytest.raises(pyodbc.ProgrammingError):
-#            self.db.connect(cmd=cmd)
-
-#    def test_file(self):
-#        assert self.db.file == self.known_dbfile
-
-#    @pytest.mark.skipif(True, reason='not implmented')
-#    def test_dbtable_to_csv(self):
-#        outputfile = get_data_file('testoutput.csv')
-#        self.db.dbtable_to_csv('bmpcats', filepath=outputfile)
-
-
-
-#class Test_DatabaseFromCSV(_base_database_Mixin):
-#    usingdb = False
-#    def setup(self):
-#        self.mainsetup()
-#        self.known_driver = None
-#        self.known_usingdb = False
-#        self.known_file = self.known_csvfile
-#        self.known_bmpcatsrc = get_data_file('testbmpcats.csv')
-#        self.known_excludeGrabs = False
-#        self.known_catScreen = True
-
-

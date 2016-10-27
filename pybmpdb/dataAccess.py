@@ -99,49 +99,47 @@ def db_connection(dbfile, driver=None):
         msg = "Unable to connect to {} using {}"
         raise RuntimeError(msg.format(dbfile, driver))
 
-    #cnn.close()
 
+def get_data(cmd, cnn):
+    try:
+        return sql.read_sql(cmd, cnn)
+    except Exception as err:
+        raise err
+    finally:
+        cnn.close()
 
 class Database(object):
+    """Top-level entry point for International BMP Database analysis
+
+    Parameters
+    ----------
+    filename : string
+        CSV file or MS Access database containing the data.
+    dbtable : optional string (defaults to the bundled data')
+        Table in the MS Access database storing the data for
+        analysis. Only used if `usingdb` is True.
+    catanalysis : optional bool (default = False)
+        Toggles the filtering for data that have been approved for
+        BMP Category-level analysis
+
+    Attributes
+    ----------
+    dbfile : string
+        Full path to the database file.
+    driver : string
+        ODBC-compliant Microsoft Access driver string.
+    category_type : string
+        See Input section.
+    usingdb : bool
+        See Input section.
+    excluded_parameters : list of string or None
+        See `parametersToExclude` in Input section.
+    data : pandas DataFrame
+        DataFrame of all of the data found in the DB or CSV file.
+
+    """
     def __init__(self, filename, dbtable=None, sqlquery=None,
                  catanalysis=False, useTex=True):
-        """Top-level entry point for International BMP Database analysis
-
-        Parameters
-        ----------
-        filename : string
-            CSV file or MS Access database containing the data.
-        dbtable : optional string (defaults to the bundled data')
-            Table in the MS Access database storing the data for
-            analysis. Only used if `usingdb` is True.
-        catanalysis : optional bool (default = False)
-            Toggles the filtering for data that have been approved for
-            BMP Category-level analysis
-
-        Attributes
-        ----------
-        dbfile : string
-            Full path to the database file.
-        driver : string
-            ODBC-compliant Microsoft Access driver string.
-        category_type : string
-            See Input section.
-        usingdb : bool
-            See Input section.
-        excluded_parameters : list of string or None
-            See `parametersToExclude` in Input section.
-        data : pandas DataFrame
-            DataFrame of all of the data found in the DB or CSV file.
-
-        Methods
-        -------
-        connect
-        redefineBMPCategory
-        convertTablesToCSV
-        getAllData
-        getGroupData
-
-        """
 
         self.file = filename
         self.usingdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
@@ -152,6 +150,8 @@ class Database(object):
         self.__data_raw = None
         self.__data_cleaned = None
         self.__data_final = None
+        self._data = None
+
         if self.usingdb:
             self._sqlquery = sqlquery
             if dbtable is None:
@@ -186,9 +186,7 @@ class Database(object):
 
     @property
     def sqlquery(self):
-        if self.dbtable is not None:
-            self._sqlquery = "select * from [{}]".format(self.dbtable)
-        elif self._sqlquery is None:
+        if self._sqlquery is None:
             self._sqlquery = dedent("""
                 select
                     [src].[Analysis_Category] as [category],
@@ -216,6 +214,7 @@ class Database(object):
                     [src].[Monitoring Station Type] as [station],
                     [src].[SGTCodeDescp] as [watertype],
                     [src].[STCODEDescp] as [sampletype],
+                    [src].[AFPA] as [initialscreen],
                     [src].[Use in BMP WQ Analysis] as [wqscreen],
                     [src].[Use in BMP Category Analysis] as [catscreen],
                     [src].[Infl_Effl_Balance] as [balanced]
@@ -244,16 +243,8 @@ class Database(object):
         if self.__data_raw is None:
             if self.usingdb:
                 # SQL query text, execution, data retrieval
-                try:
-                    cnn = db_connection(self.file, self.driver)
-                    try:
-                        df = sql.read_sql(self.sqlquery, cnn)
-                        cnn.close()
-                    except:
-                        cnn.close()
-                        raise
-                except:
-                    raise
+                cnn = db_connection(self.file, self.driver)
+                df = get_data(self.sqlquery, cnn)
             else:
                 df = pandas.read_csv(self.file, parse_dates=['sampledate'], encoding='utf-8')
 
@@ -339,7 +330,9 @@ class Database(object):
 
     @property
     def data(self):
-        return self._data_final
+        if self._data is None:
+            self._data = self._data_final
+        return self._data
     @data.setter
     def data(self, df):
         self._data = df
@@ -466,77 +459,6 @@ class Database(object):
             parameter_names = [parameter_names]
         return np.all([p in self.params for p in parameter_names])
 
-    def connect(self, cmd=None, commit=False):
-        '''
-        Connects to the database using pyodbc. Executes a command if provided.
-
-        Parameters
-        ----------
-        cmd : optional string or None (default)
-            SQL statement that will be executed (see Notes).
-
-        commit : optional bool (default = False)
-            Toggles if the changes to the database executed with `cmd`
-            should be save. Be carefule. You could delete everything
-
-        Returns
-        -------
-        cnn : pyodbc connection object
-
-        Notes
-        ------
-         - It's recommended to not use the `cmd` argument to retrieve data.
-           In fact, it's impossible. If you need to execute a custom
-           selection query it's recommended to use the function to create
-           the connection object and the pass that to
-           pandas.io.sql.read_frame (see Examples).
-         - This function is primarily used internally to select large
-           amounts of data when instantiating the `Database` object.
-           It's probably best to use pandas selection methods on the
-           `data` attribute to isolated specific records for a
-           particular analysis.
-
-        Examples
-        -------
-        >>> from pandas.io import sql
-        >>> import bmp
-        >>> db = bmp.dataAccess.Database()
-        >>> myCmd = "SELECT * FROM myTable"
-        >>> with db.connect() as cnn:
-           ...: data = sql.read_frame(myCmd, cnn)
-        >>> print(data.head())
-
-        '''
-
-        if os.path.splitext(self.file)[1] not in ['.accdb', '.mdb']:
-            raise ValueError('Datasource is not an MS Access database')
-
-        # connection string
-        connection_string = r'Driver=%s;DBQ=%s' % (self.driver, self.file)
-
-        # make the connection and cursor
-        cnn = pyodbc.connect(connection_string)
-
-        # execute commands if provided
-        if cmd is not None:
-            cur = cnn.cursor()
-
-            try:
-                cur.execute(cmd)
-
-                # commit if requested
-                if commit:
-                    cnn.commit()
-
-            # raise whatever exception we encoutered
-            except:
-                raise
-            # be sure to close the cursor
-            finally:
-                cur.close()
-
-        return cnn
-
     def dbtable_to_csv(self, tablename, filepath=None):
         '''
         Converts all relevant tables in the DB to CSV files
@@ -547,16 +469,8 @@ class Database(object):
             filepath = 'bmp/data/{0}.csv'
 
         cmd = "select * from [{0}]".format(tablename)
-        try:
-            cnn = db_connection(self.file, self.driver)
-            try:
-                df = sql.read_sql(cmd, cnn)
-                cnn.close()
-            except:
-                cnn.close()
-                raise
-        except:
-            raise
+        cnn = db_connection(self.file, self.driver)
+        df = get_data(cmd, cnn)
 
         df.to_csv(filepath, index=False, encoding='utf-8')
 
