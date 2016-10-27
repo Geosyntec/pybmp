@@ -229,9 +229,23 @@ class Database(object):
             if self.usingdb:
                 # SQL query text, execution, data retrieval
                 with db_connection(self.file, self.driver) as cnn:
-                    self.__from_source = sql.read_sql(self.sqlquery, cnn)
+                    df = sql.read_sql(self.sqlquery, cnn)
             else:
-                self.__from_source = pandas.read_csv(self.file, encoding='utf-8')
+                df = pandas.read_csv(self.file, parse_dates=['sampledate'], encoding='utf-8')
+
+            categoricals = [
+                'bmptype', 'bmpcat', 'category', 'site', 'bmp',
+                'monitoringstation', 'paramgroup', 'parameter',
+                'raw_parameter', 'fraction', 'media', 'wq_units',
+                'wq_qual', 'station', 'watertype', 'sampletype',
+                'initialscreen', 'wqscreen', 'balanced', 'catscreen',
+                'state', 'country',
+            ]
+
+            self.__from_source = (
+                df.fillna({'wq_qual': '='})
+                  #.pipe(wqio.utils.categorize_columns, *categoricals)
+            )
 
         return self.__from_source
 
@@ -377,8 +391,9 @@ class Database(object):
         row_headers = [
             'category', 'epazone', 'state', 'site', 'bmp',
             'station', 'storm', 'sampletype', 'watertype',
-            'paramgroup', 'units', 'parameter', 'fraction', 'wqscreen',
-            'catscreen', 'balanced', 'PDFID', 'WQID'
+            'paramgroup', 'units', 'parameter', 'fraction',
+            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
+            'PDFID', 'WQID', 'bmptype',
         ]
 
         units_norm = {
@@ -399,6 +414,12 @@ class Database(object):
             'raw_parameter': 'general_parameter',
             'category': 'category'
         }
+
+        biofilters = {
+            'Biofilter - Grass Swale': 'Grass Swale',
+            'Biofilter - Grass Strip': 'Grass Strip',
+        }
+
         drop_columns = ['monitoringstation', '_parameter']
         data = (
             self._source_data
@@ -407,6 +428,7 @@ class Database(object):
                 .pipe(self._strip_quals, qualcol='qual')
                 .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
                 .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
+                .assign(initialscreen=lambda df: df['initialscreen'].apply(_process_screening))
                 .assign(wqscreen=lambda df: df['wqscreen'].apply(_process_screening))
                 .assign(catscreen=lambda df: df['catscreen'].apply(_process_screening))
                 .assign(station=lambda df: df['station'].str.lower())
@@ -415,6 +437,7 @@ class Database(object):
                 .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
                 .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
                 .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
+                .replace({'category': biofilters})
                 .pipe(utils.normalize_units, units_norm, target_units, paramcol='_parameter', rescol='res', unitcol='units', napolicy='raise')
                 .drop(drop_columns, axis=1)
                 .query("res > 0")
@@ -427,8 +450,9 @@ class Database(object):
         row_headers = [
             'category', 'epazone', 'state', 'site', 'bmp',
             'station', 'storm', 'sampletype', 'watertype',
-            'paramgroup', 'units', 'parameter', 'wqscreen',
-            'catscreen', 'balanced', 'PDFID', 'WQID'
+            'paramgroup', 'units', 'parameter', 'fraction',
+            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
+            'PDFID', 'WQID', 'bmptype',
         ]
 
         # group the data based on the index

@@ -228,10 +228,10 @@ def expected_parameters():
 @pytest.fixture
 def expected_index_names():
     index_names = [
-        'category', 'epazone', 'state', 'site', 'bmp', 'station',
-        'storm', 'sampletype', 'watertype', 'paramgroup', 'units',
-        'parameter', 'wqscreen', 'catscreen',  'balanced', 'PDFID',
-        'WQID', 'sampledatetime'
+        'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
+        'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
+        'fraction', 'initialscreen', 'wqscreen', 'catscreen', 'balanced',
+        'PDFID', 'WQID', 'bmptype', 'sampledatetime'
     ]
     return index_names
 
@@ -265,7 +265,7 @@ def test_file(db):
     #db_fromaccess(),
 ])
 def test_data_attr(db, expected_index_names):
-    expected_datashape = (16233, 2)
+    expected_datashape = (16273, 2)
     assert isinstance(db.data, pandas.DataFrame)
     assert db.data.shape == expected_datashape
     assert isinstance(db.data.index, pandas.MultiIndex)
@@ -397,12 +397,6 @@ def test_parameter_lookup(db):
     #db_fromaccess(),
 ])
 def test_index(db, expected_index_names):
-    expected_index_names = [
-        'category', 'epazone', 'state', 'site', 'bmp', 'station',
-        'storm', 'sampletype', 'watertype', 'paramgroup', 'units',
-        'parameter', 'wqscreen', 'catscreen',  'balanced', 'PDFID',
-        'WQID', 'sampledatetime'
-    ]
     assert len(db.index.keys()) == len(expected_index_names)
     for key in db.index.keys():
         assert key in expected_index_names
@@ -414,7 +408,7 @@ def test_index(db, expected_index_names):
 ])
 def test_index_values(db):
     expected_categories = [
-            'Biofilter - Grass Swale',
+            'Grass Swale',
             'Bioretention',
             'Detention Basin',
             'Porous Pavement',
