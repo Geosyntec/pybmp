@@ -139,7 +139,7 @@ def _filter_by_BMP_count(dataframe, minbmps):
 def getSummaryData(dbpath=None, catanalysis=False,
                    minstorms=3, minbmps=3, name=None, useTex=False,
                    excludedbmps=None, excludedparams=None,
-                   **selection):
+                   balancedonly=True, **selection):
     """
     Select offical data from database.
 
@@ -180,34 +180,33 @@ def getSummaryData(dbpath=None, catanalysis=False,
 
     db = dataAccess.Database(dbpath, catanalysis=catanalysis)
 
-    # astable must be true here. The input value is respected later
-    table = db.selectData(astable=True, useTex=useTex, **selection)
-    # -> db.data -> db._group_data()
-    # ---> db._data_cleaned -> db._cleanup_data() -- selects balanced data for cat-level analysiw
-    # -----> db._data_fromdb -> "raw data"
-
     # combine NO3+NO2 and NO3 into NOx
     nitro_components = [
         'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
         'Nitrogen, Nitrate (NO3) as N'
     ]
-    nitros_exist = table._check_for_parameters(nitro_components)
+    nitros_exist = db._check_for_parameters(nitro_components)
     if nitros_exist:
         nitro_combined = 'Nitrogen, NOx as N'
-        table.unionParamsWithPreference(nitro_components, nitro_combined,
-                                        'mg/L')
+        db.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
 
     grab_BMPs = ['Retention Pond', 'Wetland Basin']
     if catanalysis:
         # merge Wet land Basins and Retention ponds, keeping
         # the original records
         WBRP_combo = 'Wetland Basin/Retention Pond'
-        table.redefineBMPCategory(
+        db.redefineBMPCategory(
             bmpname=WBRP_combo,
             criteria=lambda r: r[0] in grab_BMPs,
             dropold=False
         )
         grab_BMPs.append(WBRP_combo)
+
+    db.redefineBMPCategory(
+        bmpname='Pervious Friction Course',
+        criteria=lambda r: r[-1] == 'PF',
+        dropold=True
+    )
 
     # all data should be compisite data, but grabs are allowed
     # for bacteria at all BMPs, and all parameter groups at
@@ -218,7 +217,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
         "((category in {}) | (paramgroup == 'Biological')) & "
         "(sampletype != 'unknown')"
     ).format(grab_BMPs)
-    subset = table.data.query(querytxt)
+    subset = db.data.query(querytxt)
 
     if excludedbmps is not None:
         # remove all of the PFCs from the dataset
@@ -234,8 +233,10 @@ def getSummaryData(dbpath=None, catanalysis=False,
               .pipe(_pick_best_station)
               .pipe(_filter_by_storm_count, minstorms)
               .pipe(_filter_by_BMP_count, minbmps)
-              .pipe(_filter_onesided_BMPs)
     )
+
+    if balancedonly:
+        subset = subset.pipe(_filter_onesided_BMPs)
 
     return subset, db
 
