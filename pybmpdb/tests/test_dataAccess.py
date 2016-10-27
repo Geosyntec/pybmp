@@ -18,13 +18,14 @@ except ImportError:
 from pybmpdb import dataAccess as da
 import wqio
 
-SKIP_DB = True #(pyodbc is None) or (os.name == 'posix')
+SKIP_DB = (pyodbc is None) or (os.name == 'posix')
 
 
 def get_data_file(filename):
     return resource_filename("pybmpdb.tests._data", filename)
 
 
+@pytest.mark.skipif(SKIP_DB, reason='No Access drivers')
 def test_db_connection():
     dbfile = get_data_file('bmpdata.accdb')
     with da.db_connection(dbfile) as cnn:
