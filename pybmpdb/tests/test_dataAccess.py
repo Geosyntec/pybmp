@@ -76,7 +76,7 @@ def expected_index_names():
     return index_names
 
 
-@pytest.mark.skipif('NO_ACCESS', reason='No Access drivers')
+@pytest.mark.skipif('NO_ACCESS')
 def test_db_connection():
     dbfile = get_data_file('bmpdata.accdb')
     try:
