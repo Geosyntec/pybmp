@@ -19,7 +19,8 @@ before_install:
 install:
   - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION pytest nose
   - source activate test
-  - conda install --yes coverage docopt requests pyyaml wqio --channel=phobson
+  - conda install --yes coverage docopt requests pyyaml mpl-probscale --channel=conda-forge
+  - conda install --yes wqio --channel=phobson/label/dev
   - pip install coveralls
   - pip install . --no-deps
 
