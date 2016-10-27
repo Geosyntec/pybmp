@@ -72,33 +72,31 @@ def getConversion(param):
     return getNormalization(p['units'])
 
 
-def addParameter(name, units, tex=None):
-    if tex is None:
-        tex = name
+def addParameter(**kwargs):
+    if kwargs.get('tex') is None:
+        kwargs['tex'] = kwargs['name']
 
-    values = {
-        'name': name.lower(),
-        'tex': tex,
-        'units': units
-    }
-    parameters.append(values)
+    if kwargs.get('unicode') is None:
+        kwargs['unicode'] = kwargs['name']
+
+    if kwargs.get('fraction') is None:
+        kwargs['fraction'] = 'Total'
+
+    parameters.append(kwargs)
     return parameters
 
 
-def addUnit(name, factor, texname=None, unicodename=None):
-    if texname is None:
-        texname = name
+def addUnit(**kwargs):
+    if kwargs.get('tex') is None:
+        kwargs['tex'] = kwargs['name']
 
-    if unicodename is None:
-        unicodename = None
+    if kwargs.get('unicode') is None:
+        kwargs['unicode'] = kwargs['name']
 
-    values = {
-        'name': 'name',
-        'factor': factor,
-        'tex': texname,
-        'unicode': unicodename
-    }
-    units.append(values)
+    if kwargs.get('factor') is None:
+        kwargs['factor'] = 1
+
+    units.append(kwargs)
     return units
 
 

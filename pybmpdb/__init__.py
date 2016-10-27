@@ -1,4 +1,4 @@
-from .dataAccess import Database, Table
+from .dataAccess import Database
 from .summary import (
     CategoricalSummary,
     DatasetSummary,
