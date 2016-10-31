@@ -86,7 +86,7 @@ def _check_levelnames(levels):
             raise ValueError(msg)
 
 
-@contextmanager
+#@contextmanager
 def db_connection(dbfile, driver=None):
     if driver is None:
         driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
@@ -94,54 +94,53 @@ def db_connection(dbfile, driver=None):
     connection_string = r'Driver={};DBQ={}'.format(driver, os.path.abspath(dbfile))
     try:
         cnn = pyodbc.connect(connection_string)
-        yield cnn
+        return cnn
     except:
         msg = "Unable to connect to {} using {}"
         raise RuntimeError(msg.format(dbfile, driver))
 
-    cnn.close()
+
+def get_data(cmd, cnn):
+    try:
+        return sql.read_sql(cmd, cnn)
+    except Exception as err:
+        raise err
+    finally:
+        cnn.close()
 
 
 class Database(object):
+    """Top-level entry point for International BMP Database analysis
+
+    Parameters
+    ----------
+    filename : string
+        CSV file or MS Access database containing the data.
+    dbtable : optional string (defaults to the bundled data')
+        Table in the MS Access database storing the data for
+        analysis. Only used if `usingdb` is True.
+    catanalysis : optional bool (default = False)
+        Toggles the filtering for data that have been approved for
+        BMP Category-level analysis
+
+    Attributes
+    ----------
+    dbfile : string
+        Full path to the database file.
+    driver : string
+        ODBC-compliant Microsoft Access driver string.
+    category_type : string
+        See Input section.
+    usingdb : bool
+        See Input section.
+    excluded_parameters : list of string or None
+        See `parametersToExclude` in Input section.
+    data : pandas DataFrame
+        DataFrame of all of the data found in the DB or CSV file.
+
+    """
     def __init__(self, filename, dbtable=None, sqlquery=None,
                  catanalysis=False, useTex=True):
-        """Top-level entry point for International BMP Database analysis
-
-        Parameters
-        ----------
-        filename : string
-            CSV file or MS Access database containing the data.
-        dbtable : optional string (defaults to the bundled data')
-            Table in the MS Access database storing the data for
-            analysis. Only used if `usingdb` is True.
-        catanalysis : optional bool (default = False)
-            Toggles the filtering for data that have been approved for
-            BMP Category-level analysis
-
-        Attributes
-        ----------
-        dbfile : string
-            Full path to the database file.
-        driver : string
-            ODBC-compliant Microsoft Access driver string.
-        category_type : string
-            See Input section.
-        usingdb : bool
-            See Input section.
-        excluded_parameters : list of string or None
-            See `parametersToExclude` in Input section.
-        data : pandas DataFrame
-            DataFrame of all of the data found in the DB or CSV file.
-
-        Methods
-        -------
-        connect
-        redefineBMPCategory
-        convertTablesToCSV
-        getAllData
-        getGroupData
-
-        """
 
         self.file = filename
         self.usingdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
@@ -149,17 +148,35 @@ class Database(object):
         self.useTex = useTex
 
         # property initialization
-        self.__from_source = None
+        self.__data_raw = None
         self.__data_cleaned = None
+        self.__data_final = None
         self._data = None
+
         if self.usingdb:
             self._sqlquery = sqlquery
+            if dbtable is None:
+                dbtable = 'bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014'
             self._dbtable = dbtable
             self.driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
         else:
             self._sqlquery = None
             self._dbtable = None
             self.driver = None
+
+        self._row_headers = [
+            'category', 'epazone', 'state', 'site', 'bmp',
+            'station', 'storm', 'sampletype', 'watertype',
+            'paramgroup', 'units', 'parameter', 'fraction',
+            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
+            'PDFID', 'WQID', 'bmptype',
+        ]
+
+        self.agg_rules = {
+            'res': 'mean',
+            'qual': 'min',
+            'sampledatetime': 'min'
+        }
 
     @property
     def dbtable(self):
@@ -170,9 +187,7 @@ class Database(object):
 
     @property
     def sqlquery(self):
-        if self.dbtable is not None:
-            self._sqlquery = "select * from [{}]".format(self.dbtable)
-        elif self._sqlquery is None:
+        if self._sqlquery is None:
             self._sqlquery = dedent("""
                 select
                     [src].[Analysis_Category] as [category],
@@ -200,6 +215,7 @@ class Database(object):
                     [src].[Monitoring Station Type] as [station],
                     [src].[SGTCodeDescp] as [watertype],
                     [src].[STCODEDescp] as [sampletype],
+                    [src].[AFPA] as [initialscreen],
                     [src].[Use in BMP WQ Analysis] as [wqscreen],
                     [src].[Use in BMP Category Analysis] as [catscreen],
                     [src].[Infl_Effl_Balance] as [balanced]
@@ -224,12 +240,12 @@ class Database(object):
         self._sqlquery = value
 
     @property
-    def _source_data(self):
-        if self.__from_source is None:
+    def _data_raw(self):
+        if self.__data_raw is None:
             if self.usingdb:
                 # SQL query text, execution, data retrieval
-                with db_connection(self.file, self.driver) as cnn:
-                    df = sql.read_sql(self.sqlquery, cnn)
+                cnn = db_connection(self.file, self.driver)
+                df = get_data(self.sqlquery, cnn)
             else:
                 df = pandas.read_csv(self.file, parse_dates=['sampledate'], encoding='utf-8')
 
@@ -242,23 +258,81 @@ class Database(object):
                 'state', 'country',
             ]
 
-            self.__from_source = (
+            self.__data_raw = (
                 df.fillna({'wq_qual': '='})
                   #.pipe(wqio.utils.categorize_columns, *categoricals)
             )
 
-        return self.__from_source
+        return self.__data_raw
 
     @property
     def _data_cleaned(self):
         if self.__data_cleaned is None:
-            self.__data_cleaned = self._cleanup_data()
+            units_norm = {
+                u['unicode']: info.getNormalization(u['name'])
+                for u in info.units
+            }
+
+            target_units = {
+                p['name'].lower(): info.getUnitsFromParam(p['name'], attr='unicode')
+                for p in info.parameters
+            }
+
+            # rename columns:
+            rename_columns = {
+                'wq_qual': 'qual',
+                'wq_value': 'res',
+                'wq_units': 'units',
+                'raw_parameter': 'general_parameter',
+                'category': 'category'
+            }
+
+            biofilters = {
+                'Biofilter - Grass Swale': 'Grass Swale',
+                'Biofilter - Grass Strip': 'Grass Strip',
+            }
+
+            drop_columns = ['monitoringstation', '_parameter']
+            self.__data_cleaned = (
+                self._data_raw
+                    .rename(columns=rename_columns)
+                    .dropna(subset=['res'])
+                    .pipe(self._strip_quals, qualcol='qual')
+                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
+                    .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
+                    .assign(initialscreen=lambda df: df['initialscreen'].apply(_process_screening))
+                    .assign(wqscreen=lambda df: df['wqscreen'].apply(_process_screening))
+                    .assign(catscreen=lambda df: df['catscreen'].apply(_process_screening))
+                    .assign(station=lambda df: df['station'].str.lower())
+                    .assign(sampletype=lambda df: df['sampletype'].apply(_process_sampletype))
+                    .assign(sampledatetime=lambda df: df.apply(utils.makeTimestamp, axis=1))
+                    .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
+                    .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
+                    .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
+                    .replace({'category': biofilters})
+                    .pipe(utils.normalize_units, units_norm, target_units, paramcol='_parameter', rescol='res', unitcol='units', napolicy='raise')
+                    .drop(drop_columns, axis=1)
+                    .query("res > 0")
+            )
+
         return self.__data_cleaned
+
+    @property
+    def _data_final(self):
+        if self.__data_final is None:
+            self.__data_final = (
+                self._data_cleaned
+                    .groupby(by=self._row_headers)
+                    .agg(self.agg_rules)
+                    .set_index('sampledatetime', append=True)
+            )
+
+        return self.__data_final
 
     @property
     def data(self):
         if self._data is None:
-            self._data = self._group_data()
+            self._data = self._data_final
         return self._data
     @data.setter
     def data(self, df):
@@ -386,158 +460,6 @@ class Database(object):
             parameter_names = [parameter_names]
         return np.all([p in self.params for p in parameter_names])
 
-    def _cleanup_data(self):
-
-        row_headers = [
-            'category', 'epazone', 'state', 'site', 'bmp',
-            'station', 'storm', 'sampletype', 'watertype',
-            'paramgroup', 'units', 'parameter', 'fraction',
-            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-            'PDFID', 'WQID', 'bmptype',
-        ]
-
-        units_norm = {
-            u['unicode']: info.getNormalization(u['name'])
-            for u in info.units
-        }
-
-        target_units = {
-            p['name'].lower(): info.getUnitsFromParam(p['name'], attr='unicode')
-            for p in info.parameters
-        }
-
-        # rename columns:
-        rename_columns = {
-            'wq_qual': 'qual',
-            'wq_value': 'res',
-            'wq_units': 'units',
-            'raw_parameter': 'general_parameter',
-            'category': 'category'
-        }
-
-        biofilters = {
-            'Biofilter - Grass Swale': 'Grass Swale',
-            'Biofilter - Grass Strip': 'Grass Strip',
-        }
-
-        drop_columns = ['monitoringstation', '_parameter']
-        data = (
-            self._source_data
-                .rename(columns=rename_columns)
-                .dropna(subset=['res'])
-                .pipe(self._strip_quals, qualcol='qual')
-                .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
-                .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
-                .assign(initialscreen=lambda df: df['initialscreen'].apply(_process_screening))
-                .assign(wqscreen=lambda df: df['wqscreen'].apply(_process_screening))
-                .assign(catscreen=lambda df: df['catscreen'].apply(_process_screening))
-                .assign(station=lambda df: df['station'].str.lower())
-                .assign(sampletype=lambda df: df['sampletype'].apply(_process_sampletype))
-                .assign(sampledatetime=lambda df: df.apply(utils.makeTimestamp, axis=1))
-                .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
-                .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
-                .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
-                .replace({'category': biofilters})
-                .pipe(utils.normalize_units, units_norm, target_units, paramcol='_parameter', rescol='res', unitcol='units', napolicy='raise')
-                .drop(drop_columns, axis=1)
-                .query("res > 0")
-        )
-
-        return data
-
-    def _group_data(self):
-        # columns to be the index
-        row_headers = [
-            'category', 'epazone', 'state', 'site', 'bmp',
-            'station', 'storm', 'sampletype', 'watertype',
-            'paramgroup', 'units', 'parameter', 'fraction',
-            'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-            'PDFID', 'WQID', 'bmptype',
-        ]
-
-        # group the data based on the index
-        agg_rules = {'res': 'mean', 'qual': 'min', 'sampledatetime': 'min'}
-
-        agged = (
-            self._data_cleaned
-                .groupby(by=row_headers)
-                .agg(agg_rules)
-                .set_index('sampledatetime', append=True)
-        )
-
-        return agged
-
-    def connect(self, cmd=None, commit=False):
-        '''
-        Connects to the database using pyodbc. Executes a command if provided.
-
-        Parameters
-        ----------
-        cmd : optional string or None (default)
-            SQL statement that will be executed (see Notes).
-
-        commit : optional bool (default = False)
-            Toggles if the changes to the database executed with `cmd`
-            should be save. Be carefule. You could delete everything
-
-        Returns
-        -------
-        cnn : pyodbc connection object
-
-        Notes
-        ------
-         - It's recommended to not use the `cmd` argument to retrieve data.
-           In fact, it's impossible. If you need to execute a custom
-           selection query it's recommended to use the function to create
-           the connection object and the pass that to
-           pandas.io.sql.read_frame (see Examples).
-         - This function is primarily used internally to select large
-           amounts of data when instantiating the `Database` object.
-           It's probably best to use pandas selection methods on the
-           `data` attribute to isolated specific records for a
-           particular analysis.
-
-        Examples
-        -------
-        >>> from pandas.io import sql
-        >>> import bmp
-        >>> db = bmp.dataAccess.Database()
-        >>> myCmd = "SELECT * FROM myTable"
-        >>> with db.connect() as cnn:
-           ...: data = sql.read_frame(myCmd, cnn)
-        >>> print(data.head())
-
-        '''
-
-        if os.path.splitext(self.file)[1] not in ['.accdb', '.mdb']:
-            raise ValueError('Datasource is not an MS Access database')
-
-        # connection string
-        connection_string = r'Driver=%s;DBQ=%s' % (self.driver, self.file)
-
-        # make the connection and cursor
-        cnn = pyodbc.connect(connection_string)
-
-        # execute commands if provided
-        if cmd is not None:
-            cur = cnn.cursor()
-
-            try:
-                cur.execute(cmd)
-
-                # commit if requested
-                if commit:
-                    cnn.commit()
-
-            # raise whatever exception we encoutered
-            except:
-                raise
-            # be sure to close the cursor
-            finally:
-                cur.close()
-
-        return cnn
-
     def dbtable_to_csv(self, tablename, filepath=None):
         '''
         Converts all relevant tables in the DB to CSV files
@@ -546,9 +468,12 @@ class Database(object):
             raise NotImplementedError('`Database` source is not an Access Database')
         if filepath is None:
             filepath = 'bmp/data/{0}.csv'
+
         cmd = "select * from [{0}]".format(tablename)
-        with db_connection(self.file, self.driver) as cnn:
-            sql.read_frame(cmd, cnn).to_csv(filepath, index=False, encoding='utf-8')
+        cnn = db_connection(self.file, self.driver)
+        df = get_data(cmd, cnn)
+
+        df.to_csv(filepath, index=False, encoding='utf-8')
 
     def select(self, **kwargs):
         """Select data from the database.
