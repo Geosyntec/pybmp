@@ -443,116 +443,65 @@ def test_index_vals_raises(db):
         db.index_values('JUNK')
 
 
-@pytest.mark.parametrize('dbfxn', [
-    db_fromcsv,
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
-])
-def test_transformParameters(dbfxn):
-    db = dbfxn()
+def test_transformParameters(db_fromcsv):
     old_params = ['Total suspended solids']
     new_param = 'log_' + 'Total suspended solids'
-    db.transformParameters(
+    db_fromcsv.transformParameters(
         old_params, new_param,
         lambda x, old_p: 1000*x[('res', old_p)],
         lambda x, old_p: x[('qual', old_p)],
         '1000*mg/L'
     )
-    assert '1000*mg/L' in db.data.index.get_level_values('units')
-    assert new_param in db.parameter_lookup.keys()
-    assert new_param in db.data.index.get_level_values('parameter')
+    assert '1000*mg/L' in db_fromcsv.data.index.get_level_values('units')
+    assert new_param in db_fromcsv.parameter_lookup.keys()
+    assert new_param in db_fromcsv.data.index.get_level_values('parameter')
 
 
-@pytest.mark.parametrize('dbfxn', [
-    db_fromcsv,
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
-])
-def test_unionParamsWithPreference(dbfxn):
-    db = dbfxn()
+def test_unionParamsWithPreference(db_fromcsv):
     components = [
         'Nitrogen, Nitrate (NO3) as N',
         'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
     ]
     combined = 'NOx'
-    db.unionParamsWithPreference(components, combined, 'mg/L')
-    assert combined in db.parameter_lookup.keys()
-    assert combined in db.data.index.get_level_values('parameter')
+    db_fromcsv.unionParamsWithPreference(components, combined, 'mg/L')
+    assert combined in db_fromcsv.parameter_lookup.keys()
+    assert combined in db_fromcsv.data.index.get_level_values('parameter')
 
 
-@pytest.mark.parametrize('dbfxn', [
-    db_fromcsv,
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
-])
-def test_redefineIndexLevel_DropOldTrue(dbfxn):
-    db = dbfxn()
+@pytest.mark.parametrize('dropold', [True, False])
+def test_redefineIndexLevel(db_fromcsv, dropold):
     levelname = 'epazone'
     newzone = 9999
     oldzone = 7
 
     criteria = lambda row: row[1] == oldzone
 
-    db.redefineIndexLevel(levelname, newzone, criteria, dropold=True)
-    assert newzone in db.data.index.get_level_values(levelname)
-    assert oldzone not in db.data.index.get_level_values(levelname)
+    db_fromcsv.redefineIndexLevel(levelname, newzone, criteria, dropold=dropold)
+    assert newzone in db_fromcsv.data.index.get_level_values(levelname)
+    if dropold:
+        assert oldzone not in db_fromcsv.data.index.get_level_values(levelname)
+    else:
+        assert oldzone in db_fromcsv.data.index.get_level_values(levelname)
 
 
-@pytest.mark.parametrize('dbfxn', [
-    db_fromcsv,
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
-])
-def test_redefineIndexLevel_DropOldFalse(dbfxn):
-    db = dbfxn()
-    levelname = 'epazone'
-    newzone = 9999
-    oldzone = 7
-
-    criteria = lambda row: row[1] == oldzone
-
-    db.redefineIndexLevel(levelname, newzone, criteria, dropold=False)
-    assert newzone in db.data.index.get_level_values(levelname)
-    assert oldzone in db.data.index.get_level_values(levelname)
-
-
-@pytest.mark.parametrize('dbfxn', [
-    db_fromcsv,
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
-])
-def test_redefineBMPCategory_DropOldTrue(dbfxn):
-    db = dbfxn()
+@pytest.mark.parametrize('dropold', [True, False])
+def test_redefineBMPCategory_DropOldTrue(db_fromcsv, dropold):
     newcat = 'Test New Category'
     oldcat = 'Bioretention'
 
-    bmpcat_index = db.index['category']
+    bmpcat_index = db_fromcsv.index['category']
     criteria = lambda row: row[bmpcat_index] == oldcat
 
-    db.redefineBMPCategory(newcat, criteria, dropold=True)
-    assert newcat in db.data.index.get_level_values('category')
-    assert oldcat not in db.data.index.get_level_values('category')
+    db_fromcsv.redefineBMPCategory(newcat, criteria, dropold=dropold)
+    assert newcat in db_fromcsv.data.index.get_level_values('category')
+    if dropold:
+        assert oldcat not in db_fromcsv.data.index.get_level_values('category')
+    else:
+        assert oldcat in db_fromcsv.data.index.get_level_values('category')
 
 
-@pytest.mark.parametrize('dbfxn', [
-    db_fromcsv,
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
-])
-def test_redefineBMPCategory_DropOldFalse(dbfxn):
-    db = dbfxn()
-    newcat = 'Test New Category'
-    oldcat = 'Bioretention'
-
-    bmpcat_index = db.index['category']
-    criteria = lambda row: row[bmpcat_index] == oldcat
-
-    db.redefineBMPCategory(newcat, criteria, dropold=False)
-    assert newcat in db.data.index.get_level_values('category')
-    assert oldcat in db.data.index.get_level_values('category')
-
-
-@pytest.mark.parametrize('dbfxn', [
-    db_fromcsv,
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess),
-])
-def test_to_DataCollection(dbfxn):
-    db = dbfxn()
-    dc = db.to_DataCollection(dict(state='GA'))
+def test_to_DataCollection(db_fromcsv):
+    dc = db_fromcsv.to_DataCollection(dict(state='GA'))
     assert isinstance(dc, wqio.DataCollection)
 
 

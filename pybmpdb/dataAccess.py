@@ -108,6 +108,7 @@ def get_data(cmd, cnn):
     finally:
         cnn.close()
 
+
 class Database(object):
     """Top-level entry point for International BMP Database analysis
 
