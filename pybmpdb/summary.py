@@ -122,7 +122,8 @@ def _filter_by_BMP_count(dataframe, minbmps):
 def getSummaryData(dbpath=None, catanalysis=False,
                    minstorms=3, minbmps=3, name=None, useTex=False,
                    excludedbmps=None, excludedparams=None,
-                   balancedonly=True, **selection):
+                   balancedonly=True, removegrabs=True,
+                   ndscaler=None, **selection):
     """
     Select offical data from database.
 
@@ -161,7 +162,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
     if dbpath is None:
         dbpath = resource_filename("pybmpdb.data", 'bmpdata.csv')
 
-    db = dataAccess.Database(dbpath, catanalysis=catanalysis)
+    db = dataAccess.Database(dbpath, catanalysis=catanalysis, ndscaler=ndscaler)
 
     # combine NO3+NO2 and NO3 into NOx
     nitro_components = [
@@ -197,12 +198,14 @@ def getSummaryData(dbpath=None, catanalysis=False,
     # for bacteria at all BMPs, and all parameter groups at
     # retention ponds and wetland basins. Samples of an unknown
     # type are excluded
-    querytxt = (
-        "(sampletype == 'composite') | "
-        "((category in {}) | (paramgroup == 'Biological')) & "
-        "(sampletype != 'unknown')"
-    ).format(grab_BMPs)
-    subset = db.data.query(querytxt)
+    if removegrabs:
+        querytxt = (
+            "(sampletype == 'composite') | "
+            "((category in {}) | (paramgroup == 'Biological') & (sampletype != 'unknown'))"
+        ).format(grab_BMPs)
+        subset = db.data.query(querytxt)
+    else:
+        subset = db.data.copy()
 
     if excludedbmps is not None:
         # remove all of the PFCs from the dataset
