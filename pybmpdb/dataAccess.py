@@ -25,11 +25,11 @@ __all__ = [
 ]
 
 
-def _fancy_factors(row, quals=None):
+def _fancy_factors(row, quals=None, nd_correction=2):
     if quals is None:
         quals = ['U', 'UK', 'UA', 'UC', 'K']
     if row['qual'] in quals:
-        return 2.
+        return float(nd_correction)
     elif row['qual'] == 'UJ'and row['res'] < row['DL']:
         return row['DL'] / row['res']
     else:
@@ -140,12 +140,13 @@ class Database(object):
 
     """
     def __init__(self, filename, dbtable=None, sqlquery=None,
-                 catanalysis=False, useTex=True):
+                 catanalysis=False, useTex=True, ndscaler=None):
 
         self.file = filename
         self.usingdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
         self.catanalysis = catanalysis
         self.useTex = useTex
+        self.ndscaler = ndscaler or _fancy_factors
 
         # property initialization
         self.__data_raw = None
@@ -298,7 +299,7 @@ class Database(object):
                     .rename(columns=rename_columns)
                     .dropna(subset=['res'])
                     .pipe(self._strip_quals, qualcol='qual')
-                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=_fancy_factors)
+                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=self.ndscaler)
                     .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
                     .assign(initialscreen=lambda df: df['initialscreen'].apply(_process_screening))
                     .assign(wqscreen=lambda df: df['wqscreen'].apply(_process_screening))
@@ -586,12 +587,12 @@ class Database(object):
             criteria=criteria, dropold=dropold
         )
 
-    def redefineBMPCategory(self, bmpname, criteria, dropold=True):
+    def redefineBMPCategory(self, category, criteria, dropold=True):
         """ Redefine a selection of BMPs into another or new category
 
         Parameters
         ----------
-        bmpname : string
+        category : string
             The longer-form name/description of the BMP category that
             will be created.
         critera : callable
@@ -644,7 +645,7 @@ class Database(object):
         """
 
         self.data = utils.redefine_index_level(
-            self.data, 'category', bmpname,
+            self.data, 'category', category,
             criteria=criteria, dropold=dropold
         )
 

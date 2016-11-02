@@ -33,23 +33,6 @@ def filterlocation(location, count=5, column='bmp'):
     ) >= count
 
 
-def getPFCs(db):
-    # get BMP Name of pervious friction course (PFC) BMPs
-    bmpnamecol = 'BMPNAME'
-    bmptable = 'BMP INFO S02'
-    bmptypecol = 'TBMPT 2009'
-    query = """
-    select [{0}]
-    FROM [{1}]
-    WHERE [{2}] = 'PF';
-    """.format(bmpnamecol, bmptable, bmptypecol)
-
-    with db.connect() as cnn:
-        pfc_names = pandas.read_sql(query, cnn)[bmpnamecol].tolist()
-
-    return pfc_names
-
-
 def _pick_best_station(dataframe):
     def best_col(row, mainstation, backupstation, valcol):
         try:
@@ -139,7 +122,8 @@ def _filter_by_BMP_count(dataframe, minbmps):
 def getSummaryData(dbpath=None, catanalysis=False,
                    minstorms=3, minbmps=3, name=None, useTex=False,
                    excludedbmps=None, excludedparams=None,
-                   balancedonly=True, **selection):
+                   balancedonly=True, removegrabs=True,
+                   ndscaler=None, **selection):
     """
     Select offical data from database.
 
@@ -178,7 +162,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
     if dbpath is None:
         dbpath = resource_filename("pybmpdb.data", 'bmpdata.csv')
 
-    db = dataAccess.Database(dbpath, catanalysis=catanalysis)
+    db = dataAccess.Database(dbpath, catanalysis=catanalysis, ndscaler=ndscaler)
 
     # combine NO3+NO2 and NO3 into NOx
     nitro_components = [
@@ -190,21 +174,23 @@ def getSummaryData(dbpath=None, catanalysis=False,
         nitro_combined = 'Nitrogen, NOx as N'
         db.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
 
-    grab_BMPs = ['Retention Pond', 'Wetland Basin']
+    grab_categories = ['Retention Pond', 'Wetland Basin']
     if catanalysis:
         # merge Wet land Basins and Retention ponds, keeping
         # the original records
+        category_index_level = db.index['category']
         WBRP_combo = 'Wetland Basin/Retention Pond'
         db.redefineBMPCategory(
-            bmpname=WBRP_combo,
-            criteria=lambda r: r[0] in grab_BMPs,
+            category=WBRP_combo,
+            criteria=lambda r: r[category_index_level] in grab_categories,
             dropold=False
         )
-        grab_BMPs.append(WBRP_combo)
+        grab_categories.append(WBRP_combo)
 
+    bmptype_index_level = db.index['bmptype']
     db.redefineBMPCategory(
-        bmpname='Pervious Friction Course',
-        criteria=lambda r: r[-1] == 'PF',
+        category='Pervious Friction Course',
+        criteria=lambda r: r[bmptype_index_level] == 'PF',
         dropold=True
     )
 
@@ -212,12 +198,14 @@ def getSummaryData(dbpath=None, catanalysis=False,
     # for bacteria at all BMPs, and all parameter groups at
     # retention ponds and wetland basins. Samples of an unknown
     # type are excluded
-    querytxt = (
-        "(sampletype == 'composite') | "
-        "((category in {}) | (paramgroup == 'Biological')) & "
-        "(sampletype != 'unknown')"
-    ).format(grab_BMPs)
-    subset = db.data.query(querytxt)
+    if removegrabs:
+        querytxt = (
+            "(sampletype == 'composite') | "
+            "((category in {}) | (paramgroup == 'Biological') & (sampletype != 'unknown'))"
+        ).format(grab_BMPs)
+        subset = db.data.query(querytxt)
+    else:
+        subset = db.data.copy()
 
     if excludedbmps is not None:
         # remove all of the PFCs from the dataset
