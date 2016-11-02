@@ -255,7 +255,7 @@ def test_Database_standardize_quals(db_quals):
         (db_fromaccess(), r'{Microsoft Access Driver (*.mdb, *.accdb)}')
     ),
 ])
-def test_driver(db, expected_driver):
+def test_Database_driver(db, expected_driver):
     assert db.driver == expected_driver
 
 
@@ -263,7 +263,7 @@ def test_driver(db, expected_driver):
     (db_fromcsv(), False),
     pytest.mark.skipif('NO_ACCESS')((db_fromaccess(), True)),
 ])
-def test_usingdb(db, expected):
+def test_Database_usingdb(db, expected):
     assert db.usingdb == expected
 
 
@@ -271,7 +271,7 @@ def test_usingdb(db, expected):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_file(db):
+def test_Database_file(db):
     assert hasattr(db, 'file')
 
 
@@ -279,7 +279,7 @@ def test_file(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_data_attr(db, expected_index_names):
+def test_Database_data_attr(db, expected_index_names):
     expected_datashape = (16273, 2)
     assert isinstance(db.data, pandas.DataFrame)
     assert db.data.shape == expected_datashape
@@ -292,7 +292,7 @@ def test_data_attr(db, expected_index_names):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_select_form(db):
+def test_Database_select_form(db):
     data = db.select(paramgroup='Metals')
     assert isinstance(data, pandas.DataFrame)
     assert data.index.names == db.data.index.names
@@ -306,7 +306,7 @@ def test_select_form(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_sqlquery_setter(db):
+def test_Database_sqlquery_setter(db):
     new_query = 'test'
     db.sqlquery = new_query
     assert db.sqlquery == new_query
@@ -316,7 +316,7 @@ def test_sqlquery_setter(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test__data_raw(db):
+def test_Database__data_raw(db):
     assert isinstance(db._data_raw, pandas.DataFrame)
 
 
@@ -324,7 +324,7 @@ def test__data_raw(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test__data_cleaned(db):
+def test_Database__data_cleaned(db):
     assert isinstance(db._data_cleaned, pandas.DataFrame)
 
 
@@ -332,7 +332,7 @@ def test__data_cleaned(db):
     (db_fromcsv(), None),
     pytest.mark.skipif('NO_ACCESS')((db_fromaccess(), 'bmp_data')),
 ])
-def test_dbtable(db, expected):
+def test_Database_dbtable(db, expected):
     assert db.dbtable == expected
     db.dbtable = 'test'
     assert db.dbtable == 'test'
@@ -342,7 +342,7 @@ def test_dbtable(db, expected):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_select_raise(db):
+def test_Database_select_raise(db):
     with pytest.raises(ValueError):
         db.select(junk=False)
 
@@ -351,7 +351,7 @@ def test_select_raise(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_select_single_args(db):
+def test_Database_select_single_args(db):
     parameter = 'Copper, Total'
     siteid = '21st and Iris Rain Garden'
     bmpid = 'UDFCD Rain Garden'
@@ -371,7 +371,7 @@ def test_select_single_args(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_select_list_args(db):
+def test_Database_select_list_args(db):
     parameters = ['Copper, Total', 'Lead, Total']
     data = db.select(parameter=parameters)
     assert isinstance(data, pandas.DataFrame)
@@ -383,7 +383,7 @@ def test_select_list_args(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_params(db, expected_parameters):
+def test_Database_params(db, expected_parameters):
     for p in db.params:
         assert p in expected_parameters
 
@@ -392,7 +392,7 @@ def test_params(db, expected_parameters):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_parameters(db):
+def test_Database_parameters(db):
     for p in db.parameters:
         assert p.name in db.params
         assert isinstance(p, wqio.Parameter)
@@ -402,7 +402,7 @@ def test_parameters(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_parameter_lookup(db):
+def test_Database_parameter_lookup(db):
     assert isinstance(db.parameter_lookup, dict)
     assert sorted(list(db.parameter_lookup.keys())) == sorted(db.params)
 
@@ -411,7 +411,7 @@ def test_parameter_lookup(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_index(db, expected_index_names):
+def test_Database_index(db, expected_index_names):
     assert len(db.index.keys()) == len(expected_index_names)
     for key in db.index.keys():
         assert key in expected_index_names
@@ -421,7 +421,7 @@ def test_index(db, expected_index_names):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_index_values(db):
+def test_Database_index_values(db):
     expected_categories = [
             'Grass Swale',
             'Bioretention',
@@ -438,12 +438,12 @@ def test_index_values(db):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_index_vals_raises(db):
+def test_Database_index_vals_raises(db):
     with pytest.raises(KeyError):
         db.index_values('JUNK')
 
 
-def test_transformParameters(db_fromcsv):
+def test_Database_transformParameters(db_fromcsv):
     old_params = ['Total suspended solids']
     new_param = 'log_' + 'Total suspended solids'
     db_fromcsv.transformParameters(
@@ -457,7 +457,7 @@ def test_transformParameters(db_fromcsv):
     assert new_param in db_fromcsv.data.index.get_level_values('parameter')
 
 
-def test_unionParamsWithPreference(db_fromcsv):
+def test_Database_unionParamsWithPreference(db_fromcsv):
     components = [
         'Nitrogen, Nitrate (NO3) as N',
         'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
@@ -469,7 +469,7 @@ def test_unionParamsWithPreference(db_fromcsv):
 
 
 @pytest.mark.parametrize('dropold', [True, False])
-def test_redefineIndexLevel(db_fromcsv, dropold):
+def test_Database_redefineIndexLevel(db_fromcsv, dropold):
     levelname = 'epazone'
     newzone = 9999
     oldzone = 7
@@ -485,7 +485,7 @@ def test_redefineIndexLevel(db_fromcsv, dropold):
 
 
 @pytest.mark.parametrize('dropold', [True, False])
-def test_redefineBMPCategory_DropOldTrue(db_fromcsv, dropold):
+def test_Database_redefineBMPCategory(db_fromcsv, dropold):
     newcat = 'Test New Category'
     oldcat = 'Bioretention'
 
@@ -500,7 +500,7 @@ def test_redefineBMPCategory_DropOldTrue(db_fromcsv, dropold):
         assert oldcat in db_fromcsv.data.index.get_level_values('category')
 
 
-def test_to_DataCollection(db_fromcsv):
+def test_Database_to_DataCollection(db_fromcsv):
     dc = db_fromcsv.to_DataCollection(dict(state='GA'))
     assert isinstance(dc, wqio.DataCollection)
 
@@ -509,7 +509,7 @@ def test_to_DataCollection(db_fromcsv):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test__check_for_parameters(db, expected_parameters):
+def test_Database__check_for_parameters(db, expected_parameters):
     assert db._check_for_parameters(expected_parameters)
     assert db._check_for_parameters(expected_parameters[0])
     assert not (db._check_for_parameters(['junk', 'garbage']))
@@ -520,7 +520,7 @@ def test__check_for_parameters(db, expected_parameters):
     (db_fromcsv(), True),
     pytest.mark.skipif('NO_ACCESS')((db_fromaccess(), False)),
 ])
-def test_dbtable_to_csv(db, should_raise):
+def test_Database_dbtable_to_csv(db, should_raise):
     outputfile = get_data_file('testoutput.csv')
     if should_raise:
         with pytest.raises(NotImplementedError):
