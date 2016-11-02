@@ -33,23 +33,6 @@ def filterlocation(location, count=5, column='bmp'):
     ) >= count
 
 
-def getPFCs(db):
-    # get BMP Name of pervious friction course (PFC) BMPs
-    bmpnamecol = 'BMPNAME'
-    bmptable = 'BMP INFO S02'
-    bmptypecol = 'TBMPT 2009'
-    query = """
-    select [{0}]
-    FROM [{1}]
-    WHERE [{2}] = 'PF';
-    """.format(bmpnamecol, bmptable, bmptypecol)
-
-    with db.connect() as cnn:
-        pfc_names = pandas.read_sql(query, cnn)[bmpnamecol].tolist()
-
-    return pfc_names
-
-
 def _pick_best_station(dataframe):
     def best_col(row, mainstation, backupstation, valcol):
         try:
