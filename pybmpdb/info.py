@@ -17,6 +17,9 @@ def _find_by_name(value_string, list_of_dicts, key='name'):
     if len(_entry) > 1:
         msg = 'too many ({}) entries found for {}'
         raise ValueError(msg.format(len(_entry), value_string))
+    elif len(_entry) < 1:
+        msg = 'no entries found for {}'
+        raise ValueError(msg.format(value_string))
 
     return _entry[0]
 
@@ -147,20 +150,20 @@ units = [
         'tex': r'CFU\si[per-mode=symbol]{\per100\milli\liter}',
         'unicode': 'CFU/100 mL'
     }, {
-        'name': 'NTU',
+        'name': 'NT',
         'factor': 1,
-        'tex': r'NTU',
-        'unicode': 'NTU'
+        'tex': r'NT',
+        'unicode': 'NT'
     }, {
-        'name': 'PCU',
+        'name': 'PC',
         'factor': 1,
-        'tex': r'PCU',
-        'unicode': 'PCU'
+        'tex': r'PC',
+        'unicode': 'PC'
     }, {
-        'name': 'su',
+        'name': 's',
         'factor': 1,
         'tex': r'',
-        'unicode': 'SU'
+        'unicode': 'S'
     }, {
         'name': 'ml/L',
         'factor': 1,
@@ -190,62 +193,72 @@ units = [
         'name': 'ug/L',
         'factor': 0.000001,
         'tex': r'\si[per-mode=symbol]{\micro\gram\per\liter}',
-        'unicode': u'\xb5g/L'
+        'unicode': 'μg/L'
     }, {
         'name': 'µg/L',
         'factor': 0.000001,
         'tex': r'\si[per-mode=symbol]{\micro\gram\per\liter}',
-        'unicode': u'\xb5g/L'
+        'unicode': 'μg/L'
     }, {
         'name': 'ng/L',
         'factor': 0.000000001,
         'tex': r'\si[per-mode=symbol]{\nano\gram\per\liter}',
         'unicode': 'ng/L'
     }, {
-        'name': u'\xb0C',
+        'name': '°C',
         'factor': 1,
         'tex': r'\si{\degreeCelsius}',
-        'unicode': u'\xb0C'
+        'unicode': '°C'
     }, {
         'name': 'deg C',
         'factor': 1,
         'tex': r'\si{\degreeCelsius}',
-        'unicode': u'\xb0C'
+        'unicode': '°C'
     }, {
         'name': 'degC',
         'factor': 1,
         'tex': r'\si{\degreeCelsius}',
-        'unicode': u'\xb0C'
+        'unicode': '°C'
     }, {
-        'name': u'\xb5mhos/cm',
+        'name': 'µmhos/cm',  # micro?
         'factor': 1,
         'tex': r'\si[per-mode=symbol]{\micro\siemens\per\centi\meter}',
-        'unicode': u'\xb5S/cm'
+        'unicode': 'μS/cm'
+    }, {
+        'name': 'μmhos/cm',  # mu?
+        'factor': 1,
+        'tex': r'\si[per-mode=symbol]{\micro\siemens\per\centi\meter}',
+        'unicode': 'μS/cm'
     }, {
         'name': 'umhos/cm',
         'factor': 1,
         'tex': r'\si[per-mode=symbol]{\micro\siemens\per\centi\meter}',
-        'unicode': u'\xb5S/cm'
+        'unicode': 'μS/cm'
     }, {
         'name': 'umho/cm',
         'factor': 1,
         'tex': r'\si[per-mode=symbol]{\micro\siemens\per\centi\meter}',
-        'unicode': u'\xb5S/cm'
+        'unicode': 'μS/cm'
     }, {
-        'name': u'\xb5S/cm',
+        'name': 'μS/cm',  # micro?
         'factor': 1,
         'tex': r'\si[per-mode=symbol]{\micro\siemens\per\centi\meter}',
-        'unicode': u'\xb5S/cm'
+        'unicode': 'μS/cm'
+    }, {
+        'name': 'µS/cm',  # mu?
+        'factor': 1,
+        'tex': r'\si[per-mode=symbol]{\micro\siemens\per\centi\meter}',
+        'unicode': 'μS/cm'
     }, {
         'name': 'uS/cm',
         'factor': 1,
         'tex': r'\si[per-mode=symbol]{\micro\siemens\per\centi\meter}',
-        'unicode': u'\xb5S/cm'
+        'unicode': 'μS/cm'
     }, {
         'name': 'mS',
         'factor': 1000,
         'tex': r'\si[per-mode=symbol]{\milli\siemens}',
-        'unicode': u'mS'
+        'unicode': 'mS'
     }, {
         'name': 'ADMI value',
         'factor': 1,
@@ -257,12 +270,43 @@ units = [
         'tex': r'kg',
         'unicode': 'kg'
     }, {
-        'name': 'mg/m3',
+        'name': 'm',
         'factor': 1,
-        'tex':r'\si[per-mode=symbol]{\milli\grams\per\meter\cubed}',
-        'unicode': 'kg'
-    }
+        'tex':r'\si[per-mode=symbol]{meter}',
+        'unicode': 'm'
+    }, {
+        'name': 'mm',
+        'factor': 0.001,
+        'tex':r'\si[per-mode=symbol]{\milli\meter}',
+        'unicode': 'mm'
+    }, {
+        'name': 'um',
+        'factor': 0.000001,
+        'tex':r'\si[per-mode=symbol]{\micro\meter}',
+        'unicode': 'μm'
+    }, {
+        'name': 'μm',
+        'factor': 0.000001,
+        'tex':r'\si[per-mode=symbol]{\micro\meter}',
+        'unicode': 'μm'
+    }, {
+        'name': 'SU',
+        'factor': 1,
+        'tex': 'SU',
+        'unicode': 'SU'
+    }, {
+        'name': 'NTU',
+        'factor': 1,
+        'tex': 'NTU',
+        'unicode': 'NTU'
+    }, {
+        'name': 'PCU',
+        'factor': 1,
+        'tex': 'PCU',
+        'unicode': 'PCU'
+    },
 ]
+
 
 parameters = [
     {
@@ -2313,13 +2357,13 @@ parameters = [
         'fraction': 'suspended'
     }, {
         'name' : 'ssc-total coarse fraction (>63um)',
-        'tex': 'SSC-Total Coarse Fraction ($>63$ \\si[per-mode=symbol]{\\micro\\meter})',
+        'tex': r'SSC-Total Coarse Fraction ($>63$ \si[per-mode=symbol]{\micro\meter})',
         'units': 'mg/L',
         'unicode': 'SSC-Total Coarse Fraction (>63 µm)',
         'fraction': 'total'
     }, {
         'name' : 'ssc-total fine fraction (<63um)',
-        'tex': 'SSC-Total Fine Fraction (<63 \\si[per-mode=symbol]{\\micro\\meter})',
+        'tex': r'SSC-Total Fine Fraction (<63 \si[per-mode=symbol]{\micro\meter})',
         'units': 'mg/L',
         'unicode': 'SSC-Total Fine Fraction (<63 µm)',
         'fraction': 'total'
@@ -2566,13 +2610,13 @@ parameters = [
     }, {
         'name' : 'turbidity',
         'tex': 'Turbidity',
-        'units': 'NTU',
+        'units': 'NT',
         'unicode': 'Turbidity',
         'fraction': 'total'
     }, {
         'name' : 'turbidity, filtered',
         'tex': 'Filtered Turbidity',
-        'units': 'NTU',
+        'units': 'NT',
         'unicode': 'Filtered Turbidity',
         'fraction': 'total'
     }, {
@@ -2758,7 +2802,7 @@ parameters = [
     }, {
         'name' : 'ph',
         'tex': 'pH',
-        'units': 'SU',
+        'units': 'S',
         'unicode': 'pH',
         'fraction': 'total'
     }, {
@@ -3174,6 +3218,18 @@ parameters = [
         'tex': 'Particle Size, % <0.21 um, >0.10 um',
         'units': 'mg/L',
         'unicode': 'Particle Size, % <0.21 µm, >0.10 µm',
+        'fraction': 'total'
+    }, {
+        'name': 'particle size, d50',
+        'tex': 'Particle Size, D50',
+        'units': 'μm',
+        'unicode': 'Particle Size, D50',
+        'fraction': 'total'
+    }, {
+        'name': '% sand, very coarse (1000-2000um)',
+        'tex': r'Percent sand, very coarse (1000-2000 \si[per-mode=symbol]{\micro\meter})',
+        'units': '%',
+        'unicode': 'Percent sand, very coarse (1000-2000 µm)',
         'fraction': 'total'
     }, {
         'name': 'echinoderm fertilization (50% sample)',
