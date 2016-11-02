@@ -173,21 +173,23 @@ def getSummaryData(dbpath=None, catanalysis=False,
         nitro_combined = 'Nitrogen, NOx as N'
         db.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
 
-    grab_BMPs = ['Retention Pond', 'Wetland Basin']
+    grab_categories = ['Retention Pond', 'Wetland Basin']
     if catanalysis:
         # merge Wet land Basins and Retention ponds, keeping
         # the original records
+        category_index_level = db.index['category']
         WBRP_combo = 'Wetland Basin/Retention Pond'
         db.redefineBMPCategory(
-            bmpname=WBRP_combo,
-            criteria=lambda r: r[0] in grab_BMPs,
+            category=WBRP_combo,
+            criteria=lambda r: r[category_index_level] in grab_categories,
             dropold=False
         )
-        grab_BMPs.append(WBRP_combo)
+        grab_categories.append(WBRP_combo)
 
+    bmptype_index_level = db.index['bmptype']
     db.redefineBMPCategory(
-        bmpname='Pervious Friction Course',
-        criteria=lambda r: r[-1] == 'PF',
+        category='Pervious Friction Course',
+        criteria=lambda r: r[bmptype_index_level] == 'PF',
         dropold=True
     )
 
