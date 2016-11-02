@@ -292,20 +292,6 @@ def test_Database_data_attr(db, expected_index_names):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_Database_select_form(db):
-    data = db.select(paramgroup='Metals')
-    assert isinstance(data, pandas.DataFrame)
-    assert data.index.names == db.data.index.names
-    nptest.assert_array_equal(
-        data.index.get_level_values('paramgroup').unique(),
-        np.array(['Metals'])
-    )
-
-
-@pytest.mark.parametrize('db', [
-    db_fromcsv(),
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
-])
 def test_Database_sqlquery_setter(db):
     new_query = 'test'
     db.sqlquery = new_query
@@ -342,42 +328,21 @@ def test_Database_dbtable(db, expected):
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
 ])
-def test_Database_select_raise(db):
-    with pytest.raises(ValueError):
-        db.select(junk=False)
-
-
-@pytest.mark.parametrize('db', [
-    db_fromcsv(),
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
+@pytest.mark.parametrize('options', [
+    pytest.mark.xfail(raises=ValueError)(dict(junk=False)),
+    dict(paramgroup='Metals'),
+    dict(parameter='Copper, Total', site='21st and Iris Rain Garden', bmp='UDFCD Rain Garden'),
+    dict(parameter=['Copper, Total', 'Lead, Total']),
 ])
-def test_Database_select_single_args(db):
-    parameter = 'Copper, Total'
-    siteid = '21st and Iris Rain Garden'
-    bmpid = 'UDFCD Rain Garden'
-    fraction = 'total'
-    data = db.select(parameter=parameter, site=siteid, bmp=bmpid)
+def test_Database_select(db, options):
+    data = db.select(**options)
     assert isinstance(data, pandas.DataFrame)
-    assert data.index.get_level_values('parameter').unique()[0] == parameter
-    assert data.index.get_level_values('site').unique()[0] == siteid
-    assert data.index.get_level_values('bmp').unique()[0] == bmpid
-
-    assert data.index.get_level_values('parameter').unique().shape == (1,)
-    assert data.index.get_level_values('site').unique().shape == (1,)
-    assert data.index.get_level_values('bmp').unique().shape == (1,)
-
-
-@pytest.mark.parametrize('db', [
-    db_fromcsv(),
-    pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
-])
-def test_Database_select_list_args(db):
-    parameters = ['Copper, Total', 'Lead, Total']
-    data = db.select(parameter=parameters)
-    assert isinstance(data, pandas.DataFrame)
-    nptest.assert_array_equal(data.index.get_level_values('parameter').unique(),
-                              np.array(parameters))
-
+    assert data.index.names == db.data.index.names
+    for level, values in options.items():
+        nptest.assert_array_equal(
+            data.index.get_level_values(level).unique(),
+            np.array(values)
+        )
 
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
