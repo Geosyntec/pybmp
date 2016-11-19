@@ -71,7 +71,7 @@ def expected_index_names():
         'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
         'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
         'fraction', 'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-        'PDFID', 'WQID', 'bmptype', 'sampledatetime'
+        'PDFID', 'bmptype', 'sampledatetime'
     ]
     return index_names
 

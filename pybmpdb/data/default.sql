@@ -1,6 +1,6 @@
-select
+ select
      [src].[Analysis_Category] as [category],
-     [src].[BMP Cat Code] as [bmpcat],
+     [src].[CAT_2016] as [bmpcat],
      [src].[TBMPT 2009] as [bmptype],
      [src].[EPA Rain Zone] as [epazone],
      [src].[State] as [state],
@@ -8,13 +8,12 @@ select
      [src].[SITENAME] as [site],
      [src].[BMPName] as [bmp],
      [src].[PDF ID] as [PDFID],
-     [src].[WQID],
      [src].[MSNAME] as [monitoringstation],
      [src].[Storm #] as [storm],
      [src].[SAMPLEDATE] as [sampledate],
      [src].[SAMPLETIME] as [sampletime],
      [src].[Group] as [paramgroup],
-     [src].[Analysis Sample Fraction] as [fraction],
+     [src].[Sample Fraction] as [fraction],
      [src].[WQX Parameter] as [raw_parameter],
      [src].[Common Name] as [parameter],
      [src].[WQ UNITS] as [wq_units],
@@ -28,18 +27,16 @@ select
      [src].[Use in BMP WQ Analysis] as [wqscreen],
      [src].[Use in BMP Category Analysis] as [catscreen],
      [src].[Infl_Effl_Balance] as [balanced]
-from
-     [{}] as [src]
-where
-     [src].[Common Name] is not null
-order by
+ from [{}] as [src]
+ where [src].[Common Name] is not null
+ order by
      [src].[TBMPT 2009],
-     [src].[CATEGORY],
+     [src].[CAT_2016],
      [src].[SITENAME],
      [src].[BMPName],
      [src].[Storm #],
      [src].[SAMPLEDATE],
      [src].[Common Name],
      [src].[WQX Parameter],
-     [src].[Analysis Sample Fraction],
+     [src].[Sample Fraction],
      [src].[Monitoring Station Type];

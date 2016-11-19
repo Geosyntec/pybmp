@@ -2374,6 +2374,102 @@ parameters = [
         'unicode': 'SSC-Total Particulate Solids',
         'fraction': 'total'
     }, {
+        'name' : 'ssc <2000 microns',
+        'tex': r'SSC $<2000$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <2000 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'ssc <1000 microns',
+        'tex': r'SSC $<1000$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <1000 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'ssc <500 microns',
+        'tex': r'SSC $<500$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <500 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'ssc <250 microns',
+        'tex': r'SSC $<250$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <250 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'ssc <100 microns',
+        'tex': r'SSC $<100$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <100 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'ssc <62.5 microns',
+        'tex': r'SSC $<62.5$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <62.5 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'ssc <50 microns',
+        'tex': r'SSC $<50$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <50 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'ssc <25 microns',
+        'tex': r'SSC $<25$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'SSC <25 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <2000 microns',
+        'tex': r'TVSS $<2000$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <2000 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <1000 microns',
+        'tex': r'TVSS $<1000$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <1000 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <500 microns',
+        'tex': r'TVSS $<500$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <500 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <250 microns',
+        'tex': r'TVSS $<250$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <250 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <100 microns',
+        'tex': r'TVSS $<100$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <100 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <62.5 microns',
+        'tex': r'TVSS $<62.5$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <62.5 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <50 microns',
+        'tex': r'TVSS $<50$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <50 µm',
+        'fraction': 'total'
+    }, {
+        'name' : 'tvss <25 microns',
+        'tex': r'TVSS $<25$ \si[per-mode=symbol]{\micro\meter}',
+        'units': 'mg/L',
+        'unicode': 'TVSS <25 µm',
+        'fraction': 'total'
+    }, {
         'name' : 'sand',
         'tex': 'Sand',
         'units': 'mg/L',
@@ -2818,7 +2914,7 @@ parameters = [
         'unicode': 'Tertiary Butylbenzene',
         'fraction': 'total'
     }, {
-        'name' : 'total petroleum hydrocarbons, motor oil range',
+        'name' : 'total petroleum hydrocarbons - motor oil range',
         'tex': 'Total Petroleum Hydrocarbons (motor oil range)',
         'units': 'ug/L',
         'unicode': 'Organics, Motor Oil Range',

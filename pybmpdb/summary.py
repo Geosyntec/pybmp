@@ -2,10 +2,10 @@ import os
 import sys
 from pkg_resources import resource_filename
 
-import numpy as np
+import numpy
 import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
+from matplotlib import pyplot
+import seaborn.apionly as seaborn
 import pandas
 import openpyxl
 from statsmodels.tools.decorators import (
@@ -41,7 +41,7 @@ def _pick_best_station(dataframe):
             else:
                 return row[(mainstation, valcol)]
         except KeyError:
-            return np.nan
+            return numpy.nan
 
     xtab = dataframe.unstack(level='station')
     xtab.columns = xtab.columns.swaplevel(0, 1)
@@ -71,7 +71,7 @@ def _pick_best_sampletype(dataframe):
         if pandas.isnull(row['composite']):
             return row[badval]
         else:
-            return np.nan
+            return numpy.nan
 
     pivotlevel='sampletype'
     badval='grab'
@@ -95,7 +95,7 @@ def _filter_onesided_BMPs(dataframe):
     xtab = dataframe.unstack(level=pivotlevel)
     xgrp = xtab.groupby(level=grouplevels)
     data = xgrp.filter(
-        lambda g: np.all(g['res'].describe().loc['count'] > 0)
+        lambda g: numpy.all(g['res'].describe().loc['count'] > 0)
     )
     return data.stack(level=pivotlevel)
 
@@ -189,7 +189,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
 
     bmptype_index_level = db.index['bmptype']
     db.redefineBMPCategory(
-        category='Pervious Friction Course',
+        category='Permeable Friction Course',
         criteria=lambda r: r[bmptype_index_level] == 'PF',
         dropold=True
     )
@@ -202,7 +202,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
         querytxt = (
             "(sampletype == 'composite') | "
             "((category in {}) | (paramgroup == 'Biological') & (sampletype != 'unknown'))"
-        ).format(grab_BMPs)
+        ).format(grab_categories)
         subset = db.data.query(querytxt)
     else:
         subset = db.data.copy()
@@ -227,6 +227,78 @@ def getSummaryData(dbpath=None, catanalysis=False,
         subset = subset.pipe(_filter_onesided_BMPs)
 
     return subset, db
+
+
+def paired_qual(row):
+    if row['qual_inflow'] == '=':
+        if row['qual_outflow'] == '=':
+            val = 'Pair'
+        elif row['qual_outflow'] == 'ND':
+            val = 'Effluent ND'
+    elif row['qual_inflow'] == 'ND':
+        if row['qual_outflow'] == '=':
+            val = 'Influent ND'
+        elif row['qual_outflow'] == 'ND':
+            val = 'Both ND'
+    return val
+
+
+def website_data(df):
+    # Capitalize some words/phrases
+    cap_old = ['composite', 'grab', 'unknown', 'ZZ']
+    cap_new = ['Composite', 'Grab', 'Unknown', 'ZZ - Unknown']
+
+    # flag the manufactured devices to be excluded from the
+    # category-level analysis
+    _cache_of_index_names = df.index.names
+    dont_use = ['Manufactured Device']
+    df = (
+        df.reset_index()
+          .assign(use=lambda df: numpy.where(df['category'].isin(dont_use) , 'no', 'yes'))
+          .replace(cap_old, cap_new)
+          .set_index(_cache_of_index_names)
+    )
+
+    # To rename columns
+    bmp_dict = {
+        'sampledatetime': 'date',
+        'res': 'value'
+    }
+
+    # Extra columns for flat data
+    columns_to_drop = [
+        'epazone',
+        'storm',
+        'watertype',
+        'paramgroup',
+        'wqscreen',
+        'catscreen',
+        'balanced',
+        'WQID'
+    ]
+
+    flat = (
+        df.reset_index()
+          .drop(columns_to_drop, axis=1)
+          .rename(columns=bmp_dict)
+          .assign(date=lambda df: pandas.to_datetime(df['date']).dt.strftime('%Y-%m-%d'))
+    )
+
+    xtab = (
+        df.set_index('use', append=True)
+          .reset_index(level='sampledatetime')
+          .assign(sampledatetime=lambda df: pandas.to_datetime(df['sampledatetime']))
+          .unstack(level='station')
+          .assign(date=lambda df: df['sampledatetime'].min(axis=1))
+          .drop('sampledatetime', axis=1)
+          .pipe(wqio.utils.flatten_columns)
+          .dropna(subset=['res_inflow', 'res_outflow'])
+          .rename(columns={'date_': 'sampledatetime'})
+          .assign(pair=lambda df: df.apply(paired_qual, axis=1))
+          .reset_index() #[columns_to_keep_pair]
+    )
+
+    return flat, xtab
 
 
 def setMPLStyle(serif=False):
@@ -681,7 +753,7 @@ class CategoricalSummary(object):
                     xlabel='Influent ' + dsum.parameter.paramunit(),
                     ylabel='Effluent ' + dsum.parameter.paramunit(),
                     one2one=True
-                    )
+                )
 
                 statpath = os.path.join(self.basepath, dsum.stat_fig_name)
                 statfig.savefig(statpath, **figoptions)
@@ -690,7 +762,7 @@ class CategoricalSummary(object):
                 scatterfig.savefig(scatterpath, **figoptions)
 
             inputIO.write(latex_input)
-            plt.close('all')
+            pyplot.close('all')
 
             old_param = new_param
 
@@ -734,38 +806,41 @@ def _proxy_inflow_outflow(dataset):
     return infl, effl
 
 
-def parameterBoxplots(datacollection, prefix, bacteria=False):
+def categorical_boxplots(dc, outpath='.'):
     param = None
-    bmplabels = datacollection.tidy['category'].unique()
+    bmplabels = sorted(dc.tidy['category'].unique())
+
+    matplotlib.rc("lines", markeredgewidth=0.5)
 
     # positions of the ticks
-    bmppositions = np.arange(1, len(bmplabels) + 1) * 2
+    bmppositions = numpy.arange(1, len(bmplabels) + 1) * 2
     pos_map = dict(zip(bmplabels, bmppositions))
 
-    for parameter in datacollection.tidy['parameter'].unique():
-
-        fig, ax = plt.subplots(figsize=(6.5, 4))
-        datasets = datacollection.selectDatasets(parameter=parameter)
+    for pu in dc.tidy[['parameter', 'paramgroup', 'units']].drop_duplicates().to_dict(orient='records'):
+        parameter = pu['parameter']
+        group = pu['paramgroup']
+        units = pu['units']
+        param = wqio.Parameter(name=parameter, units=units)
+        fig, ax = pyplot.subplots(figsize=(6.5, 4))
+        datasets = dc.selectDatasets('inflow', 'outflow', parameter=parameter)
         infl_proxy = None
-        effl_proxy = None
 
         for n, ds in enumerate(datasets):
             pos = pos_map[ds.definition['category']]
             if ds is not None:
-
-                bp = ds.boxplot(ax=ax, yscale='log', width=0.45,
-                                bacteria=bacteria, pos=pos, offset=0.25)
-
+                bp = ds.boxplot(ax=ax, yscale='log', width=0.45, bothTicks=False,
+                                bacteria=group == 'Biological',
+                                pos=pos, offset=0.25,
+                                patch_artist=True)
                 if infl_proxy is None:
                     infl_proxy, effl_proxy = _proxy_inflow_outflow(ds)
-
-                if param is None:
-                    param = ds.definition['parameter_obj']
 
         ax.set_xticks(bmppositions)
         ax.set_xticklabels([x.replace('/', '/\n') for x in bmplabels])
         ax.set_ylabel(param.paramunit())
         ax.set_xlabel('')
+        ax.yaxis.grid(True, which='major', color='0.5', linestyle='-')
+        ax.yaxis.grid(False, which='minor')
         wqio.viz.rotateTickLabels(ax, 45, 'x')
         ax.set_xlim(left=1, right=bmppositions.max()+1)
         if infl_proxy is not None:
@@ -777,34 +852,62 @@ def parameterBoxplots(datacollection, prefix, bacteria=False):
                 bbox_to_anchor=(1.0, 1.1)
             )
         fig.tight_layout()
-        figpath = 'figures/{}_{}_boxplots.png'.format(prefix, parameter.replace(', ', ''))
-        fig.savefig(figpath, dpi=600, bbox_inches='tight', transparent=True)
-        plt.close(fig)
+        seaborn.despine(fig)
+        fname = '{}_{}_boxplots.png'.format(group, parameter.replace(', ', ''))
+
+        fig.savefig(os.path.join(outpath, fname), dpi=600, bbox_inches='tight', transparent=False)
+        pyplot.close(fig)
 
 
-def bmpStatSummary(datacollection):
+def _get_fmt(paramgroup):
+    if paramgroup == 'Solids':
+        fmt = lambda x: '{:.1f}'.format(x)
+    elif paramgroup == 'Biological':
+        fmt = lambda x: wqio.utils.sigFigs(x, n=2)
+    else:
+        fmt = lambda x: '{:.2f}'.format(x)
+
+    return fmt
+
+
+def categorical_stats(datacollection):
+    diff_marks = {
+        True: '◆',
+        False: '◇',
+        None: '◇',
+    }
     stat_dict = {}
+    for ds in datacollection.datasets('inflow', 'outflow'):
+        pgroup = ds.definition['paramgroup']
+        paramunit = '{}, ({})'.format(ds.definition['parameter'], ds.definition['units'])
+        key = (paramunit, pgroup, ds.definition['category'])
+        fmt = _get_fmt(pgroup)
 
-    def getNStudies(loc):
-        return loc.filtered_data.index.get_level_values('bmp').unique().shape[0]
-
-    for ds in datacollection.datasets:
-        key = (ds.definition['parameter'], ds.definition['category'])
         stat_dict[key] = {}
         for n, loc in zip(['In', 'Out'], [ds.influent, ds.effluent]):
-            stat_dict[key][('N', n)] = loc.N
-            stat_dict[key][('N-Studies', n)] = getNStudies(loc)
-            stat_dict[key][('25th', n)] = loc.pctl25
-            stat_dict[key][('Median', n)] = loc.median
-            stat_dict[key][('Median CI low', n)] = loc.median_conf_interval[0]
-            stat_dict[key][('Median CI high', n)] = loc.median_conf_interval[1]
-            stat_dict[key][('75th', n)] = loc.pctl75
+            medians = [loc.median] + loc.median_conf_interval.tolist()
+            stat_dict[key][('EMCs', n)] = loc.N
+            stat_dict[key][('BMPs', n)] = loc.raw_data.reset_index()['bmp'].unique().shape[0]
+            stat_dict[key][('25th', n)] = fmt(loc.pctl25)
+            stat_dict[key][('Median', n)] = '{}, ({}, {})'.format(*map(fmt, medians))
+            stat_dict[key][('75th', n)] = fmt(loc.pctl75)
+
+        truth_array = [
+            not ds.medianCIsOverlap if ds.medianCIsOverlap is not None else False,
+            ds.mannwhitney_p <= 0.05 if ds.mannwhitney_p is not None else False,
+            ds.wilcoxon_p <= 0.05 if ds.wilcoxon_p is not None else False,
+        ]
+        stat_dict[key][('Median', 'Difference')] = ''.join(map(diff_marks.get, truth_array))
 
     stat_df = pandas.DataFrame(stat_dict).T
 
-    full_index = pandas.MultiIndex.from_product([
-        stat_df.index.get_level_values(0).unique(),
-        stat_df.index.get_level_values(1).unique(),
-    ], names=['Parameter', 'BMP Type'])
+    final_cols = [
+        ('BMPs', 'In'), ('BMPs', 'Out'),
+        ('EMCs', 'In'), ('EMCs', 'Out'),
+        ('25th', 'In'), ('25th', 'Out'),
+        ('Median', 'In'), ('Median', 'Out'), ('Median', 'Difference'),
+        ('75th', 'In'), ('75th', 'Out'),
+    ]
 
-    return stat_df.reindex(full_index)
+    index_names = ['paramunit', 'paramgroup', 'BMP Category']
+    return stat_df.reindex(columns=final_cols).rename_axis(index_names, axis='index')
