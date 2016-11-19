@@ -169,7 +169,7 @@ class Database(object):
             'station', 'storm', 'sampletype', 'watertype',
             'paramgroup', 'units', 'parameter', 'fraction',
             'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-            'PDFID', 'WQID', 'bmptype',
+            'PDFID', 'bmptype',
         ]
 
         self.agg_rules = {
@@ -369,6 +369,12 @@ class Database(object):
 
         return df
 
+    def connect(self):
+        if self.usingdb:
+            return db_connection(self.file)
+        else:
+            raise ValueError("can't connect to {}".self.file)
+
     def _get_parameters(self, asobj=True):
         """
         Looks at the dataframe `tabledata` (from `getTableData`) and returns a list
@@ -462,7 +468,7 @@ class Database(object):
         good_keys = [
             'category', 'site', 'bmp', 'storm', 'sampledatetime',
             'paramgroup', 'units', 'parameter', 'sampletype',
-            'epazone', 'state',
+            'epazone', 'state', 'station'
         ]
 
         index_levels = self.data.index.names
@@ -698,10 +704,10 @@ class Database(object):
                     dropold=True
                 )
 
-        if newunits not in [u['name'] for u in info.units]:
+        if newunits not in [u['unicode'] for u in info.units]:
             info.units = info.addUnit(name=newunits)
 
-        if newparam not in [p['name'] for p in info.parameters]:
+        if newparam not in [p['unicode'] for p in info.parameters]:
             info.parameters = info.addParameter(name=newparam, units=newunits)
 
         # return the *full* dataset (preserving original params)
