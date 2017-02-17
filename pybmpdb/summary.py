@@ -88,16 +88,20 @@ def _pick_best_sampletype(dataframe):
     return data
 
 
-def _filter_onesided_BMPs(dataframe):
+def _filter_onesided_BMPs(dataframe, execute=True):
     grouplevels = ['site', 'bmp', 'parameter', 'category']
     pivotlevel = 'station'
 
-    xtab = dataframe.unstack(level=pivotlevel)
-    xgrp = xtab.groupby(level=grouplevels)
-    data = xgrp.filter(
-        lambda g: numpy.all(g['res'].describe().loc['count'] > 0)
-    )
-    return data.stack(level=pivotlevel)
+    if execute:
+        data = (
+            dataframe.unstack(level=pivotlevel)
+                .groupby(level=grouplevels)
+                .filter(lambda g: numpy.all(g['res'].describe().loc['count'] > 0))
+                .stack(level=pivotlevel)
+        )
+    else:
+        data = dataframe.copy()
+    return data
 
 
 def _filter_by_storm_count(dataframe, minstorms):
@@ -201,7 +205,7 @@ def getSummaryData(dbpath=None, catanalysis=False,
     if removegrabs:
         querytxt = (
             "(sampletype == 'composite') | "
-            "((category in {}) | (paramgroup == 'Biological') & (sampletype != 'unknown'))"
+            "(((category in @grab_categories) | (paramgroup == 'Biological')) & (sampletype != 'unknown'))"
         ).format(grab_categories)
         subset = db.data.query(querytxt)
     else:
@@ -209,22 +213,20 @@ def getSummaryData(dbpath=None, catanalysis=False,
 
     if excludedbmps is not None:
         # remove all of the PFCs from the dataset
-        exclude_bmp_query = "bmp not in {}".format(excludedbmps)
+        exclude_bmp_query = "bmp not in @excludedbmps"
         subset = subset.query(exclude_bmp_query)
 
     if excludedparams is not None:
-        exclude_params_query = "parameter not in {}".format(excludedparams)
+        exclude_params_query = "parameter not in @excludedparams"
         subset = subset.query(exclude_params_query)
 
     subset = (
         subset.pipe(_pick_best_sampletype)
               .pipe(_pick_best_station)
+              .pipe(_filter_onesided_BMPs, execute=balancedonly)
               .pipe(_filter_by_storm_count, minstorms)
               .pipe(_filter_by_BMP_count, minbmps)
     )
-
-    if balancedonly:
-        subset = subset.pipe(_filter_onesided_BMPs)
 
     return subset, db
 
@@ -879,27 +881,35 @@ def categorical_stats(datacollection):
     stat_dict = {}
     for ds in datacollection.datasets('inflow', 'outflow'):
         pgroup = ds.definition['paramgroup']
-        paramunit = '{}, ({})'.format(ds.definition['parameter'], ds.definition['units'])
+        paramunit = '{} ({})'.format(ds.definition['parameter'], ds.definition['units'])
         key = (paramunit, pgroup, ds.definition['category'])
         fmt = _get_fmt(pgroup)
 
         stat_dict[key] = {}
         for n, loc in zip(['In', 'Out'], [ds.influent, ds.effluent]):
-            medians = [loc.median] + loc.median_conf_interval.tolist()
-            stat_dict[key][('EMCs', n)] = loc.N
-            stat_dict[key][('BMPs', n)] = loc.raw_data.reset_index()['bmp'].unique().shape[0]
-            stat_dict[key][('25th', n)] = fmt(loc.pctl25)
-            stat_dict[key][('Median', n)] = '{}, ({}, {})'.format(*map(fmt, medians))
-            stat_dict[key][('75th', n)] = fmt(loc.pctl75)
+            if loc is not None:
+                medians = [loc.median] + loc.median_conf_interval.tolist()
+                stat_dict[key][('EMCs', n)] = loc.N
+                stat_dict[key][('BMPs', n)] = loc.raw_data.reset_index()['bmp'].unique().shape[0]
+                stat_dict[key][('25th', n)] = fmt(loc.pctl25)
+                stat_dict[key][('Median', n)] = '{} ({}, {})'.format(*map(fmt, medians))
+                stat_dict[key][('75th', n)] = fmt(loc.pctl75)
+            else:
+                stat_dict[key][('EMCs', n)] = 0
+                stat_dict[key][('BMPs', n)] = 0
+                stat_dict[key][('25th', n)] = None
+                stat_dict[key][('Median', n)] = None
+                stat_dict[key][('75th', n)] = None
 
-        truth_array = [
-            not ds.medianCIsOverlap if ds.medianCIsOverlap is not None else False,
-            ds.mannwhitney_p <= 0.05 if ds.mannwhitney_p is not None else False,
-            ds.wilcoxon_p <= 0.05 if ds.wilcoxon_p is not None else False,
-        ]
-        stat_dict[key][('Median', 'Difference')] = ''.join(map(diff_marks.get, truth_array))
-
-    stat_df = pandas.DataFrame(stat_dict).T
+        if ds.influent is not None and ds.effluent is not None:
+            truth_array = [
+                not ds.medianCIsOverlap if ds.medianCIsOverlap is not None else False,
+                ds.mannwhitney_p <= 0.05 if ds.mannwhitney_p is not None else False,
+                ds.wilcoxon_p <= 0.05 if ds.wilcoxon_p is not None else False,
+            ]
+            stat_dict[key][('Median', 'Difference')] = ''.join(map(diff_marks.get, truth_array))
+        else:
+            stat_dict[key][('Median', 'Difference')] = None
 
     final_cols = [
         ('BMPs', 'In'), ('BMPs', 'Out'),
@@ -908,6 +918,11 @@ def categorical_stats(datacollection):
         ('Median', 'In'), ('Median', 'Out'), ('Median', 'Difference'),
         ('75th', 'In'), ('75th', 'Out'),
     ]
-
     index_names = ['paramunit', 'paramgroup', 'BMP Category']
-    return stat_df.reindex(columns=final_cols).rename_axis(index_names, axis='index')
+    stat_df = (
+        pandas.DataFrame(stat_dict)
+            .transpose()
+            .reindex(columns=final_cols)
+            .rename_axis(index_names, axis='index')
+    )
+    return stat_df

@@ -11,7 +11,6 @@ except ImportError:
 
 import numpy as np
 import pandas
-from pandas.io import sql
 
 from . import info
 
@@ -101,7 +100,7 @@ def db_connection(dbfile, driver=None):
 
 def get_data(cmd, cnn):
     try:
-        return sql.read_sql(cmd, cnn)
+        return pandas.read_sql(cmd, cnn)
     except Exception as err:
         raise err
     finally:
@@ -704,10 +703,10 @@ class Database(object):
                     dropold=True
                 )
 
-        if newunits not in [u['unicode'] for u in info.units]:
+        if newunits.lower() not in [u['name'].lower() for u in info.units]:
             info.units = info.addUnit(name=newunits)
 
-        if newparam not in [p['unicode'] for p in info.parameters]:
+        if newparam.lower() not in [p['name'].lower() for p in info.parameters]:
             info.parameters = info.addParameter(name=newparam, units=newunits)
 
         # return the *full* dataset (preserving original params)
