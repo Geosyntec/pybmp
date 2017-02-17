@@ -41,8 +41,11 @@ test:
     - pybmpdb
 
   requires:
-    - nose
+    - pytest
     - wqio
+
+  commands:
+    - python -c "import probscale; probscale.test()"
 
 about:
   home: https://github.com/Geosyntec/pybmpdb.git
