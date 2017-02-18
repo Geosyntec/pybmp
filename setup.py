@@ -18,14 +18,14 @@ def getDataFiles(folder):
 DESCRIPTION = "pybmpdb: Analyze data from the International Stormwater BMP Database"
 LONG_DESCRIPTION = DESCRIPTION
 NAME = "pybmpdb"
-VERSION = "0.1.x"
+VERSION = "0.2.x"
 AUTHOR = "Paul Hobson (Geosyntec Consultants)"
 AUTHOR_EMAIL = "phobson@geosyntec.com"
 URL = "https://github.com/Geosyntec/pybmpdb"
 DOWNLOAD_URL = "https://github.com/Geosyntec/pybmpdb/archive/master.zip"
 LICENSE = "BSD 3-clause"
 PACKAGES = find_packages(exclude=[])
-PLATFORMS = "Python 3.4, 3.5 and later."
+PLATFORMS = "Python 3.4 and later."
 CLASSIFIERS = [
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
@@ -34,10 +34,11 @@ CLASSIFIERS = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
 ]
-INSTALL_REQUIRES = ['wqio']
+INSTALL_REQUIRES = ['wqio', 'numpy', 'matplotlib', 'pandas', 'statsmodels', 'openpyxl', 'seaborn']
 PACKAGE_DATA = {
-    'pybmpdb.data': ['*.csv'],
+    'pybmpdb.data': ['*.csv', '*.sql'],
     'pybmpdb.tex': ['*.tex'],
 }
 

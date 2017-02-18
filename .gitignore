@@ -9,7 +9,7 @@
 *.pyc
 build
 dist
-pybmpdb.egg-info
+pybmpdbdb.egg-info
 
 # Packages #
 ############
@@ -44,14 +44,14 @@ Thumbs.db
 # big files #
 #############
 other_docs/*
-src/bmp/summary/*
-src/bmp/data/project/*
+pybmpdb/summary/*
+pybmpdb/data/project/*
 
 
 # tex files #
 #############
-src/bmp/tex/*.pdf
-src/cvc/output/tex/*
+pybmpdb/tex/*.pdf
+pybmpdb/cvc/output/tex/*
 *.aux
 *.out
 *.toc
@@ -60,26 +60,26 @@ src/cvc/output/tex/*
 
 # test output #
 ###############
-src/*/tests/*.pdf
-src/*/tests/*.png
-src/*/tests/*.csv
-src/*/tests/*.tex
-src/*/tests/*.xlsx
+pybmpdb/*/tests/*.pdf
+pybmpdb/*/tests/*.png
+pybmpdb/*/tests/*.csv
+pybmpdb/*/tests/*.tex
+pybmpdb/*/tests/*.xlsx
 .noseids
 .coverage
-pybmp.egg-info/*
+pybmpdb.egg-info/*
 result_images/*
 
 # scratch files #
 #################
-src/scratch/*
-src/bmp/tex/boxplotlegend.png
+pybmpdb/scratch/*
+pybmpdb/tex/boxplotlegend.png
 *ipython_log*
 *.noseids
 .ipynb_checkpoints
 *.sublime-workspace
-src/*/old/*
-src/bmp/data/old/*
+pybmpdb/*/old/*
+pybmpdb/data/old/*
 coversheets
 
 # Visual Studio stuff #
@@ -87,3 +87,7 @@ coversheets
 *.pyproj
 *.sln
 *.suo
+
+# docs #
+########
+examples/*

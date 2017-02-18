@@ -2050,6 +2050,12 @@ parameters = [
         'unicode': 'Nitrogen, NOₓ as N',
         'fraction': 'total'
     }, {
+        'name' : 'nitrogen, noₓ as n',
+        'tex': 'Nitrogen, NO$_{x}$ as N',
+        'units': 'mg/L',
+        'unicode': 'Nitrogen, NOₓ as N',
+        'fraction': 'total'
+    }, {
         'name' : 'nitrogen, total',
         'tex': 'Total Nitrogen',
         'units': 'mg/L',
