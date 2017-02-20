@@ -10,7 +10,7 @@ source:
    # - fix.patch
 
 build:
-  number: 1
+  number: 0
   script: python setup.py install
 
 requirements:
@@ -21,7 +21,7 @@ requirements:
     - numexpr
     - seaborn
     - pyodbc
-    - wqio 0.3.2
+    - wqio
 
   run:
     - python
@@ -34,7 +34,7 @@ requirements:
     - openpyxl
     - xlrd
     - six
-    - wqio 0.3.2
+    - wqio
 
 test:
   imports:
@@ -45,7 +45,7 @@ test:
     - wqio
 
   commands:
-    - python -c "import probscale; probscale.test()"
+    - python -c "import sys, pybmpdb; sys.exit(pybmpdb.test())"
 
 about:
   home: https://github.com/Geosyntec/pybmpdb.git
