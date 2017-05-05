@@ -11,7 +11,7 @@
      [src].[BMPName] as [bmp],
      [src].[BMPID] as [bmp_id],
      [src].[PDF ID] as [pdf_id],
-     [src].[MSNAME] as [monitoringstation],
+     [src].[MSNAME] as [ms],
      [src].[Storm #] as [storm],
      [src].[SAMPLEDATE] as [sampledate],
      [src].[SAMPLETIME] as [sampletime],

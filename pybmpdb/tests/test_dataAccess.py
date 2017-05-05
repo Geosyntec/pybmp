@@ -68,10 +68,10 @@ def expected_parameters():
 @pytest.fixture
 def expected_index_names():
     index_names = [
-        'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
-        'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
-        'fraction', 'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-        'PDFID', 'bmptype', 'sampledatetime'
+        'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm', 'sampletype',
+        'watertype', 'paramgroup', 'units', 'parameter', 'fraction', 'initialscreen',
+        'wqscreen', 'catscreen', 'balanced', 'bmptype', 'pdf_id', 'site_id', 'bmp_id',
+        'sampledatetime'
     ]
     return index_names
 
