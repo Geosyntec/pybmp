@@ -1,7 +1,4 @@
 import os
-import itertools
-from textwrap import dedent
-from contextlib import contextmanager
 from pkg_resources import resource_filename
 
 try:
@@ -84,7 +81,6 @@ def _check_levelnames(levels):
             raise ValueError(msg)
 
 
-#@contextmanager
 def db_connection(dbfile, driver=None):
     if driver is None:
         driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'

@@ -1,8 +1,5 @@
 # coding=utf-8
 
-from copy import deepcopy
-
-
 __all__ = ['getUnits', 'getTexParam', 'getTexUnit',
            'getNormalization', 'getConversion']
 

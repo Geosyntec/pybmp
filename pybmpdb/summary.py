@@ -7,9 +7,8 @@ import matplotlib
 from matplotlib import pyplot
 import seaborn.apionly as seaborn
 import pandas
-import openpyxl
 from statsmodels.tools.decorators import (
-    resettable_cache, cache_readonly, cache_writable
+    resettable_cache, cache_readonly
 )
 
 import wqio

@@ -1,9 +1,7 @@
 from textwrap import dedent
 import os
 import subprocess
-from io import StringIO
 
-import numpy
 import pandas
 
 from wqio.tests import helpers
