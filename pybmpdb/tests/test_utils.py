@@ -40,6 +40,7 @@ def test_makeBoxplotLegend():
 def inputpath():
     return StringIO("Date,A,B,C,D\nX,1,2,3,4\nY,5,6,7,8\nZ,9,0,1,2")
 
+
 def test_csvToTex(inputpath):
     result = utils.csvToTex(inputpath)
     knownfile = 'testtable_toTex_Known.tex'
@@ -84,7 +85,8 @@ def test_makeTexTable_allOptions():
     \clearpage
     """)
     test = utils.makeTexTable('fake.tex', 'test caption', sideways=True,
-           footnotetext='test footnote', clearpage=True, pos='bt')
+                              footnotetext='test footnote', clearpage=True,
+                              pos='bt')
     assert known == test
 
 

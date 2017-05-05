@@ -2,7 +2,6 @@ import sys
 import os
 from io import StringIO
 from pkg_resources import resource_filename
-PYTHON2 = sys.version_info.major == 2
 
 from unittest import mock
 import pytest
@@ -19,7 +18,8 @@ import pybmpdb
 
 mock_figure = mock.Mock(spec=plt.Figure)
 
-SKIP_DB = True # pyodbc is None or os.name == 'posix'
+PYTHON2 = sys.version_info.major == 2
+SKIP_DB = True  # pyodbc is None or os.name == 'posix'
 
 
 def get_data_file(filename):
@@ -243,7 +243,7 @@ class _base_DatasetSummary_Mixin(object):
 
     def test__tex_table_row_advanced(self):
         r = self.ds_sum._tex_table_row('Mean CI', 'mean_conf_interval', rule='top',
-                                   twoval=True, ci=True, sigfigs=2)
+                                       twoval=True, ci=True, sigfigs=2)
         assert r == self.known_r_advanced
 
     def test__text_table_row_twoattrs(self):
@@ -457,8 +457,6 @@ class test_CategoricalSummary(object):
 
     def teardown(self):
         os.remove(self.test_templatefile)
-        #if os.path.exists(self.scatter_fig_path)
-        #    os.remove(self.csum())
 
     def test_datasets(self):
         for ds in self.csum.datasets:
@@ -482,7 +480,6 @@ class test_CategoricalSummary(object):
             'test__make_input_file_IO_res.tex',
             'test__make_input_file_IO_exp.test'
         )
-
 
     @pytest.mark.skipif(PYTHON2, reason='legacy python')
     def test__make_report_IO(self):
@@ -706,6 +703,7 @@ input_file_string = r'''\section{Carbon Dioxide}
         \end{figure} \clearpage
 \clearpage
 '''
+
 
 class Test_helpers(object):
     def setup(self):

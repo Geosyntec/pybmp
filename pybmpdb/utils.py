@@ -1,9 +1,7 @@
 from textwrap import dedent
 import os
 import subprocess
-from io import StringIO
 
-import numpy
 import pandas
 
 from wqio.tests import helpers
@@ -122,7 +120,6 @@ def csvToTex(csvpath, na_rep='--', float_format=_sig_figs, pcols=15,
 
     if pcols > 0:
         lines = []
-        #with open(texpath, 'r') as textfile:
         header, rest_of_file = latex.split('\n', maxsplit=1)
 
         # createa a bew header
@@ -338,7 +335,7 @@ def makeLongLandscapeTexTable(df, caption, label, footnotetext=None, index=False
     %s
     \clearpage
     """) % (colalignment, caption, label, columns, len(dfcols),
-           columns, len(dfcols), valuestring, notes)
+            columns, len(dfcols), valuestring, notes)
     return tablestring
 
 

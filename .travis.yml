@@ -20,15 +20,16 @@ before_install:
   - conda update --yes conda
 
 install:
-  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION pytest nose
+  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
   - source activate test
-  - conda install --yes coverage docopt requests pyyaml mpl-probscale --channel=conda-forge
+  - conda install --yes requests pyyaml mpl-probscale --channel=conda-forge
+  - conda install --yes coverage docopt pytest pytest-pep8 --channel=conda-forge
   - conda install --yes wqio --channel=phobson/label/dev
   - pip install coveralls
   - pip install . --no-deps
 
 script:
-  - python check_pybmpdb.py --verbose
+  - python check_pybmpdb.py --verbose --pep8
 
 after_success:
   - if [ ${COVERAGE} = true ]; then

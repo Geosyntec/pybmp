@@ -7,9 +7,8 @@ import matplotlib
 from matplotlib import pyplot
 import seaborn.apionly as seaborn
 import pandas
-import openpyxl
 from statsmodels.tools.decorators import (
-    resettable_cache, cache_readonly, cache_writable
+    resettable_cache, cache_readonly
 )
 
 import wqio
@@ -73,8 +72,8 @@ def _pick_best_sampletype(dataframe):
         else:
             return numpy.nan
 
-    pivotlevel='sampletype'
-    badval='grab'
+    pivotlevel = 'sampletype'
+    badval = 'grab'
 
     orig_cols = dataframe.columns
     xtab = dataframe.unstack(level=pivotlevel)
@@ -95,9 +94,9 @@ def _filter_onesided_BMPs(dataframe, execute=True):
     if execute:
         data = (
             dataframe.unstack(level=pivotlevel)
-                .groupby(level=grouplevels)
-                .filter(lambda g: numpy.all(g['res'].describe().loc['count'] > 0))
-                .stack(level=pivotlevel)
+                     .groupby(level=grouplevels)
+                     .filter(lambda g: numpy.all(g['res'].describe().loc['count'] > 0))
+                     .stack(level=pivotlevel)
         )
     else:
         data = dataframe.copy()
@@ -205,7 +204,8 @@ def getSummaryData(dbpath=None, catanalysis=False,
     if removegrabs:
         querytxt = (
             "(sampletype == 'composite') | "
-            "(((category in @grab_categories) | (paramgroup == 'Biological')) & (sampletype != 'unknown'))"
+            "(((category in @grab_categories) | (paramgroup == 'Biological')) & "
+            "  (sampletype != 'unknown'))"
         ).format(grab_categories)
         subset = db.data.query(querytxt)
     else:
@@ -256,7 +256,7 @@ def website_data(df):
     dont_use = ['Manufactured Device']
     df = (
         df.reset_index()
-          .assign(use=lambda df: numpy.where(df['category'].isin(dont_use) , 'no', 'yes'))
+          .assign(use=lambda df: numpy.where(df['category'].isin(dont_use), 'no', 'yes'))
           .replace(cap_old, cap_new)
           .set_index(_cache_of_index_names)
     )
@@ -297,7 +297,7 @@ def website_data(df):
           .dropna(subset=['res_inflow', 'res_outflow'])
           .rename(columns={'date_': 'sampledatetime'})
           .assign(pair=lambda df: df.apply(paired_qual, axis=1))
-          .reset_index() #[columns_to_keep_pair]
+          .reset_index()
     )
 
     return flat, xtab
@@ -370,6 +370,7 @@ class DatasetSummary(object):
                 self.paramgroup, self.bmp, self.parameter.name
             )).lower()
         return self._latex_file_name
+
     @latex_file_name.setter
     def latex_file_name(self, value):
         self._latex_file_name = value
@@ -388,6 +389,7 @@ class DatasetSummary(object):
             figname = utils.processFilename('{}_scatter.pdf'.format(self.latex_file_name))
             self._scatter_fig_name = self.scatter_fig_path + '/' + figname
         return self._scatter_fig_name
+
     @scatter_fig_name.setter
     def scatter_fig_name(self, value):
         self._scatter_fig_name = value
@@ -406,6 +408,7 @@ class DatasetSummary(object):
             figname = utils.processFilename('{}_stats.pdf'.format(self.latex_file_name))
             self._stat_fig_name = self.stat_fig_path + '/' + figname
         return self._stat_fig_name
+
     @stat_fig_name.setter
     def stat_fig_name(self, value):
         self._stat_fig_name = value
@@ -450,9 +453,9 @@ class DatasetSummary(object):
                         if twoval:
                             thisstring = '{}; {}'.format(
                                 wqio.utils.sigFigs(val[0], sigfigs, pval=pval,
-                                              tex=tex, forceint=forceint),
+                                                   tex=tex, forceint=forceint),
                                 wqio.utils.sigFigs(val[1], sigfigs, pval=pval,
-                                              tex=tex, forceint=forceint)
+                                                   tex=tex, forceint=forceint)
                             )
 
                             if ci:
@@ -501,7 +504,6 @@ class DatasetSummary(object):
             The LaTeX commands for the statsummary table.
 
         '''
-        #tabletitle = 'Summary of {} at {} BMPs'.format(self.parameter.tex, self.bmpName)
         stattable = r"""
         \begin{table}[h!]
             \caption{%s}
@@ -513,44 +515,51 @@ class DatasetSummary(object):
         stats = [
             {'name': 'Count', 'attribute': 'N', 'rule': 'top', 'forceint': True},
             {'name': 'Number of NDs', 'attribute': 'ND', 'forceint': True},
-            #{'name': 'Number of Studies', 'attribute': 'JUNK', 'sigfigs': 0},
             {'name': 'Min; Max', 'attribute': ['min', 'max'], 'twoval': True},
             {'name': 'Mean', 'attribute': 'mean', },
-            {'name': '(95\% confidence interval)',
+            {
+                'name': '(95\% confidence interval)',
                 'attribute': 'mean_conf_interval',
-                'twoval': True, 'ci': True, 'rule':'none'
+                'twoval': True, 'ci': True, 'rule': 'none'
             },
             {'name': 'Standard Deviation', 'attribute': 'std', },
             {'name': 'Log. Mean', 'attribute': 'logmean', },
-            {'name': '(95\% confidence interval)',
+            {
+                'name': '(95\% confidence interval)',
                 'attribute': 'logmean_conf_interval',
-                'twoval': True, 'ci': True, 'rule':'none'
+                'twoval': True, 'ci': True, 'rule': 'none'
             },
             {'name': 'Log. Standard Deviation', 'attribute': 'logstd', },
             {'name': 'Geo. Mean', 'attribute': 'geomean', },
-            {'name': '(95\% confidence interval)',
+            {
+                'name': '(95\% confidence interval)',
                 'attribute': 'geomean_conf_interval',
-                'twoval': True, 'ci': True, 'rule':'none'
+                'twoval': True, 'ci': True, 'rule': 'none'
             },
             {'name': 'Coeff. of Variation', 'attribute': 'cov', },
             {'name': 'Skewness', 'attribute': 'skew', },
             {'name': 'Median', 'attribute': 'median', },
-            {'name': '(95\% confidence interval)',
+            {
+                'name': '(95\% confidence interval)',
                 'attribute': 'median_conf_interval',
-                'twoval': True, 'ci': True, 'rule':'none'
+                'twoval': True, 'ci': True, 'rule': 'none'
             },
-            {'name': 'Quartiles',
+            {
+                'name': 'Quartiles',
                 'attribute': ['pctl25', 'pctl75'],
                 'twoval': True,
             },
-            {'name': 'Number of Pairs', 'attribute': 'n_pairs',
+            {
+                'name': 'Number of Pairs', 'attribute': 'n_pairs',
                 'rule': 'top', 'fromdataset': True,
                 'sigfigs': 1, 'forceint': True
             },
-            {'name': 'Wilcoxon p-value', 'attribute': 'wilcoxon_p',
+            {
+                'name': 'Wilcoxon p-value', 'attribute': 'wilcoxon_p',
                 'fromdataset': True, 'pval': True, 'tex': True
             },
-            {'name': 'Mann-Whitney p-value', 'attribute': 'mannwhitney_p',
+            {
+                'name': 'Mann-Whitney p-value', 'attribute': 'mannwhitney_p',
                 'fromdataset': True, 'pval': True, 'tex': True
             },
         ]
@@ -710,9 +719,6 @@ class CategoricalSummary(object):
                 filterlocation(ds.influent, count=self.filtercount,
                                column=self.filtercolumn)
 
-                #if ds.n_pairs is None or ds.paired_data is None or ds.n_pairs < self.filtercount:
-                #    ds.include = False
-                #else:
                 ds.include = ds.effluent.include
 
                 if ds.include:
@@ -734,7 +740,6 @@ class CategoricalSummary(object):
             dsum = DatasetSummary(ds, self.paramgroup, self.figpath)
             new_param = dsum.parameter.name
 
-
             tabletitle = 'Statistics for {} at {} BMPs'.format(
                 dsum.parameter.paramunit(), dsum.bmp
             )
@@ -748,7 +753,7 @@ class CategoricalSummary(object):
             if regenfigs:
                 statfig = ds.statplot(
                     ylabel=dsum.parameter.paramunit(),
-                    bacteria=(self.paramgroup=='Bacteria'),
+                    bacteria=(self.paramgroup == 'Bacteria'),
                     axtype='prob'
                 )
                 scatterfig = ds.scatterplot(
@@ -818,7 +823,12 @@ def categorical_boxplots(dc, outpath='.'):
     bmppositions = numpy.arange(1, len(bmplabels) + 1) * 2
     pos_map = dict(zip(bmplabels, bmppositions))
 
-    for pu in dc.tidy[['parameter', 'paramgroup', 'units']].drop_duplicates().to_dict(orient='records'):
+    paramunits = (
+        dc.tidy[['parameter', 'paramgroup', 'units']]
+          .drop_duplicates()
+          .to_dict(orient='records')
+    )
+    for pu in paramunits:
         parameter = pu['parameter']
         group = pu['paramgroup']
         units = pu['units']
@@ -863,13 +873,11 @@ def categorical_boxplots(dc, outpath='.'):
 
 def _get_fmt(paramgroup):
     if paramgroup == 'Solids':
-        fmt = lambda x: '{:.1f}'.format(x)
+        return lambda x: '{:.1f}'.format(x)
     elif paramgroup == 'Biological':
-        fmt = lambda x: wqio.utils.sigFigs(x, n=2)
+        return lambda x: wqio.utils.sigFigs(x, n=2)
     else:
-        fmt = lambda x: '{:.2f}'.format(x)
-
-    return fmt
+        return lambda x: '{:.2f}'.format(x)
 
 
 def categorical_stats(datacollection):
@@ -921,8 +929,8 @@ def categorical_stats(datacollection):
     index_names = ['paramunit', 'paramgroup', 'BMP Category']
     stat_df = (
         pandas.DataFrame(stat_dict)
-            .transpose()
-            .reindex(columns=final_cols)
-            .rename_axis(index_names, axis='index')
+              .transpose()
+              .reindex(columns=final_cols)
+              .rename_axis(index_names, axis='index')
     )
     return stat_df

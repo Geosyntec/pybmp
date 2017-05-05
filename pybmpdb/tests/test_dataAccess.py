@@ -68,10 +68,10 @@ def expected_parameters():
 @pytest.fixture
 def expected_index_names():
     index_names = [
-        'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm',
-        'sampletype', 'watertype', 'paramgroup', 'units', 'parameter',
-        'fraction', 'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-        'PDFID', 'bmptype', 'sampledatetime'
+        'category', 'epazone', 'state', 'site', 'bmp', 'station', 'storm', 'sampletype',
+        'watertype', 'paramgroup', 'units', 'parameter', 'fraction', 'initialscreen',
+        'wqscreen', 'catscreen', 'balanced', 'bmptype', 'pdf_id', 'site_id', 'bmp_id',
+        'sampledatetime'
     ]
     return index_names
 
@@ -250,8 +250,7 @@ def test_Database_standardize_quals(db_quals):
 
 
 @pytest.mark.parametrize(('db', 'expected_driver'), [
-    (db_fromcsv(), None),
-     pytest.mark.skipif('NO_ACCESS')(
+    (db_fromcsv(), None), pytest.mark.skipif('NO_ACCESS')(
         (db_fromaccess(), r'{Microsoft Access Driver (*.mdb, *.accdb)}')
     ),
 ])
@@ -344,6 +343,7 @@ def test_Database_select(db, options):
             np.array(values)
         )
 
+
 @pytest.mark.parametrize('db', [
     db_fromcsv(),
     pytest.mark.skipif('NO_ACCESS')(db_fromaccess()),
@@ -388,12 +388,12 @@ def test_Database_index(db, expected_index_names):
 ])
 def test_Database_index_values(db):
     expected_categories = [
-            'Grass Swale',
-            'Bioretention',
-            'Detention Basin',
-            'Porous Pavement',
-            'Retention Pond',
-            'Wetland Basin'
+        'Grass Swale',
+        'Bioretention',
+        'Detention Basin',
+        'Porous Pavement',
+        'Retention Pond',
+        'Wetland Basin'
     ]
     bmpcats = db.index_values('category')
     assert sorted(bmpcats) == sorted(expected_categories)
@@ -413,7 +413,7 @@ def test_Database_transformParameters(db_fromcsv):
     new_param = 'log_' + 'Total suspended solids'
     db_fromcsv.transformParameters(
         old_params, new_param,
-        lambda x, old_p: 1000*x[('res', old_p)],
+        lambda x, old_p: 1000 * x[('res', old_p)],
         lambda x, old_p: x[('qual', old_p)],
         '1000*mg/L'
     )
@@ -439,9 +439,8 @@ def test_Database_redefineIndexLevel(db_fromcsv, dropold):
     newzone = 9999
     oldzone = 7
 
-    criteria = lambda row: row[1] == oldzone
-
-    db_fromcsv.redefineIndexLevel(levelname, newzone, criteria, dropold=dropold)
+    db_fromcsv.redefineIndexLevel(levelname, newzone, lambda row: row[1] == oldzone,
+                                  dropold=dropold)
     assert newzone in db_fromcsv.data.index.get_level_values(levelname)
     if dropold:
         assert oldzone not in db_fromcsv.data.index.get_level_values(levelname)
@@ -455,9 +454,8 @@ def test_Database_redefineBMPCategory(db_fromcsv, dropold):
     oldcat = 'Bioretention'
 
     bmpcat_index = db_fromcsv.index['category']
-    criteria = lambda row: row[bmpcat_index] == oldcat
-
-    db_fromcsv.redefineBMPCategory(newcat, criteria, dropold=dropold)
+    db_fromcsv.redefineBMPCategory(newcat, lambda row: row[bmpcat_index] == oldcat,
+                                   dropold=dropold)
     assert newcat in db_fromcsv.data.index.get_level_values('category')
     if dropold:
         assert oldcat not in db_fromcsv.data.index.get_level_values('category')

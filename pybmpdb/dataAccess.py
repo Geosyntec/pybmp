@@ -1,7 +1,4 @@
 import os
-import itertools
-from textwrap import dedent
-from contextlib import contextmanager
 from pkg_resources import resource_filename
 
 try:
@@ -37,7 +34,8 @@ def _fancy_factors(row, quals=None, nd_correction=2):
 def _fancy_quals(row, quals=None):
     if quals is None:
         quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
-    if (row['qual'] in quals) or (row['qual'] == 'UJ' and row['res'] <= row['DL']):
+    if (row['qual'] in quals) or \
+            (row['qual'] == 'UJ' and row['res'] <= row['DL']):
         return 'ND'
     else:
         return '='
@@ -84,7 +82,6 @@ def _check_levelnames(levels):
             raise ValueError(msg)
 
 
-#@contextmanager
 def db_connection(dbfile, driver=None):
     if driver is None:
         driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
@@ -137,10 +134,10 @@ class Database(object):
         DataFrame of all of the data found in the DB or CSV file.
 
     """
-    def __init__(self, filename, dbtable=None, sqlquery=None,
+    def __init__(self, filename=None, dbtable=None, sqlquery=None,
                  catanalysis=False, useTex=True, ndscaler=None):
 
-        self.file = filename
+        self.file = filename or wqio.download('bmpdata')
         self.usingdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
         self.catanalysis = catanalysis
         self.useTex = useTex
@@ -168,7 +165,7 @@ class Database(object):
             'station', 'storm', 'sampletype', 'watertype',
             'paramgroup', 'units', 'parameter', 'fraction',
             'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-            'PDFID', 'bmptype',
+            'bmptype', 'pdf_id', 'site_id', 'bmp_id'
         ]
 
         self.agg_rules = {
@@ -206,12 +203,11 @@ class Database(object):
                 df = pandas.read_csv(self.file, parse_dates=['sampledate'], encoding='utf-8')
 
             categoricals = [
-                'bmptype', 'bmpcat', 'category', 'site', 'bmp',
-                'monitoringstation', 'paramgroup', 'parameter',
-                'raw_parameter', 'fraction', 'media', 'wq_units',
-                'wq_qual', 'station', 'watertype', 'sampletype',
-                'initialscreen', 'wqscreen', 'balanced', 'catscreen',
-                'state', 'country',
+                'bmptype', 'bmpcat', 'category', 'site', 'bmp', 'ms',
+                'paramgroup', 'parameter', 'raw_parameter', 'fraction',
+                'media', 'wq_units', 'wq_qual', 'station', 'watertype',
+                'sampletype', 'initialscreen', 'wqscreen', 'balanced',
+                'catscreen', 'state', 'country',
             ]
 
             self.__data_raw = (
@@ -248,7 +244,7 @@ class Database(object):
                 'Biofilter - Grass Strip': 'Grass Strip',
             }
 
-            drop_columns = ['monitoringstation', '_parameter']
+            drop_columns = ['ms', '_parameter']
             self.__data_cleaned = (
                 self._data_raw
                     .rename(columns=rename_columns)
@@ -771,6 +767,21 @@ class Database(object):
 
         self.transformParameters(existingparams, newparam, returnFiniteRes, returnFiniteQual, newunits)
 
-    def to_DataCollection(self, selection_dict, **kwargs):
-        df = self.select(**selection_dict)
-        return wqio.DataCollection(self.data, **kwargs)
+    def to_DataCollection(self, selection_dict=None, **kwargs):
+        selection_dict = wqio.validate.at_least_empty_dict(selection_dict)
+        othergroups = kwargs.pop('othergroups', ['category', 'units'])
+        pairgroups = kwargs.pop('pairgroups', ['category', 'units', 'bmp_id', 'site_id', 'storm'])
+        return (
+            self.select(**selection_dict)
+                .reset_index()
+                .pipe(
+                    wqio.DataCollection,
+                    rescol='res',
+                    qualcol='qual',
+                    ndval=['ND'],
+                    stationcol='station',
+                    paramcol='parameter',
+                    othergroups=othergroups,
+                    pairgroups=pairgroups,
+                    **kwargs)
+        )

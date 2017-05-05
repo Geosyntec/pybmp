@@ -28,6 +28,7 @@ pybmpdbdb.egg-info
 ######################
 *.log
 *.sqlite
+.cache/*
 
 # OS generated files #
 ######################
@@ -46,6 +47,7 @@ Thumbs.db
 other_docs/*
 pybmpdb/summary/*
 pybmpdb/data/project/*
+pybmpdb/data/scratch/*
 
 
 # tex files #
@@ -87,6 +89,7 @@ coversheets
 *.pyproj
 *.sln
 *.suo
+.vscode/*
 
 # docs #
 ########
