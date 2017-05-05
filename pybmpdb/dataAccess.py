@@ -34,7 +34,8 @@ def _fancy_factors(row, quals=None, nd_correction=2):
 def _fancy_quals(row, quals=None):
     if quals is None:
         quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
-    if (row['qual'] in quals) or (row['qual'] == 'UJ' and row['res'] <= row['DL']):
+    if (row['qual'] in quals) or \
+            (row['qual'] == 'UJ' and row['res'] <= row['DL']):
         return 'ND'
     else:
         return '='

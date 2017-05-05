@@ -9,17 +9,19 @@ def test_run():
 
 class Report():
     def __init__(self):
-        #self.std_tables = ['bacteria', 'metals', 'tss', 'nutrients']
-        #self.std_docs = ['Bacteria', 'Metals', 'Total Suspended Solids', 'Nutrients']
         self.std_tables = ['bacteria', 'metals']
         self.std_docs = ['Bacteria', 'Metals']
 
         self.cbay_tables = ['tss_cbay', 'nutrients_cbay', 'tss_noncbay', 'nutrients_noncbay']
-        self.cbay_docs = ['Total Suspended Solids in Chesapeake Bay', 'Nutrients in Chesapeake Bay',
-                          'Total Suspended Solids outside of Chesapeake Bay', 'Nutrients outside of Chesapeake Bay']
+        self.cbay_docs = ['Total Suspended Solids in Chesapeake Bay',
+                          'Nutrients in Chesapeake Bay',
+                          'Total Suspended Solids outside of Chesapeake Bay',
+                          'Nutrients outside of Chesapeake Bay']
 
         self.md_tables = ['metals_md', 'tss_md', 'nutrients_md']
-        self.md_docs = ['Metals (Manufactured devices only)', 'TSS (Manufactured devices only)', 'Nutrients (Manufactured devices only)']
+        self.md_docs = ['Metals (Manufactured devices only)',
+                        'TSS (Manufactured devices only)',
+                        'Nutrients (Manufactured devices only)']
 
         self.all_tables = ['bacteria', 'metals', 'tss', 'nutrients',
                            'tss_cbay', 'nutrients_cbay',
@@ -27,9 +29,13 @@ class Report():
                            'metals_md', 'tss_md', 'nutrients_md']
 
         self.all_docs = ['Bacteria', 'Metals', 'Total Suspended Solids', 'Nutrients',
-                         'Total Suspended Solids in Chesapeake Bay', 'Nutrients in Chesapeake Bay',
-                         'Total Suspended Solids outside of Chesapeake Bay', 'Nutrients outside of Chesapeake Bay',
-                         'Metals (Manufactured devices only)', 'TSS (Manufactured devices only)', 'Nutrients (Manufactured devices only)']
+                         'Total Suspended Solids in Chesapeake Bay',
+                         'Nutrients in Chesapeake Bay',
+                         'Total Suspended Solids outside of Chesapeake Bay',
+                         'Nutrients outside of Chesapeake Bay',
+                         'Metals (Manufactured devices only)',
+                         'TSS (Manufactured devices only)',
+                         'Nutrients (Manufactured devices only)']
 
         self.sbpat_tables = ['bacteria_sbpat', 'tss', 'nutrients', 'metals']
 
