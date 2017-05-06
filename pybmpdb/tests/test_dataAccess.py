@@ -3,7 +3,10 @@ import os
 from io import StringIO
 from pkg_resources import resource_filename
 import tempfile
+import zipfile
+from urllib import request
 
+from unittest.mock import patch
 import pytest
 import numpy.testing as nptest
 import pandas.util.testing as pdtest
@@ -175,6 +178,16 @@ def test__fancy_factors(row, expected):
 def test__fancy_quals(row, expected):
     result = da._fancy_quals(row)
     assert result == expected
+
+
+@patch.object(zipfile.ZipFile, 'extractall')
+@patch.object(request, 'urlretrieve')
+@patch.object(os.path, 'splitext')
+@patch.object(os, 'makedirs')
+@patch.object(wqio, 'download')
+def test_Database_no_file(mockdl, mockos, mockpath, mockreq, mockzip):
+    db = da.Database()
+    mockdl.assert_called_once_with('bmpdata')
 
 
 def test_Database_strip_quals(db_quals):
