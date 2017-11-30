@@ -50,6 +50,12 @@ def _process_screening(screen_val):
         raise ValueError(msg)
 
 
+def _proc_screen_vectorized(df, screencol):
+    yes = df[screencol].str.lower().isin(['inc', 'yes'])
+    no = df[screencol].str.lower().isin(['exc', 'no'])
+    return np.select([yes, no], ['yes', 'no'], 'invalid')
+
+
 def _process_sampletype(sampletype):
     if "grab" in sampletype.lower():
         return "grab"
