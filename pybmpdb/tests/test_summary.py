@@ -748,9 +748,9 @@ def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
     outfile = get_data_file(outfilename)
 
     input_df = pandas.read_csv(infile, index_col=index_cols)
-    expected_df = pandas.read_csv(outfile, index_col=index_cols).sort()
+    expected_df = pandas.read_csv(outfile, index_col=index_cols).sort_index()
 
-    test_df = fxn(input_df, *args).sort()
+    test_df = fxn(input_df, *args).sort_index()
     pdtest.assert_frame_equal(expected_df.reset_index(), test_df.reset_index())
 
 

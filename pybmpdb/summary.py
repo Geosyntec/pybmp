@@ -5,7 +5,7 @@ from pkg_resources import resource_filename
 import numpy
 import matplotlib
 from matplotlib import pyplot
-import seaborn.apionly as seaborn
+import seaborn
 import pandas
 from statsmodels.tools.decorators import (
     resettable_cache, cache_readonly
@@ -81,7 +81,7 @@ def _pick_best_sampletype(dataframe):
         xtab[(col, badval)] = xtab[col].apply(best_col, axis=1)
 
     data = (
-        xtab.select(lambda c: c[1] != 'unknown', axis=1)
+        xtab.loc[:, xtab.columns.map(lambda c: c[1] != 'unknown')]
             .stack(level=['sampletype'])
     )
     return data
@@ -163,21 +163,25 @@ def getSummaryData(dbpath=None, catanalysis=False,
 
     # main dataset
     if dbpath is None:
-        dbpath = resource_filename("pybmpdb.data", 'bmpdata.csv')
+        dbpath = wqio.download('bmpdata')
 
     db = dataAccess.Database(dbpath, catanalysis=catanalysis, ndscaler=ndscaler)
+    db.data = db.select(**selection)
 
     # combine NO3+NO2 and NO3 into NOx
     nitro_components = [
         'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
         'Nitrogen, Nitrate (NO3) as N'
     ]
-    nitros_exist = db._check_for_parameters(nitro_components)
-    if nitros_exist:
+    if db._check_for_parameters(nitro_components) and combine_nox:
         nitro_combined = 'Nitrogen, NOx as N'
         db.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
 
-    grab_categories = ['Retention Pond', 'Wetland Basin']
+    if grab_categories is None:
+        grab_categories = ['Retention Pond', 'Wetland Basin']
+    else:
+        grab_categories = wqio.validate.at_least_empty_list(grab_categories)
+
     if catanalysis:
         # merge Wet land Basins and Retention ponds, keeping
         # the original records

@@ -12,7 +12,6 @@ import pandas
 from . import info
 
 import wqio
-from wqio import utils
 
 
 __all__ = [
@@ -539,7 +538,7 @@ class Database(object):
 
         """
 
-        self.data = utils.redefine_index_level(
+        self.data = wqio.utils.redefine_index_level(
             self.data, levelname, value,
             criteria=criteria, dropold=dropold
         )
@@ -601,7 +600,7 @@ class Database(object):
         >>> print(db.data.index.get_level_values('category').unique())
         """
 
-        self.data = utils.redefine_index_level(
+        self.data = wqio.utils.redefine_index_level(
             self.data, 'category', category,
             criteria=criteria, dropold=dropold
         )
