@@ -100,13 +100,9 @@ def db_connection(dbfile, driver=None):
         raise RuntimeError(msg.format(dbfile, driver))
 
 
-def get_data(cmd, cnn):
-    try:
+def get_data(cmd, dbfile, driver=None):
+    with db_connection(dbfile, driver=driver) as cnn:
         return pandas.read_sql(cmd, cnn)
-    except Exception as err:
-        raise err
-    finally:
-        cnn.close()
 
 
 class Database(object):
@@ -170,7 +166,7 @@ class Database(object):
             'station', 'storm', 'sampletype', 'watertype',
             'paramgroup', 'units', 'parameter', 'fraction',
             'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-            'bmptype', 'pdf_id', 'site_id', 'bmp_id'
+            'bmptype', 'pdf_id', 'site_id', 'bmp_id',
         ]
 
         self.agg_rules = {
@@ -432,10 +428,7 @@ class Database(object):
         if filepath is None:
             filepath = 'bmp/data/{0}.csv'
 
-        cmd = "select * from [{0}]".format(tablename)
-        cnn = db_connection(self.file, self.driver)
-        df = get_data(cmd, cnn)
-
+        df = get_data(self.sqlquery, self.file, driver=self.driver)
         df.to_csv(filepath, index=False, encoding='utf-8')
 
     def select(self, **kwargs):
