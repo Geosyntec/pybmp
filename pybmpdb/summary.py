@@ -42,26 +42,26 @@ def _pick_best_station(dataframe):
         except KeyError:
             return numpy.nan
 
-    xtab = dataframe.unstack(level='station')
-    xtab.columns = xtab.columns.swaplevel(0, 1)
-    xtab[('final_outflow', 'res')] = xtab.apply(
-        best_col, axis=1, args=('outflow', 'subsurface', 'res')
-    )
-    xtab[('final_outflow', 'qual')] = xtab.apply(
-        best_col, axis=1, args=('outflow', 'subsurface', 'qual')
-    )
-    xtab[('final_inflow', 'qual')] = xtab.apply(
-        best_col, axis=1, args=('inflow', 'reference outflow', 'qual')
-    )
-    xtab[('final_inflow', 'res')] = xtab.apply(
-        best_col, axis=1, args=('inflow', 'reference outflow', 'res')
-    )
-
     data = (
-        xtab.select(lambda c: 'final_' in c[0], axis=1)
+        dataframe.unstack(level='station')
+            .pipe(wqio.utils.swap_column_levels, 0, 1)
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('outflow', 'subsurface', 'res')),
+                  'final_outflow', 'res')
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('outflow', 'subsurface', 'qual')),
+                  'final_outflow', 'qual')
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('inflow', 'reference outflow', 'res')),
+                  'final_inflow', 'res')
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('inflow', 'reference outflow', 'qual')),
+                  'final_inflow', 'qual')
+            .loc[:, lambda df: df.columns.map(lambda c: 'final_' in c[0])]
             .rename(columns=lambda col: col.replace('final_', ''))
             .stack(level='station')
     )
+
     return data
 
 
@@ -122,11 +122,11 @@ def _filter_by_BMP_count(dataframe, minbmps):
     return data
 
 
-def getSummaryData(dbpath=None, catanalysis=False,
-                   minstorms=3, minbmps=3, name=None, useTex=False,
+def getSummaryData(dbpath=None, catanalysis=False, minstorms=3, minbmps=3,
+                   name=None, useTex=False, ndscaler=None, combine_nox=True,
+                   removegrabs=True, grab_categories=None, combine_WB_RP=True,
                    excludedbmps=None, excludedparams=None,
-                   balancedonly=True, removegrabs=True,
-                   ndscaler=None, **selection):
+                   balancedonly=True, **selection):
     """
     Select offical data from database.
 
@@ -136,13 +136,11 @@ def getSummaryData(dbpath=None, catanalysis=False,
         File path to the BMP Database Access file.
     catanalysis : optional bool (default = False)
         Filters for data approved for BMP Category-level analysis.
-    wqanalysis : optional bool (default = False)
-        Filters for data approvded for individual BMP analysis.
     minstorms : option int (default = 3)
         The minimum number of storms each group defined by BMP, station,
         and parameter should have. Groups with too few storms will be
         filtered out.
-    minstorms : option int (default = 3)
+    minbmps : option int (default = 3)
         The minimum number of BMPs each group defined
         by category, station, and parameter should have.
         Groups with too few BMPs will be filtered out.
@@ -215,17 +213,13 @@ def getSummaryData(dbpath=None, catanalysis=False,
     else:
         subset = db.data.copy()
 
-    if excludedbmps is not None:
-        # remove all of the PFCs from the dataset
-        exclude_bmp_query = "bmp not in @excludedbmps"
-        subset = subset.query(exclude_bmp_query)
-
-    if excludedparams is not None:
-        exclude_params_query = "parameter not in @excludedparams"
-        subset = subset.query(exclude_params_query)
+    excludedbmps = wqio.validate.at_least_empty_list(excludedbmps)
+    excludedparams = wqio.validate.at_least_empty_list(excludedparams)
 
     subset = (
-        subset.pipe(_pick_best_sampletype)
+        subset.query("bmp not in @excludedbmps")
+              .query("parameter not in @excludedparams")
+              .pipe(_pick_best_sampletype)
               .pipe(_pick_best_station)
               .pipe(_filter_onesided_BMPs, execute=balancedonly)
               .pipe(_filter_by_storm_count, minstorms)

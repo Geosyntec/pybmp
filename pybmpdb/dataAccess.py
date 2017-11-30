@@ -198,25 +198,11 @@ class Database(object):
         if self.__data_raw is None:
             if self.usingdb:
                 # SQL query text, execution, data retrieval
-                cnn = db_connection(self.file, self.driver)
-                df = get_data(self.sqlquery, cnn)
+                df = get_data(self.sqlquery, self.file, driver=self.driver)
             else:
                 df = pandas.read_csv(self.file, parse_dates=['sampledate'], encoding='utf-8')
 
-            categoricals = [
-                'bmptype', 'bmpcat', 'category', 'site', 'bmp', 'ms',
-                'paramgroup', 'parameter', 'raw_parameter', 'fraction',
-                'media', 'wq_units', 'wq_qual', 'station', 'watertype',
-                'sampletype', 'initialscreen', 'wqscreen', 'balanced',
-                'catscreen', 'state', 'country',
-            ]
-
-            self.__data_raw = (
-                df.fillna({'wq_qual': '='})
-                  #.pipe(wqio.utils.categorize_columns, *categoricals)
-            )
-
-        return self.__data_raw
+        return df.fillna({'wq_qual': '='})
 
     @property
     def _data_cleaned(self):
@@ -250,20 +236,24 @@ class Database(object):
                 self._data_raw
                     .rename(columns=rename_columns)
                     .dropna(subset=['res'])
-                    .pipe(self._strip_quals, qualcol='qual')
-                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual', userfxn=self.ndscaler)
+                    .assign(qual=lambda df: df['qual'].str.strip())
+                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual',
+                          userfxn=self.ndscaler)
                     .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
-                    .assign(initialscreen=lambda df: df['initialscreen'].apply(_process_screening))
-                    .assign(wqscreen=lambda df: df['wqscreen'].apply(_process_screening))
-                    .assign(catscreen=lambda df: df['catscreen'].apply(_process_screening))
+                    .assign(initialscreen=lambda df: _proc_screen_vectorized(df, 'initialscreen'))
+                    .assign(wqscreen=lambda df: _proc_screen_vectorized(df, 'wqscreen'))
+                    .assign(catscreen=lambda df: _proc_screen_vectorized(df, 'catscreen'))
                     .assign(station=lambda df: df['station'].str.lower())
                     .assign(sampletype=lambda df: df['sampletype'].apply(_process_sampletype))
-                    .assign(sampledatetime=lambda df: df.apply(utils.makeTimestamp, axis=1))
-                    .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
+                    .assign(sampledatetime=lambda df: df.apply(wqio.utils.makeTimestamp, axis=1))
+                    .assign(units=lambda df: df['units'].map(
+                        lambda u: info.getUnits(u, attr='unicode')
+                    ))
                     .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
                     .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
                     .replace({'category': biofilters})
-                    .pipe(utils.normalize_units, units_norm, target_units, paramcol='_parameter', rescol='res', unitcol='units', napolicy='raise')
+                    .pipe(wqio.utils.normalize_units, units_norm, target_units, paramcol='_parameter',
+                          rescol='res', unitcol='units', napolicy='raise')
                     .drop(drop_columns, axis=1)
                     .query("res > 0")
             )
@@ -279,7 +269,6 @@ class Database(object):
                     .agg(self.agg_rules)
                     .set_index('sampledatetime', append=True)
             )
-
         return self.__data_final
 
     @property
@@ -639,63 +628,42 @@ class Database(object):
         >>> csvpath = 'bmp/data/data_pybmpdb.csv'
         >>> db = bmp.dataAccess.Database(file=csvpath)
         >>> db.transformParameters(['pH'], 'protons',
-        ...     lambda x, junk: utils.pH2concentration(x[('res', 'pH')]),
+        ...     lambda x, junk: wqio.utils.pH2concentration(x[('res', 'pH')]),
         ...     lambda x, junk: x[('qual', 'pH')], 'mg/L'
         ... )
 
         """
 
         index_name_cache = self.data.index.names
-
-        if np.isscalar(existingparams):
-            existingparams = [existingparams]
+        existingparams = wqio.validate.at_least_empty_list(existingparams)
 
         params_exist = self._check_for_parameters(existingparams)
         if not params_exist:
             raise ValueError("Parameter %s is not in this dataset" % param)
 
+        selection = (
+            self.data.query("parameter in @existingparams")
+                .unstack(level='parameter')
+                .pipe(wqio.utils.assign_multilevel_column,
+                      lambda df: df.apply(qualfxn, axis=1, args=existingparams),
+                      'qual', newparam)
+                .pipe(wqio.utils.assign_multilevel_column,
+                      lambda df: df.apply(resfxn, axis=1, args=existingparams),
+                      'res', newparam)
+        )
 
-        pindex = self.index['parameter']
-        selection = self.data.query("parameter in {}".format(existingparams))
 
-        # put the station into the row index and pivot the param into columns
-        selection = selection.unstack(level='parameter')
-
-        # compute the right values
-        selection[('qual', newparam)] = selection.apply(qualfxn, axis=1,
-                                                  args=existingparams)
-        selection[('res', newparam)] = selection.apply(resfxn, axis=1,
-                                                 args=existingparams)
-
-        # keep only the combined data
-        selection = selection.select(lambda col: col[1] == newparam, axis=1)
-
-        # station goes back in into columns, parameters into rows
-        #selection = selection.unstack(level='station')
-        selection = selection.stack(level='parameter')
-
-        # get the column indices in the right order
-        #selection.columns = selection.columns.swaplevel('quantity', 'station')
-
-        # check on indexMods
-        if indexMods is None:
-            indexMods = {}
-
-        # check indexMods type
-        if indexMods is not None:
-            if not isinstance(indexMods, dict):
-                raise ValueError('indexMods must be a dictionary')
-
-            # add the units into indexMod, apply all changes
-            indexMods['units'] = newunits
-            for levelname, value in indexMods.items():
-                selection = utils.redefine_index_level(
-                    selection,
-                    levelname,
-                    value,
-                    criteria=None,
-                    dropold=True
-                )
+        indexMods = wqio.validate.at_least_empty_dict(indexMods, units=newunits)
+        # add the units into indexMod, apply all changes
+        indexMods['units'] = newunits
+        for levelname, value in indexMods.items():
+            selection = wqio.utils.redefine_index_level(
+                selection,
+                levelname,
+                value,
+                criteria=None,
+                dropold=True
+            )
 
         if newunits.lower() not in [u['name'].lower() for u in info.units]:
             info.units = info.addUnit(name=newunits)
