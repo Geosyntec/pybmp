@@ -33,29 +33,28 @@ def filterlocation(location, count=5, column='bmp'):
 
 
 def _pick_best_station(dataframe):
-    def best_col(row, mainstation, backupstation, valcol):
-        try:
-            if pandas.isnull(row[(mainstation, valcol)]):
-                return row[(backupstation, valcol)]
-            else:
-                return row[(mainstation, valcol)]
-        except KeyError:
-            return numpy.nan
+    def best_col(df, mainstation, backupstation, valcol):
+        values = numpy.where(
+            df[(mainstation, valcol)].isnull(),
+            df[(backupstation, valcol)],
+            df[(mainstation, valcol)]
+        )
+        return values
 
     data = (
         dataframe.unstack(level='station')
             .pipe(wqio.utils.swap_column_levels, 0, 1)
             .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: df.apply(best_col, axis=1, args=('outflow', 'subsurface', 'res')),
+                  lambda df: best_col(df, 'outflow', 'subsurface', 'res'),
                   'final_outflow', 'res')
             .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: df.apply(best_col, axis=1, args=('outflow', 'subsurface', 'qual')),
+                  lambda df: best_col(df, 'outflow', 'subsurface', 'qual'),
                   'final_outflow', 'qual')
             .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: df.apply(best_col, axis=1, args=('inflow', 'reference outflow', 'res')),
+                  lambda df: best_col(df, 'inflow', 'reference outflow', 'res'),
                   'final_inflow', 'res')
             .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: df.apply(best_col, axis=1, args=('inflow', 'reference outflow', 'qual')),
+                  lambda df: best_col(df, 'inflow', 'reference outflow', 'qual'),
                   'final_inflow', 'qual')
             .loc[:, lambda df: df.columns.map(lambda c: 'final_' in c[0])]
             .rename(columns=lambda col: col.replace('final_', ''))
