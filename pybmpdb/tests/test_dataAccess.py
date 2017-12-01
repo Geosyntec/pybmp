@@ -33,6 +33,22 @@ NO_ACCESS = True
 
 
 @pytest.fixture
+def df_for_quals():
+    df = pandas.DataFrame([
+        {'res': 1, 'DL': 2, 'qual': 'U'},
+        {'res': 1, 'DL': 2, 'qual': 'UK'},
+        {'res': 1, 'DL': 2, 'qual': 'UA'},
+        {'res': 1, 'DL': 2, 'qual': 'UC'},
+        {'res': 1, 'DL': 2, 'qual': 'K'},
+        {'res': 5., 'DL': 15., 'qual': 'UJ'},
+        {'res': 5., 'DL': 10., 'qual': 'UJ'},
+        {'res': 10., 'DL': 5., 'qual': 'UJ'},
+        {'res': 5., 'DL': 5., 'qual': 'junk'},
+    ])
+    return df
+
+
+@pytest.fixture
 def db_quals():
     return ['U', 'UJ']
 
@@ -92,51 +108,22 @@ def test_db_connection():
         raise
 
 
-@pytest.mark.parametrize(('value', 'expected'), [
-    ('Yes', 'yes'),
-    ('INC', 'yes'),
-    ('No', 'no'),
-    ('eXC', 'no'),
-    ('junk', None)
-])
-def test__process_screening(value, expected):
-    if expected is None:
-        with pytest.raises(ValueError):
-            da._process_screening(value)
-    else:
-        assert da._process_screening(value) == expected
-
-
-def test__proc_screen_vectorized():
+def test__process_screening():
     df = pandas.DataFrame({
         'screen': ['Yes', 'INC', 'No', 'eXC', 'junk']
     })
     expected = np.array(['yes', 'yes', 'no', 'no', 'invalid'])
-    assert (da._proc_screen_vectorized(df, 'screen') == expected).all()
+    result = da._process_screening(df, 'screen')
+    nptest.assert_array_equal(result, expected)
 
 
-@pytest.mark.parametrize(('value', 'expected'), [
-    ('SRjeL GraB asdf', 'grab'),
-    ('SRjeL cOMPositE asdf', 'composite'),
-    ('SRjeL LSDRsdfljkSdj asdf', 'unknown'),
-])
-def test__process_sampletype_grab(value, expected):
-    assert da._process_sampletype(value) == expected
-
-
-@pytest.mark.parametrize(('value', 'error'), [
-    ('inFLow', None),
-    ('OutflOW', None),
-    ('rEFErence', NotImplementedError),
-    ('subsURFace', NotImplementedError),
-    ('junk', ValueError)
-])
-def test__check_station(value, error):
-    if error is not None:
-        with pytest.raises(error):
-            da._check_station(value)
-    else:
-        assert da._check_station(value) == value.lower()
+def test__process_sampletype_grab():
+    df = pandas.DataFrame({
+        'sampletype': ['SRL GraB asdf', 'SeL cOMPositE df', 'jeL LSDR as']
+    })
+    expected = np.array(['grab', 'composite', 'unknown'])
+    result = da._process_sampletype(df, 'sampletype')
+    nptest.assert_array_equal(result, expected)
 
 
 def test__check_levelnames():
@@ -146,38 +133,16 @@ def test__check_levelnames():
         da._check_levelnames(['site', 'junk'])
 
 
-@pytest.mark.parametrize(('row', 'expected'), [
-    ({'qual': 'U'}, 2),
-    ({'qual': 'UK'}, 2),
-    ({'qual': 'UA'}, 2),
-    ({'qual': 'UC'}, 2),
-    ({'qual': 'K'}, 2),
-    ({'res': 5., 'DL': 15., 'qual': 'UJ'}, 3),
-    ({'res': 5., 'DL': 10., 'qual': 'UJ'}, 2),
-    ({'res': 10., 'DL': 5., 'qual': 'UJ'}, 1),
-    ({'res': 5., 'DL': 5., 'qual': 'junk'}, 1),
-])
-def test__fancy_factors(row, expected):
-    result = da._fancy_factors(row)
-    assert result == expected
+def test__handle_ND_factors(df_for_quals):
+    expected = np.array([2, 2, 2, 2, 2, 3, 2, 1, 1])
+    result = da._handle_ND_factors(df_for_quals)
+    nptest.assert_array_equal(result, expected)
 
 
-@pytest.mark.parametrize(('row', 'expected'), [
-    ({'qual': 'U'}, 'ND'),
-    ({'qual': 'UK'}, 'ND'),
-    ({'qual': 'UA'}, 'ND'),
-    ({'qual': 'UC'}, 'ND'),
-    ({'qual': 'K'}, 'ND'),
-    ({'res': 5., 'DL': 15., 'qual': 'UJ'}, 'ND'),
-    ({'res': 5., 'DL': 10., 'qual': 'UJ'}, 'ND'),
-    ({'res': 5., 'DL': 5., 'qual': 'UJ'}, 'ND'),
-    ({'res': 10., 'DL': 5., 'qual': 'UJ'}, '='),
-    ({'res': 5., 'DL': 5., 'qual': 'junk'}, '='),
-
-])
-def test__fancy_quals(row, expected):
-    result = da._fancy_quals(row)
-    assert result == expected
+def test__handle_ND_qualifiers(df_for_quals):
+    result = da._handle_ND_qualifiers(df_for_quals)
+    expected = np.array(['ND', 'ND', 'ND', 'ND', 'ND', 'ND', 'ND', '=', '='])
+    nptest.assert_array_equal(result, expected)
 
 
 @patch.object(zipfile.ZipFile, 'extractall')
@@ -188,88 +153,6 @@ def test__fancy_quals(row, expected):
 def test_Database_no_file(mockdl, mockos, mockpath, mockreq, mockzip):
     db = da.Database()
     mockdl.assert_called_once_with('bmpdata')
-
-
-def test_Database_strip_quals(db_quals):
-    df_raw = pandas.DataFrame({
-        'res':  [  1,    2,     3,    4,    5,    6,     7,    8],
-        'qual': ['U', 'U ', ' U ', None, None, None, ' UJ', 'UJ']
-    })
-
-    df_final = pandas.DataFrame({
-        'res':  [  1,   2,   3,    4,    5,    6,    7,    8],
-        'qual': ['U', 'U', 'U', None, None, None, 'UJ', 'UJ']
-    })
-    da.Database._strip_quals(df_raw, 'qual')
-    pdtest.assert_frame_equal(df_raw, df_final)
-
-
-def test_Database_apply_res_factors_baseline(db_quals):
-    df_raw = pandas.DataFrame({
-        'res':  [  1,   2,   3,    4,    5,    6,    7,    8],
-        'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
-    })
-
-    df_final = pandas.DataFrame({
-        'res':  [  2,   4,   6,    4,    5,    6,   14,   16],
-        'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
-    })
-
-    da.Database._apply_res_factors(df_raw, 'res', 'qual',
-                                   quallist=db_quals, factor=2)
-    pdtest.assert_frame_equal(df_raw, df_final)
-
-
-def test_Database_apply_res_factors_fancy(db_quals):
-    df_raw = pandas.DataFrame({
-        'res':  [ 1.,  2.,  3.,   4.,   5.,   6.,   7.,   8.],
-        'DL':   [ 1.,  2.,  3.,   4.,   5.,   6.,  10.,   8.],
-        'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
-    })
-
-    df_final = pandas.DataFrame({
-        'res':  [ 2.,  4.,  6.,   4.,   5.,   6.,  10.,   8.],
-        'DL':   [ 1.,  2.,  3.,   4.,   5.,   6.,  10.,   8.],
-        'qual': ['U', 'U', 'U', None, 'AB', None, 'UJ', 'UJ']
-    })
-
-    def fancy_factors(row):
-        if row.qual == 'U':
-            return 2
-        elif row.qual == 'UJ'and row.res < row.DL:
-            return row.DL / row.res
-        else:
-            return 1
-
-    da.Database._apply_res_factors(df_raw, 'res', 'qual',
-                                   userfxn=fancy_factors)
-    pdtest.assert_frame_equal(df_raw, df_final)
-
-
-def test_Database_apply_res_factors_errors(db_quals):
-    df = pandas.DataFrame([1, 2, 3])
-    with pytest.raises(ValueError):
-        da.Database._apply_res_factors(df, 'res', 'qual')
-
-    with pytest.raises(ValueError):
-        da.Database._apply_res_factors(df, 'res', 'qual', factor=2)
-
-    with pytest.raises(ValueError):
-        da.Database._apply_res_factors(df, 'res', 'qual', factor=2, userfxn=2)
-
-
-def test_Database_standardize_quals(db_quals):
-    df_raw = pandas.DataFrame({
-        'res':  [  2,   4,   6,    4,    5,    6,   14,   16],
-        'qual': ['U', 'U', 'U', None, None, None, 'UJ', 'UJ']
-    })
-
-    df_final = pandas.DataFrame({
-        'res':  [   2,    4,    6,   4,   5,   6,   14,   16],
-        'qual': ['ND', 'ND', 'ND', '=', '=', '=', 'ND', 'ND']
-    })
-    da.Database._standardize_quals(df_raw, 'qual', db_quals)
-    pdtest.assert_frame_equal(df_raw, df_final)
 
 
 @pytest.mark.parametrize(('db', 'expected_driver'), [
@@ -456,21 +339,6 @@ def test_Database_unionParamsWithPreference(db_fromcsv):
     db_fromcsv.unionParamsWithPreference(components, combined, 'mg/L')
     assert combined in db_fromcsv.parameter_lookup.keys()
     assert combined in db_fromcsv.data.index.get_level_values('parameter')
-
-
-@pytest.mark.parametrize('dropold', [True, False])
-def test_Database_redefineIndexLevel(db_fromcsv, dropold):
-    levelname = 'epazone'
-    newzone = 9999
-    oldzone = 7
-
-    db_fromcsv.redefineIndexLevel(levelname, newzone, lambda row: row[1] == oldzone,
-                                  dropold=dropold)
-    assert newzone in db_fromcsv.data.index.get_level_values(levelname)
-    if dropold:
-        assert oldzone not in db_fromcsv.data.index.get_level_values(levelname)
-    else:
-        assert oldzone in db_fromcsv.data.index.get_level_values(levelname)
 
 
 @pytest.mark.parametrize('dropold', [True, False])
