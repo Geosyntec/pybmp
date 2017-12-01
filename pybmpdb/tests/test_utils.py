@@ -3,6 +3,7 @@ import sys
 import glob
 from textwrap import dedent
 from io import StringIO
+from pkg_resources import resource_filename
 
 from unittest import mock
 import pytest
@@ -43,15 +44,15 @@ def inputpath():
 
 def test_csvToTex(inputpath):
     result = utils.csvToTex(inputpath)
-    knownfile = 'testtable_toTex_Known.tex'
-    with open(helpers.test_data_path(knownfile), 'r') as known:
+    knownfile = resource_filename("pybmpdb.tests._data", 'testtable_toTex_Known.tex')
+    with open(knownfile, 'r') as known:
         expected = known.read()
         assert result == expected
 
 
 def test_csvToXlsx(inputpath):
     with mock.patch.object(pandas.DataFrame, 'to_excel') as toxl:
-        outputpath = helpers.test_data_path('testtable_toXL.xlsx')
+        outputpath = resource_filename("pybmpdb.tests._data", 'testtable_toXL.xlsx')
         utils.csvToXlsx(inputpath, outputpath)
         toxl.assert_called_once_with(outputpath, float_format=None,
                                      na_rep='--', index=False)

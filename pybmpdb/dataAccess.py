@@ -19,60 +19,33 @@ __all__ = [
 ]
 
 
-def _fancy_factors(row, quals=None, nd_correction=2):
+def _handle_ND_factors(df, qualcol='qual', rescol='res', dlcol='DL', quals=None, nd_correction=2):
     if quals is None:
         quals = ['U', 'UK', 'UA', 'UC', 'K']
-    if row['qual'] in quals:
-        return float(nd_correction)
-    elif row['qual'] == 'UJ'and row['res'] < row['DL']:
-        return row['DL'] / row['res']
-    else:
-        return 1.
+
+    normal_ND = [df[qualcol].isin(quals), float(nd_correction)]
+    weird_UJ = [(df[qualcol] == 'UJ') & (df[rescol] < df[dlcol]), df[dlcol] / df[rescol]]
+    return wqio.utils.selector(1, normal_ND, weird_UJ)
 
 
-def _fancy_quals(row, quals=None):
+def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=None):
     if quals is None:
         quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
-    if (row['qual'] in quals) or \
-            (row['qual'] == 'UJ' and row['res'] <= row['DL']):
-        return 'ND'
-    else:
-        return '='
+
+    is_ND = df[qualcol].isin(quals) | ((df[qualcol] == 'UJ') & (df[rescol] < df[dlcol]))
+    return np.where(is_ND, 'ND', '=')
 
 
-def _process_screening(screen_val):
-    if screen_val.lower().strip() in ['inc', 'yes']:
-        return 'yes'
-    elif screen_val.lower().strip() in ['exc', 'no']:
-        return 'no'
-    else:
-        msg = 'invalid screening value ({0}) found'.format(screen_val)
-        raise ValueError(msg)
-
-
-def _proc_screen_vectorized(df, screencol):
+def _process_screening(df, screencol):
     yes = df[screencol].str.lower().isin(['inc', 'yes'])
     no = df[screencol].str.lower().isin(['exc', 'no'])
     return np.select([yes, no], ['yes', 'no'], 'invalid')
 
 
-def _process_sampletype(sampletype):
-    if "grab" in sampletype.lower():
-        return "grab"
-    elif "composite" in sampletype.lower():
-        return "composite"
-    else:
-        return "unknown"
-
-
-def _check_station(station):
-    if station.lower() in ['reference', 'subsurface']:
-        raise NotImplementedError
-
-    if station.lower() not in ['inflow', 'outflow']:
-        raise ValueError('`station` must be "inflow" or "outflow"')
-
-    return station.lower()
+def _process_sampletype(df, sampletype):
+    grab = [df[sampletype].str.lower().str.contains('grab'), 'grab']
+    composite = [df[sampletype].str.lower().str.contains('composite'), 'composite']
+    return wqio.utils.selector('unknown', grab, composite)
 
 
 def _check_levelnames(levels):
@@ -142,7 +115,7 @@ class Database(object):
         self.usingdb = os.path.splitext(self.file)[1] in ['.accdb', '.mdb']
         self.catanalysis = catanalysis
         self.useTex = useTex
-        self.ndscaler = ndscaler or _fancy_factors
+        self.ndscaler = ndscaler or _handle_ND_factors
 
         # property initialization
         self.__data_raw = None
@@ -237,14 +210,13 @@ class Database(object):
                     .rename(columns=rename_columns)
                     .dropna(subset=['res'])
                     .assign(qual=lambda df: df['qual'].str.strip())
-                    .pipe(self._apply_res_factors, rescol='res', qualcol='qual',
-                          userfxn=self.ndscaler)
-                    .pipe(self._standardize_quals, qualcol='qual', userfxn=_fancy_quals)
-                    .assign(initialscreen=lambda df: _proc_screen_vectorized(df, 'initialscreen'))
-                    .assign(wqscreen=lambda df: _proc_screen_vectorized(df, 'wqscreen'))
-                    .assign(catscreen=lambda df: _proc_screen_vectorized(df, 'catscreen'))
+                    .assign(res=lambda df: df['res'] * _handle_ND_factors(df))
+                    .assign(qual=lambda df: _handle_ND_qualifiers(df))
+                    .assign(initialscreen=lambda df: _process_screening(df, 'initialscreen'))
+                    .assign(wqscreen=lambda df: _process_screening(df, 'wqscreen'))
+                    .assign(catscreen=lambda df: _process_screening(df, 'catscreen'))
                     .assign(station=lambda df: df['station'].str.lower())
-                    .assign(sampletype=lambda df: df['sampletype'].apply(_process_sampletype))
+                    .assign(sampletype=lambda df: _process_sampletype(df, 'sampletype'))
                     .assign(sampledatetime=lambda df: df.apply(wqio.utils.makeTimestamp, axis=1))
                     .assign(units=lambda df: df['units'].map(
                         lambda u: info.getUnits(u, attr='unicode')
@@ -315,50 +287,11 @@ class Database(object):
         """
         return self.data.index.get_level_values(levelname).unique().tolist()
 
-    @staticmethod
-    def _strip_quals(df, qualcol):
-        df[qualcol] = df[qualcol].str.strip()
-        return df
-
-    @staticmethod
-    def _apply_res_factors(df, rescol, qualcol, userfxn=None, quallist=None, factor=None):
-
-        if factor is not None and userfxn is None:
-            if quallist is None:
-                raise ValueError("must provide `quallist` if useing `factor`")
-
-            factors = df[qualcol].apply(lambda x: factor if x in quallist else 1)
-
-        elif factor is None and userfxn is not None:
-            factors = df.apply(userfxn, axis=1)
-
-        else:
-            raise ValueError("must provide exactly 1 of `factor` or `userfxn`")
-
-        df[rescol] *= factors
-
-        return df
-
-    @staticmethod
-    def _standardize_quals(df, qualcol, ndquals=None, userfxn=None):
-        if ndquals is not None and userfxn is None:
-            df[qualcol] = df.apply(
-                lambda x: 'ND' if x.qual in ndquals else '=',
-                axis=1
-            )
-        elif ndquals is None and userfxn is not None:
-            df[qualcol] = df.apply(userfxn, axis=1)
-
-        else:
-            raise ValueError("must provide exactly 1 of `ndquals` or `userfxn`")
-
-        return df
-
     def connect(self):
         if self.usingdb:
             return db_connection(self.file)
         else:
-            raise ValueError("can't connect to {}".self.file)
+            raise ValueError("can't connect to {}".format(self.file))
 
     def _get_parameters(self, asobj=True):
         """
@@ -386,20 +319,18 @@ class Database(object):
         if params_df.shape[0] > params_df['parameter'].unique().shape[0]:
             raise ValueError('dataframe does not have consistent units')
 
-        # initalize the results list
-        parameters = []
-        for row in params_df.to_dict(orient='records'):
-            basic_param = row['parameter']
-            basic_unit = row['units']
-            if self.useTex:
-                p = wqio.Parameter(
-                    name=info.getParam(basic_param, attr='tex'),
-                    units=info.getUnits(basic_unit, attr='tex')
-                )
-            else:
-                p = wqio.Parameter(name=basic_param, units=basic_unit)
-
-            parameters.append(p)
+        if self.useTex:
+            parameters = [
+                wqio.Parameter(
+                    name=info.getParam(row['parameter'], attr='tex'),
+                    units=info.getUnits(row['units'], attr='tex')
+                ) for row in params_df.to_dict(orient='records')
+            ]
+        else:
+            parameters = [
+                wqio.Parameter(name=row['parameter'], units=row['units'])
+                for row in params_df.to_dict(orient='records')
+            ]
 
         return parameters
 
@@ -415,7 +346,7 @@ class Database(object):
         if not self.usingdb:
             raise NotImplementedError('`Database` source is not an Access Database')
         if filepath is None:
-            filepath = 'bmp/data/{0}.csv'
+            filepath = 'bmpdb.csv'
 
         df = get_data(self.sqlquery, self.file, driver=self.driver)
         df.to_csv(filepath, index=False, encoding='utf-8')
@@ -466,70 +397,6 @@ class Database(object):
             data = data.loc[data[key].isin(val), :]
 
         return data.set_index(index_levels)
-
-    def redefineIndexLevel(self, levelname, value, criteria, dropold=True):
-        """ Redefine a selection of BMPs into another or new category
-
-        Parameters
-        ----------
-        levelname : string
-            The name of the index level that needs to be modified.
-            (see `Database.index`)
-        value : string or int
-            The replacement value for the index level.
-        critera : callable
-            This should return True/False in a manner consitent with the
-            `.select()` method of a pandas dataframe. See that docstring
-            for more info.
-        dropold : bool, optional (default is True)
-            Toggles the replacement (True) or addition (False) of the
-            data of the redefined BMPs into the the `data` dataframe.
-
-        Returns
-        -------
-        None (operates in-place)
-
-        Notes
-        -----
-        The standard dataframe present in `Database.data` has the
-        following indicies:
-
-        | Level | Name                                       |
-        |-------|--------------------------------------------|
-        | 0     | category (determined by ``category_type``) |
-        | 1     | epazone                                    |
-        | 2     | state                                      |
-        | 3     | site                                       |
-        | 4     | bmp                                        |
-        | 5     | storm                                      |
-        | 6     | sampletype                                 |
-        | 7     | paramgroup                                 |
-        | 8     | units                                      |
-        | 9     | parameter                                  |
-
-        So if you were creating a selection based on a set of Site IDs,
-        your lambda expression would look like this:
-
-        >>> criteria = lambda row: row[1] in my_site_id_list
-
-        Example
-        -------
-        >>> # import and create `Database` object
-        >>> import bmp
-        >>> db = bmp.dataAccess.Database()
-        >>> # move tree box planters into their own EPA Zone
-        >>> bmpcats = [-1098775618, 95902823, 1053525776, 1495211473]
-        >>> criteria = lambda row: row[3] in TB_bmps
-        >>> db.redefineIndexLevel('epazone', 9999, criteria, dropold=True)
-        >>> # prove to ourselves that it worked
-        >>> print(db.data.index.get_level_values('epazone').unique())
-
-        """
-
-        self.data = wqio.utils.redefine_index_level(
-            self.data, levelname, value,
-            criteria=criteria, dropold=dropold
-        )
 
     def redefineBMPCategory(self, category, criteria, dropold=True):
         """ Redefine a selection of BMPs into another or new category
@@ -645,13 +512,12 @@ class Database(object):
             self.data.query("parameter in @existingparams")
                 .unstack(level='parameter')
                 .pipe(wqio.utils.assign_multilevel_column,
-                      lambda df: df.apply(qualfxn, axis=1, args=existingparams),
+                      lambda df: qualfxn(df, existingparams),
                       'qual', newparam)
                 .pipe(wqio.utils.assign_multilevel_column,
-                      lambda df: df.apply(resfxn, axis=1, args=existingparams),
+                      lambda df: resfxn(df, existingparams),
                       'res', newparam)
         )
-
 
         indexMods = wqio.validate.at_least_empty_dict(indexMods, units=newunits)
         # add the units into indexMod, apply all changes
@@ -718,18 +584,20 @@ class Database(object):
             raise NotImplementedError('existingparams must be a sequence of length = 2')
 
         # function to return the right column of qualifiers
-        def returnFiniteQual(row, preferred, secondary):
-            if isinstance(row[('qual', preferred)], str):
-                return row[('qual', preferred)]
-            else:
-                return row[('qual', secondary)]
+        def returnFiniteQual(df, preferred, secondary):
+            return np.where(
+                ~df[('qual', preferred)].isnull(), 
+                df[('qual', preferred)],
+                df[('qual', secondary)],
+            )
 
         # function to return the right column of results
         def returnFiniteRes(row,  preferred, secondary):
-            if np.isfinite(row[('res', preferred)]):
-                return row[('res', preferred)]
-            else:
-                return row[('res', secondary)]
+            return np.where(
+                ~df[('res', preferred)].isnull(), 
+                df[('res', preferred)],
+                df[('res', secondary)],
+            )
 
         self.transformParameters(existingparams, newparam, returnFiniteRes, returnFiniteQual, newunits)
 
