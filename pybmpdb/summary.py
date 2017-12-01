@@ -5,7 +5,7 @@ from pkg_resources import resource_filename
 import numpy
 import matplotlib
 from matplotlib import pyplot
-import seaborn.apionly as seaborn
+import seaborn
 import pandas
 from statsmodels.tools.decorators import (
     resettable_cache, cache_readonly
@@ -42,26 +42,26 @@ def _pick_best_station(dataframe):
         except KeyError:
             return numpy.nan
 
-    xtab = dataframe.unstack(level='station')
-    xtab.columns = xtab.columns.swaplevel(0, 1)
-    xtab[('final_outflow', 'res')] = xtab.apply(
-        best_col, axis=1, args=('outflow', 'subsurface', 'res')
-    )
-    xtab[('final_outflow', 'qual')] = xtab.apply(
-        best_col, axis=1, args=('outflow', 'subsurface', 'qual')
-    )
-    xtab[('final_inflow', 'qual')] = xtab.apply(
-        best_col, axis=1, args=('inflow', 'reference outflow', 'qual')
-    )
-    xtab[('final_inflow', 'res')] = xtab.apply(
-        best_col, axis=1, args=('inflow', 'reference outflow', 'res')
-    )
-
     data = (
-        xtab.select(lambda c: 'final_' in c[0], axis=1)
+        dataframe.unstack(level='station')
+            .pipe(wqio.utils.swap_column_levels, 0, 1)
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('outflow', 'subsurface', 'res')),
+                  'final_outflow', 'res')
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('outflow', 'subsurface', 'qual')),
+                  'final_outflow', 'qual')
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('inflow', 'reference outflow', 'res')),
+                  'final_inflow', 'res')
+            .pipe(wqio.utils.assign_multilevel_column,
+                  lambda df: df.apply(best_col, axis=1, args=('inflow', 'reference outflow', 'qual')),
+                  'final_inflow', 'qual')
+            .loc[:, lambda df: df.columns.map(lambda c: 'final_' in c[0])]
             .rename(columns=lambda col: col.replace('final_', ''))
             .stack(level='station')
     )
+
     return data
 
 
@@ -81,7 +81,7 @@ def _pick_best_sampletype(dataframe):
         xtab[(col, badval)] = xtab[col].apply(best_col, axis=1)
 
     data = (
-        xtab.select(lambda c: c[1] != 'unknown', axis=1)
+        xtab.loc[:, xtab.columns.map(lambda c: c[1] != 'unknown')]
             .stack(level=['sampletype'])
     )
     return data
@@ -122,11 +122,11 @@ def _filter_by_BMP_count(dataframe, minbmps):
     return data
 
 
-def getSummaryData(dbpath=None, catanalysis=False,
-                   minstorms=3, minbmps=3, name=None, useTex=False,
+def getSummaryData(dbpath=None, catanalysis=False, minstorms=3, minbmps=3,
+                   name=None, useTex=False, ndscaler=None, combine_nox=True,
+                   removegrabs=True, grab_categories=None, combine_WB_RP=True,
                    excludedbmps=None, excludedparams=None,
-                   balancedonly=True, removegrabs=True,
-                   ndscaler=None, **selection):
+                   balancedonly=True, **selection):
     """
     Select offical data from database.
 
@@ -136,13 +136,11 @@ def getSummaryData(dbpath=None, catanalysis=False,
         File path to the BMP Database Access file.
     catanalysis : optional bool (default = False)
         Filters for data approved for BMP Category-level analysis.
-    wqanalysis : optional bool (default = False)
-        Filters for data approvded for individual BMP analysis.
     minstorms : option int (default = 3)
         The minimum number of storms each group defined by BMP, station,
         and parameter should have. Groups with too few storms will be
         filtered out.
-    minstorms : option int (default = 3)
+    minbmps : option int (default = 3)
         The minimum number of BMPs each group defined
         by category, station, and parameter should have.
         Groups with too few BMPs will be filtered out.
@@ -163,21 +161,25 @@ def getSummaryData(dbpath=None, catanalysis=False,
 
     # main dataset
     if dbpath is None:
-        dbpath = resource_filename("pybmpdb.data", 'bmpdata.csv')
+        dbpath = wqio.download('bmpdata')
 
     db = dataAccess.Database(dbpath, catanalysis=catanalysis, ndscaler=ndscaler)
+    db.data = db.select(**selection)
 
     # combine NO3+NO2 and NO3 into NOx
     nitro_components = [
         'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
         'Nitrogen, Nitrate (NO3) as N'
     ]
-    nitros_exist = db._check_for_parameters(nitro_components)
-    if nitros_exist:
+    if db._check_for_parameters(nitro_components) and combine_nox:
         nitro_combined = 'Nitrogen, NOx as N'
         db.unionParamsWithPreference(nitro_components, nitro_combined, 'mg/L')
 
-    grab_categories = ['Retention Pond', 'Wetland Basin']
+    if grab_categories is None:
+        grab_categories = ['Retention Pond', 'Wetland Basin']
+    else:
+        grab_categories = wqio.validate.at_least_empty_list(grab_categories)
+
     if catanalysis:
         # merge Wet land Basins and Retention ponds, keeping
         # the original records
@@ -211,17 +213,13 @@ def getSummaryData(dbpath=None, catanalysis=False,
     else:
         subset = db.data.copy()
 
-    if excludedbmps is not None:
-        # remove all of the PFCs from the dataset
-        exclude_bmp_query = "bmp not in @excludedbmps"
-        subset = subset.query(exclude_bmp_query)
-
-    if excludedparams is not None:
-        exclude_params_query = "parameter not in @excludedparams"
-        subset = subset.query(exclude_params_query)
+    excludedbmps = wqio.validate.at_least_empty_list(excludedbmps)
+    excludedparams = wqio.validate.at_least_empty_list(excludedparams)
 
     subset = (
-        subset.pipe(_pick_best_sampletype)
+        subset.query("bmp not in @excludedbmps")
+              .query("parameter not in @excludedparams")
+              .pipe(_pick_best_sampletype)
               .pipe(_pick_best_station)
               .pipe(_filter_onesided_BMPs, execute=balancedonly)
               .pipe(_filter_by_storm_count, minstorms)

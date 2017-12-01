@@ -2,9 +2,6 @@ language: python
 
 matrix:
   include:
-    - python: 3.4
-      env:
-        - COVERAGE=false
     - python: 3.5
       env:
         - COVERAGE=false
@@ -24,7 +21,7 @@ install:
   - source activate test
   - conda install --yes requests pyyaml mpl-probscale --channel=conda-forge
   - conda install --yes coverage docopt pytest pytest-pep8 --channel=conda-forge
-  - conda install --yes wqio --channel=phobson/label/dev
+  - pip install git+https://github.com/Geosyntec/wqio.git
   - pip install coveralls
   - pip install . --no-deps
 
