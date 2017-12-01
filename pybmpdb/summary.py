@@ -34,6 +34,10 @@ def filterlocation(location, count=5, column='bmp'):
 
 def _pick_best_station(dataframe):
     def best_col(df, mainstation, backupstation, valcol):
+        for sta in [mainstation, backupstation]:
+            if (sta, valcol) not in df.columns:
+                df = wqio.utils.assign_multilevel_column(df, numpy.nan, sta, valcol)
+
         values = numpy.where(
             df[(mainstation, valcol)].isnull(),
             df[(backupstation, valcol)],
@@ -41,8 +45,12 @@ def _pick_best_station(dataframe):
         )
         return values
 
+    orig_index = dataframe.index.names    
     data = (
-        dataframe.unstack(level='station')
+        dataframe
+            .reset_index()
+            .set_index(orig_index)
+            .unstack(level='station')
             .pipe(wqio.utils.swap_column_levels, 0, 1)
             .pipe(wqio.utils.assign_multilevel_column,
                   lambda df: best_col(df, 'outflow', 'subsurface', 'res'),
@@ -75,7 +83,13 @@ def _pick_best_sampletype(dataframe):
     badval = 'grab'
 
     orig_cols = dataframe.columns
-    xtab = dataframe.unstack(level=pivotlevel)
+    orig_index = dataframe.index.names
+    xtab = (
+        dataframe
+            .reset_index()
+            .set_index(orig_index)
+            .unstack(level=pivotlevel)
+    )
     for col in orig_cols:
         xtab[(col, badval)] = xtab[col].apply(best_col, axis=1)
 
