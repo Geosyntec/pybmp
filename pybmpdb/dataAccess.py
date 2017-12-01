@@ -507,9 +507,12 @@ class Database(object):
         params_exist = self._check_for_parameters(existingparams)
         if not params_exist:
             raise ValueError("Parameter %s is not in this dataset" % param)
-
+        
         selection = (
-            self.data.query("parameter in @existingparams")
+            self.data
+                .query("parameter in @existingparams")
+                .reset_index()
+                .set_index(index_name_cache)
                 .unstack(level='parameter')
                 .pipe(wqio.utils.assign_multilevel_column,
                       lambda df: qualfxn(df, existingparams),
@@ -517,6 +520,8 @@ class Database(object):
                 .pipe(wqio.utils.assign_multilevel_column,
                       lambda df: resfxn(df, existingparams),
                       'res', newparam)
+                .xs(newparam, level='parameter', axis='columns', drop_level=False)
+                .stack(level='parameter')
         )
 
         indexMods = wqio.validate.at_least_empty_dict(indexMods, units=newunits)
@@ -584,19 +589,21 @@ class Database(object):
             raise NotImplementedError('existingparams must be a sequence of length = 2')
 
         # function to return the right column of qualifiers
-        def returnFiniteQual(df, preferred, secondary):
+        def returnFiniteQual(df, existingparams):
+
             return np.where(
-                ~df[('qual', preferred)].isnull(), 
-                df[('qual', preferred)],
-                df[('qual', secondary)],
+                ~df[('qual', existingparams[0])].isnull(), 
+                df[('qual', existingparams[0])],
+                df[('qual', existingparams[1])],
             )
 
         # function to return the right column of results
-        def returnFiniteRes(row,  preferred, secondary):
+        def returnFiniteRes(df, existingparams):
+
             return np.where(
-                ~df[('res', preferred)].isnull(), 
-                df[('res', preferred)],
-                df[('res', secondary)],
+                ~df[('res', existingparams[0])].isnull(), 
+                df[('res', existingparams[0])],
+                df[('res', existingparams[1])],
             )
 
         self.transformParameters(existingparams, newparam, returnFiniteRes, returnFiniteQual, newunits)
