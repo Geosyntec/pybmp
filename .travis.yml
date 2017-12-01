@@ -20,17 +20,18 @@ install:
   - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
   - source activate test
   - conda install --yes requests pyyaml mpl-probscale --channel=conda-forge
+  - conda install --yes --channel=conda-forge numpy scipy matplotlib statsmodels seaborn mpl-probscale
   - conda install --yes coverage docopt pytest pytest-pep8 --channel=conda-forge
   - pip install git+https://github.com/Geosyntec/wqio.git
-  - pip install coveralls
+  - pip install codecov
   - pip install . --no-deps
 
 script:
-  - python check_pybmpdb.py --verbose --pep8
+  - coverage run --source pybmpdb check_pybmpdb.py --verbose --pep8
 
 after_success:
   - if [ ${COVERAGE} = true ]; then
-      coverage run --source pybmpdb check_pybmpdb.py;
+      
       coverage report -m;
-      coveralls;
+      codecov;
     fi
