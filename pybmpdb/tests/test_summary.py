@@ -426,7 +426,7 @@ class Test_DatasetSummary_FF(_base_DatasetSummary_Mixin):
                 Counts & NA & NA \\'''
 
 
-class test_CategoricalSummary(object):
+class Test_CategoricalSummary(object):
     def setup(self):
         includes = [
             (True, True),
@@ -754,6 +754,16 @@ def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
     pdtest.assert_frame_equal(expected_df.reset_index(), test_df.reset_index())
 
 
+def test__pick_non_null():
+    df = pandas.DataFrame({
+        ('res', 'this'): [1.0, np.nan, 2.0, np.nan],
+        ('res', 'that'): [np.nan, np.nan, 9.0, 3.0]
+    })
+    expected = np.array([1.0, np.nan, 2.0, 3.0])
+    result = pybmpdb.summary._pick_non_null(df, 'res', 'this', 'that')
+    nptest.assert_array_equal(result, expected)
+
+
 def test__pick_best_station():
     index_cols = ['site', 'bmp', 'storm', 'parameter', 'station']
     _do_filter_test(
@@ -810,37 +820,11 @@ def test__filter_by_BMP_count():
     )
 
 
-def test_statDump():
-    pass
-
-
-def test__writeStatLine():
-    pass
-
-
-def test_writeDiffStatLine():
-    pass
-
-
-def test_diffStatsDump():
-    pass
-
-
-def test_sbpat_stats():
-    pass
-
-
-def test_paramTables():
-    pass
-
-
-def test_paramBoxplots():
-    pass
-
-
-def test_doBoxPlot():
-    pass
-
-
-def test_makeBMPLabel():
-    pass
+def test_paired_qual():
+    df = pandas.DataFrame({
+        'in_qual': ['=', '=', 'ND', 'ND'],
+        'out_qual': ['=', 'ND', '=', 'ND']
+    })
+    expected = ['Pair', 'Effluent ND', 'Influent ND', 'Both ND']
+    result = pybmpdb.summary.paired_qual(df, 'in_qual', 'out_qual')
+    nptest.assert_array_equal(result, expected)
