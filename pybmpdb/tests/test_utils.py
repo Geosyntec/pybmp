@@ -7,8 +7,10 @@ from pkg_resources import resource_filename
 
 from unittest import mock
 import pytest
+import pandas.util.testing as pdtest
 from wqio.tests import helpers
 
+import numpy
 import pandas
 
 from wqio.utils import numutils
@@ -19,6 +21,25 @@ from pybmpdb import utils
 def test__sig_figs_helper():
     x = 1.2
     assert utils._sig_figs(x) == numutils.sigFigs(x, 3, tex=True)
+
+
+def test_refresh_index():
+    idx = pandas.MultiIndex.from_product([list('ABC'), list('ABC')], names=['A', 'B'])
+    df = pandas.DataFrame(
+        index=idx,
+        columns=list('abc'),
+        data=numpy.arange(27).reshape(9, 3)
+    )
+    pdtest.assert_frame_equal(df, utils.refresh_index(df))
+
+
+def test_get_level_position():
+    idx = pandas.MultiIndex.from_product([
+        list('ABC'), ['cat', 'dog', 'fox', 'deer']
+    ], names=['forest', 'animal'])
+    df = pandas.DataFrame(index=idx, columns=list('abc'))
+
+    assert utils.get_level_position(df, 'animal') == 1
 
 
 def test_sanitizeTex():
