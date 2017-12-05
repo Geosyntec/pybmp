@@ -6,7 +6,7 @@ try:
 except ImportError:
     pyodbc = None
 
-import numpy as np
+import numpy
 import pandas
 
 from . import info, utils
@@ -40,13 +40,13 @@ def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=No
         quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
 
     is_ND = df[qualcol].isin(quals) | ((df[qualcol] == 'UJ') & (df[rescol] < df[dlcol]))
-    return np.where(is_ND, 'ND', '=')
+    return numpy.where(is_ND, 'ND', '=')
 
 
 def _process_screening(df, screencol):
     yes = df[screencol].str.lower().isin(['inc', 'yes'])
     no = df[screencol].str.lower().isin(['exc', 'no'])
-    return np.select([yes, no], ['yes', 'no'], 'invalid')
+    return numpy.select([yes, no], ['yes', 'no'], 'invalid')
 
 
 def _process_sampletype(df, sampletype):

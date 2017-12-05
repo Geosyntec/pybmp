@@ -9,14 +9,14 @@ import numpy.testing as nptest
 import pandas.util.testing as pdtest
 from wqio.tests import helpers
 
-import numpy as np
-import matplotlib.pyplot as plt
+import numpy
+from matplotlib import pyplot
 import pandas
 
-import pybmpdb
+from pybmpdb import summary
 
 
-mock_figure = mock.Mock(spec=plt.Figure)
+mock_figure = mock.Mock(spec=pyplot.Figure)
 
 PYTHON2 = sys.version_info.major == 2
 SKIP_DB = True  # pyodbc is None or os.name == 'posix'
@@ -47,18 +47,18 @@ class mock_location(object):
         self.min = 0.123456
         self.max = 123.456
         self.mean = 12.3456
-        self.mean_conf_interval = np.array([-1, 1]) + self.mean
+        self.mean_conf_interval = numpy.array([-1, 1]) + self.mean
         self.logmean = 12.3456
-        self.logmean_conf_interval = np.array([-1, 1]) + self.logmean
+        self.logmean_conf_interval = numpy.array([-1, 1]) + self.logmean
         self.geomean = 12.3456
-        self.geomean_conf_interval = np.array([-1, 1]) + self.geomean
+        self.geomean_conf_interval = numpy.array([-1, 1]) + self.geomean
         self.std = 4.56123
         self.logstd = 4.56123
         self.cov = 5.61234
         self.skew = 6.12345
         self.pctl25 = 0.612345
         self.median = 1.23456
-        self.median_conf_interval = np.array([-1, 1]) + self.median
+        self.median_conf_interval = numpy.array([-1, 1]) + self.median
         self.pctl75 = 2.34561
         self.include = include
         self.exclude = not self.include
@@ -90,7 +90,7 @@ class _base_DatasetSummary_Mixin(object):
         self.known_paramgroup = 'Metals'
         self.known_bmp = 'testbmp'
         self.known_latex_file_name = 'metalstestbmpcarbondioxide'
-        self.ds_sum = pybmpdb.DatasetSummary(self.ds, self.known_paramgroup, 'testfigpath')
+        self.ds_sum = summary.DatasetSummary(self.ds, self.known_paramgroup, 'testfigpath')
         self.known_latex_input_tt = r"""\subsection{testbmp}
         \begin{table}[h!]
             \caption{test table title}
@@ -438,7 +438,7 @@ class Test_CategoricalSummary(object):
         self.datasets = [mock_dataset(*inc) for inc in includes]
         self.known_paramgroup = 'Metals'
         self.known_dataset_count = 3
-        self.csum = pybmpdb.CategoricalSummary(
+        self.csum = summary.CategoricalSummary(
             self.datasets,
             self.known_paramgroup,
             'basepath',
@@ -718,11 +718,11 @@ def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
 
 def test__pick_non_null():
     df = pandas.DataFrame({
-        ('res', 'this'): [1.0, np.nan, 2.0, np.nan],
-        ('res', 'that'): [np.nan, np.nan, 9.0, 3.0]
+        ('res', 'this'): [1.0, numpy.nan, 2.0, numpy.nan],
+        ('res', 'that'): [numpy.nan, numpy.nan, 9.0, 3.0]
     })
-    expected = np.array([1.0, np.nan, 2.0, 3.0])
-    result = pybmpdb.summary._pick_non_null(df, 'res', 'this', 'that')
+    expected = numpy.array([1.0, numpy.nan, 2.0, 3.0])
+    result = summary._pick_non_null(df, 'res', 'this', 'that')
     nptest.assert_array_equal(result, expected)
 
 
@@ -732,7 +732,7 @@ def test__pick_best_station():
         index_cols,
         'test_pick_station_input.csv',
         'test_pick_station_output.csv',
-        pybmpdb.summary._pick_best_station
+        summary._pick_best_station
     )
 
 
@@ -743,7 +743,7 @@ def test__pick_best_sampletype():
         index_cols,
         'test_pick_sampletype_input.csv',
         'test_pick_sampletype_output.csv',
-        pybmpdb.summary._pick_best_sampletype
+        summary._pick_best_sampletype
     )
 
 
@@ -754,7 +754,7 @@ def test__filter_onesided_BMPs():
         index_cols,
         'test_filter_onesidedbmps_input.csv',
         'test_filter_onesidedbmps_output.csv',
-        pybmpdb.summary._filter_onesided_BMPs
+        summary._filter_onesided_BMPs
     )
 
 
@@ -765,7 +765,7 @@ def test__filter_by_storm_count():
         index_cols,
         'test_filter_bmp-storm_counts_input.csv',
         'test_filter_storm_counts_output.csv',
-        pybmpdb.summary._filter_by_storm_count,
+        summary._filter_by_storm_count,
         6
     )
 
@@ -777,7 +777,7 @@ def test__filter_by_BMP_count():
         index_cols,
         'test_filter_bmp-storm_counts_input.csv',
         'test_filter_bmp_counts_output.csv',
-        pybmpdb.summary._filter_by_BMP_count,
+        summary._filter_by_BMP_count,
         4
     )
 
@@ -788,5 +788,5 @@ def test_paired_qual():
         'out_qual': ['=', 'ND', '=', 'ND']
     })
     expected = ['Pair', 'Effluent ND', 'Influent ND', 'Both ND']
-    result = pybmpdb.summary.paired_qual(df, 'in_qual', 'out_qual')
+    result = summary.paired_qual(df, 'in_qual', 'out_qual')
     nptest.assert_array_equal(result, expected)
