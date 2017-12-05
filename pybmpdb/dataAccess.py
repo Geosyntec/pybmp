@@ -39,7 +39,7 @@ def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=No
     if quals is None:
         quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
 
-    is_ND = df[qualcol].isin(quals) | ((df[qualcol] == 'UJ') & (df[rescol] < df[dlcol]))
+    is_ND = df[qualcol].isin(quals) | ((df[qualcol] == 'UJ') & (df[rescol] <= df[dlcol]))
     return numpy.where(is_ND, 'ND', '=')
 
 
