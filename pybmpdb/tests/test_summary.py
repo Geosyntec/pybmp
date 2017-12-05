@@ -705,44 +705,6 @@ input_file_string = r'''\section{Carbon Dioxide}
 '''
 
 
-class Test_helpers(object):
-    def setup(self):
-        if os.name == 'posix':
-            dbfile = 'testdata.csv'
-        else:
-            dbfile = 'testdata.accdb'
-
-        self.dbfile = get_data_file(dbfile)
-        self.db = pybmpdb.dataAccess.Database(self.dbfile)
-        self.known_pfcs = [
-            'NCDOT_PFC_A', 'NCDOT_PFC_B', 'NCDOT_PFC_D',
-            'AustinTX3PFC', 'AustinTX1PFC', 'AustinTX2PFC'
-        ]
-        self.known_shape = (2250, 2)
-        self.known_shape_excl = (2168, 2)
-
-    @pytest.mark.skipif(SKIP_DB, reason='no viable DN')
-    def test_getSummaryData_smoke(self):
-        df, db = pybmpdb.summary.getSummaryData(dbpath=self.dbfile)
-        assert df.shape == self.known_shape
-
-    @pytest.mark.skipif(SKIP_DB, reason='no viable DN')
-    def test_getSummaryDataExclusive_smoke(self):
-        exbmps = ['15.2Apex', '7.6Apex']
-        df, db = pybmpdb.summary.getSummaryData(dbpath=self.dbfile, excludedbmps=exbmps)
-        assert df.shape == self.known_shape_excl
-        for x in exbmps:
-            assert x not in df.index.get_level_values('bmp').unique()
-
-    def test_setMPLStyle_smoke(self):
-        pybmpdb.summary.setMPLStyle()
-
-    @pytest.mark.skipif(SKIP_DB, reason='no viable DN')
-    def test_getPFCs(self):
-        pfcs = pybmpdb.summary.getPFCs(self.db)
-        assert pfcs == self.known_pfcs
-
-
 def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
     infile = get_data_file(infilename)
     outfile = get_data_file(outfilename)
