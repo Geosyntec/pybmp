@@ -2,6 +2,7 @@ from textwrap import dedent
 import os
 import subprocess
 
+import numpy
 import pandas
 
 from wqio.tests import helpers
@@ -15,6 +16,20 @@ def _sig_figs(x):
     """
 
     return numutils.sigFigs(x, n=3, tex=True)
+
+
+def refresh_index(df):
+    """ gets around weird pandas block manager bugs that rise with
+    deeply nested indexes
+    """
+    index_names = df.index.names
+    return df.reset_index().set_index(index_names) 
+
+
+def get_level_position(df, levelname):
+    _names = numpy.array(df.index.names)
+    ri, = numpy.nonzero(_names == levelname)
+    return ri[0]
 
 
 def makeBoxplotLegend(filename='bmp/tex/boxplotlegend', figsize=4, **kwargs):

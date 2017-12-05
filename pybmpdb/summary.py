@@ -1,6 +1,7 @@
 import os
 import sys
 from pkg_resources import resource_filename
+from functools import partial
 
 import numpy
 import matplotlib
@@ -32,6 +33,14 @@ def filterlocation(location, count=5, column='bmp'):
     ) >= count
 
 
+def _pick_non_null(dataframe, maincol, preferred, secondary):
+    return numpy.where(
+        ~dataframe[(maincol, preferred)].isnull(), 
+        dataframe[(maincol, preferred)],
+        dataframe[(maincol, secondary)],
+    )
+
+
 def _pick_best_station(dataframe):
     def best_col(df, mainstation, backupstation, valcol):
         for sta in [mainstation, backupstation]:
@@ -48,8 +57,7 @@ def _pick_best_station(dataframe):
     orig_index = dataframe.index.names    
     data = (
         dataframe
-            .reset_index()
-            .set_index(orig_index)
+            .pipe(utils.refresh_index)
             .unstack(level='station')
             .pipe(wqio.utils.swap_column_levels, 0, 1)
             .pipe(wqio.utils.assign_multilevel_column,
@@ -73,25 +81,19 @@ def _pick_best_station(dataframe):
 
 
 def _pick_best_sampletype(dataframe):
-    def best_col(row):
-        if pandas.isnull(row['composite']):
-            return row[badval]
-        else:
-            return numpy.nan
-
-    pivotlevel = 'sampletype'
-    badval = 'grab'
-
     orig_cols = dataframe.columns
-    orig_index = dataframe.index.names
     xtab = (
-        dataframe
-            .reset_index()
-            .set_index(orig_index)
-            .unstack(level=pivotlevel)
+        dataframe.pipe(utils.refresh_index)
+            .unstack(level='sampletype')
     )
     for col in orig_cols:
-        xtab[(col, badval)] = xtab[col].apply(best_col, axis=1)
+        grabvalues = numpy.where(
+            xtab[(col, 'composite')].isnull(),
+            xtab[(col, 'grab')],
+            numpy.nan
+        )
+        xtab = wqio.utils.assign_multilevel_column(xtab, grabvalues, col, 'grab')
+
 
     data = (
         xtab.loc[:, xtab.columns.map(lambda c: c[1] != 'unknown')]
@@ -133,6 +135,71 @@ def _filter_by_BMP_count(dataframe, minbmps):
         lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps
     )
     return data
+
+
+def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
+                     removegrabs=True, grab_categories=None, combine_WB_RP=True,
+                     excludedbmps=None, excludedparams=None, balancedonly=True):
+
+    _cats = utils.get_level_position(df, 'category')
+    grab_categories = wqio.validate.at_least_empty_list(grab_categories)
+    if not grab_categories:
+        grab_categories = ['Retention Pond', 'Wetland Basin']
+
+    if combine_WB_RP:
+        # merge Wetland Basins and Retention ponds, keeping
+        # the original records
+        WBRP_combo = 'Wetland Basin/Retention Pond'
+        
+        df =  wqio.utils.redefine_index_level(df, 'category', WBRP_combo, dropold=False,
+                                              criteria=lambda row: row[_cats] in grab_categories)
+        grab_categories.append(WBRP_combo)
+
+    if combine_nox:
+        # combine NO3+NO2 and NO3 into NOx
+        nitro_components = [
+            'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
+            'Nitrogen, Nitrate (NO3) as N'
+        ]
+
+        picker = partial(_pick_non_null, preferred=nitro_components[0], secondary=nitro_components[1])
+        nitro_combined = 'Nitrogen, NOx as N'
+        df = dataAccess.transform_parameters(
+            df, nitro_components, nitro_combined, 'mg/L',
+            partial(picker, maincol='res'),
+            partial(picker, maincol='qual')
+        )
+
+    PFC = 'Permeable Friction Course'
+    df =  wqio.utils.redefine_index_level(df, 'category', PFC, dropold=True,
+                                          criteria=lambda row: row[_cats] == 'PF')
+
+    # all data should be compisite data, but grabs are allowed
+    # for bacteria at all BMPs, and all parameter groups at
+    # retention ponds and wetland basins. Samples of an unknown
+    # type are excluded
+    if removegrabs:
+        querytxt = (
+            "(sampletype == 'composite') | "
+            "(((category in @grab_categories) | (paramgroup == 'Biological')) & "
+            "  (sampletype != 'unknown'))"
+        )
+        df = df.query(querytxt)
+
+    excludedbmps = wqio.validate.at_least_empty_list(excludedbmps)
+    excludedparams = wqio.validate.at_least_empty_list(excludedparams)
+
+    df = (
+        df.query("bmp not in @excludedbmps")
+          .query("parameter not in @excludedparams")
+          .pipe(_pick_best_sampletype)
+          .pipe(_pick_best_station)
+          .pipe(_filter_onesided_BMPs, execute=balancedonly)
+          .pipe(_filter_by_storm_count, minstorms)
+          .pipe(_filter_by_BMP_count, minbmps)
+    )
+
+    return df
 
 
 def getSummaryData(dbpath=None, catanalysis=False, minstorms=3, minbmps=3,
@@ -242,18 +309,12 @@ def getSummaryData(dbpath=None, catanalysis=False, minstorms=3, minbmps=3,
     return subset, db
 
 
-def paired_qual(row):
-    if row['qual_inflow'] == '=':
-        if row['qual_outflow'] == '=':
-            val = 'Pair'
-        elif row['qual_outflow'] == 'ND':
-            val = 'Effluent ND'
-    elif row['qual_inflow'] == 'ND':
-        if row['qual_outflow'] == '=':
-            val = 'Influent ND'
-        elif row['qual_outflow'] == 'ND':
-            val = 'Both ND'
-    return val
+def paired_qual(df, qualin='qual_inflow', qualout='qual_outflow'):
+    ND_neither = [(df[qualin] == '=') & (df[qualout] == '='), 'Pair']
+    ND_in = [(df[qualin] == 'ND') & (df[qualout] == '='), 'Influent ND']
+    ND_out = [(df[qualin] == '=') & (df[qualout] == 'ND'), 'Effluent ND']
+    ND_both = [(df[qualin] == 'ND') & (df[qualout] == 'ND'), 'Both ND']
+    return wqio.utils.selector('=', ND_neither, ND_in, ND_out, ND_both)
 
 
 def website_data(df):
@@ -307,7 +368,7 @@ def website_data(df):
           .pipe(wqio.utils.flatten_columns)
           .dropna(subset=['res_inflow', 'res_outflow'])
           .rename(columns={'date_': 'sampledatetime'})
-          .assign(pair=lambda df: df.apply(paired_qual, axis=1))
+          .assign(pair=lambda df: paired_qual(df))
           .reset_index()
     )
 
