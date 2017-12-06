@@ -23,47 +23,13 @@ def refresh_index(df):
     deeply nested indexes
     """
     index_names = df.index.names
-    return df.reset_index().set_index(index_names) 
+    return df.reset_index().set_index(index_names)
 
 
 def get_level_position(df, levelname):
     _names = numpy.array(df.index.names)
     ri, = numpy.nonzero(_names == levelname)
     return ri[0]
-
-
-def makeBoxplotLegend(filename='bmp/tex/boxplotlegend', figsize=4, **kwargs):
-    """ Creates an explanatory diagram for boxplots.
-
-    Parameters
-    ----------
-    filename : string
-        File name and path (without extension) where the figure will be
-        saved.
-    figsize : float or int
-        Size of the figure in inches.
-    kwargs : keyword arguments
-        Keyword arguments passed directly to `_boxplot_legend`
-
-    Returns
-    -------
-    None
-
-    """
-    raise NotImplementedError
-    ## setup the figure
-    #fig, ax = plt.subplots(figsize=(figsize, figsize))
-
-    ## call the helper function that does the heavy lifting
-    #figutils.boxplot_legend(ax, **kwargs)
-
-    ## optimize the figure's layout
-    #fig.tight_layout()
-
-    ## save and close
-    #fig.savefig(filename + '.pdf', transparent=True, dpi=300)
-    #fig.savefig(filename + '.png', transparent=True, dpi=300)
-    #plt.close(fig)
 
 
 def sanitizeTex(texstring):
