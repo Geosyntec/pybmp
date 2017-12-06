@@ -42,20 +42,21 @@ def df_for_quals():
         {'res': 5., 'DL': 15., 'qual': 'UJ'},
         {'res': 5., 'DL': 10., 'qual': 'UJ'},
         {'res': 10., 'DL': 5., 'qual': 'UJ'},
+        {'res': 10., 'DL': 10., 'qual': 'UJ'},
         {'res': 5., 'DL': 5., 'qual': 'junk'},
     ])
     return df
 
 
 def test__handle_ND_factors(df_for_quals):
-    expected = numpy.array([2, 2, 2, 2, 2, 3, 2, 1, 1])
+    expected = numpy.array([2, 2, 2, 2, 2, 3, 2, 1, 1, 1])
     result = dataAccess._handle_ND_factors(df_for_quals)
     nptest.assert_array_equal(result, expected)
 
 
 def test__handle_ND_qualifiers(df_for_quals):
     result = dataAccess._handle_ND_qualifiers(df_for_quals)
-    expected = numpy.array(['ND', 'ND', 'ND', 'ND', 'ND', 'ND', 'ND', '=', '='])
+    expected = numpy.array(['ND', 'ND', 'ND', 'ND', 'ND', 'ND', 'ND', '=', 'ND', '='])
     nptest.assert_array_equal(result, expected)
 
 
