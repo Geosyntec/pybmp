@@ -10,6 +10,7 @@ def _loader(fname):
     with open(resource_filename('pybmpdb.data', fname), 'r') as f:
         return json.load(f)
 
+
 def _find_by_name(value_string, list_of_dicts, key='name'):
     # get the parameter's entry in the lookup list of dicts
     _entry = list(filter(
@@ -17,12 +18,9 @@ def _find_by_name(value_string, list_of_dicts, key='name'):
         list_of_dicts
     ))
 
-    if len(_entry) > 1:
-        msg = 'too many ({}) entries found for {}'
+    if len(_entry) != 1:
+        msg = 'Found ({}) entries found for {}. Expected 1.'
         raise ValueError(msg.format(len(_entry), value_string))
-    elif len(_entry) < 1:
-        msg = 'no entries found for {}'
-        raise ValueError(msg.format(value_string))
 
     return _entry[0]
 
@@ -76,34 +74,6 @@ def getConversion(param):
     p = _find_by_name(param, parameters)
 
     return getNormalization(p['units'])
-
-
-def addParameter(**kwargs):
-    if kwargs.get('tex') is None:
-        kwargs['tex'] = kwargs['name']
-
-    if kwargs.get('unicode') is None:
-        kwargs['unicode'] = kwargs['name']
-
-    if kwargs.get('fraction') is None:
-        kwargs['fraction'] = 'Total'
-
-    parameters.append(kwargs)
-    return parameters
-
-
-def addUnit(**kwargs):
-    if kwargs.get('tex') is None:
-        kwargs['tex'] = kwargs['name']
-
-    if kwargs.get('unicode') is None:
-        kwargs['unicode'] = kwargs['name']
-
-    if kwargs.get('factor') is None:
-        kwargs['factor'] = 1
-
-    units.append(kwargs)
-    return units
 
 
 parameters = _loader('parameters.json')
