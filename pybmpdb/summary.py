@@ -35,7 +35,7 @@ def filterlocation(location, count=5, column='bmp'):
 
 def _pick_non_null(dataframe, maincol, preferred, secondary):
     return numpy.where(
-        ~dataframe[(maincol, preferred)].isnull(), 
+        ~dataframe[(maincol, preferred)].isnull(),
         dataframe[(maincol, preferred)],
         dataframe[(maincol, secondary)],
     )
@@ -54,7 +54,7 @@ def _pick_best_station(dataframe):
         )
         return values
 
-    orig_index = dataframe.index.names    
+    orig_index = dataframe.index.names
     data = (
         dataframe
             .pipe(utils.refresh_index)
@@ -93,7 +93,6 @@ def _pick_best_sampletype(dataframe):
             numpy.nan
         )
         xtab = wqio.utils.assign_multilevel_column(xtab, grabvalues, col, 'grab')
-
 
     data = (
         xtab.loc[:, xtab.columns.map(lambda c: c[1] != 'unknown')]
@@ -150,9 +149,9 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
         # merge Wetland Basins and Retention ponds, keeping
         # the original records
         WBRP_combo = 'Wetland Basin/Retention Pond'
-        
-        df =  wqio.utils.redefine_index_level(df, 'category', WBRP_combo, dropold=False,
-                                              criteria=lambda row: row[_cats] in grab_categories)
+
+        df = wqio.utils.redefine_index_level(df, 'category', WBRP_combo, dropold=False,
+                                             criteria=lambda row: row[_cats] in grab_categories)
         grab_categories.append(WBRP_combo)
 
     if combine_nox:
@@ -171,8 +170,8 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
         )
 
     PFC = 'Permeable Friction Course'
-    df =  wqio.utils.redefine_index_level(df, 'category', PFC, dropold=True,
-                                          criteria=lambda row: row[_cats] == 'PF')
+    df = wqio.utils.redefine_index_level(df, 'category', PFC, dropold=True,
+                                         criteria=lambda row: row[_cats] == 'PF')
 
     # all data should be compisite data, but grabs are allowed
     # for bacteria at all BMPs, and all parameter groups at
@@ -819,7 +818,7 @@ def categorical_boxplots(dc, outpath='.'):
         ax.yaxis.grid(True, which='major', color='0.5', linestyle='-')
         ax.yaxis.grid(False, which='minor')
         wqio.viz.rotateTickLabels(ax, 45, 'x')
-        ax.set_xlim(left=1, right=bmppositions.max()+1)
+        ax.set_xlim(left=1, right=bmppositions.max() + 1)
         if infl_proxy is not None:
             ax.legend(
                 (infl_proxy, effl_proxy),

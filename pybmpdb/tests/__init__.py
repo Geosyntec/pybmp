@@ -9,6 +9,6 @@ def test(*args):
     except ImportError:
         raise ImportError("pytest required run tests")
 
-    options = [resource_filename('pybmpdb', 'tests')]
+    options = [resource_filename('pybmpdb', '')]
     options.extend(list(args))
     return pytest.main(options)

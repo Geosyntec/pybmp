@@ -135,17 +135,21 @@ def load_from_access(dbfile, sqlquery=None, dbtable=None):
     dbfile : str
         Path to the Access database.
     sqlquery : str, optional
-        SQL (JET) query to run to 
+        SQL (JET) query to run.
+
+    Returns
+    -------
+    bmpdata : pandas.DataFrame
     """
 
-    driver =  r'{Microsoft Access Driver (*.mdb, *.accdb)}'
+    driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
     if not sqlquery:
         if dbtable:
             sqlquery = "select * from {}".format(dbtable)
         else:
             dbtable = 'bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014'
             sqlquery = get_default_query().format(dbtable)
-        
+
     return get_data(sqlquery, dbfile, driver=driver)
 
 
@@ -201,14 +205,12 @@ def prepare_data(raw_df):
             .assign(station=lambda df: df['station'].str.lower())
             .assign(sampletype=lambda df: _process_sampletype(df, 'sampletype'))
             .assign(sampledatetime=lambda df: df.apply(wqio.utils.makeTimestamp, axis=1))
-            .assign(units=lambda df: df['units'].map(
-                lambda u: info.getUnits(u, attr='unicode')
-            ))
+            .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
             .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
             .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
             .replace({'category': biofilters})
             .pipe(wqio.utils.normalize_units, units_norm, target_units, paramcol='_parameter',
-                    rescol='res', unitcol='units', napolicy='raise')
+                  rescol='res', unitcol='units', napolicy='raise')
             .drop(drop_columns, axis=1)
             .query("res > 0")
             .groupby(by=_row_headers)
@@ -265,7 +267,7 @@ def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn
 
     transformed = (
         df.query("{} in @existingparams".format(paramlevel))
-          .pipe(utils.refresh_index)  
+          .pipe(utils.refresh_index)
           .unstack(level=paramlevel)
           .pipe(wqio.utils.assign_multilevel_column, qualfxn, 'qual', newparam)
           .pipe(wqio.utils.assign_multilevel_column, resfxn, 'res', newparam)
@@ -288,8 +290,10 @@ def to_DataCollection(df, **kwargs):  # pragma: no cover
     selection_dict = wqio.validate.at_least_empty_dict(selection_dict)
     othergroups = kwargs.pop('othergroups', ['category', 'units'])
     pairgroups = kwargs.pop('pairgroups', ['category', 'units', 'bmp_id', 'site_id', 'storm'])
-    return (df.reset_index()
-              .pipe(wqio.DataCollection, rescol='res', qualcol='qual', ndval=['ND'],
-                    stationcol='station', paramcol='parameter', othergroups=othergroups,
-                    pairgroups=pairgroups,  **kwargs)
+    dc = (
+        df.reset_index()
+          .pipe(wqio.DataCollection, rescol='res', qualcol='qual', ndval=['ND'],
+                stationcol='station', paramcol='parameter', othergroups=othergroups,
+                pairgroups=pairgroups, **kwargs)
     )
+    return dc
