@@ -1,4 +1,4 @@
-[
+units = [
     {
         "name": "%",
         "factor": 1,
@@ -105,13 +105,21 @@
         "name": "ug/L",
         "factor": 0.000001,
         "tex": "\\si[per-mode=symbol]{\\micro\\gram\\per\\liter}",
-        "unicode": "μg/L"
+        "unicode": "µg/L"
     },
     {
+        "meta": "converts greek letter to the micro sign",
+        "name": "μg/L",
+        "factor": 0.000001,
+        "tex": "\\si[per-mode=symbol]{\\micro\\gram\\per\\liter}",
+        "unicode": "µg/L"
+    },
+    {
+        "meta": "no-op entry for the micro sign",
         "name": "µg/L",
         "factor": 0.000001,
         "tex": "\\si[per-mode=symbol]{\\micro\\gram\\per\\liter}",
-        "unicode": "μg/L"
+        "unicode": "µg/L"
     },
     {
         "name": "ng/L",

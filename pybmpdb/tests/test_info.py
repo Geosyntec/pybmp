@@ -5,16 +5,6 @@ from unittest.mock import patch
 from pybmpdb import info
 
 
-@pytest.mark.parametrize(('filename', 'error'), [
-    ('parameters.json', None),
-    ('units.json', None),
-    ('junks.json', FileNotFoundError)
-])
-def test__loader_smoke(filename, error):
-    with helpers.raises(error):
-        info._loader(filename)
-
-
 @pytest.mark.parametrize(('value', 'expected', 'error'), [
     ('ug/L', {"name": "ug/L", "factor": 1}, None),
     ('mg/L', None, ValueError),

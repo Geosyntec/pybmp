@@ -1,4 +1,4 @@
-[
+parameters = [
     {
         "name": "1,1,1,2-tetrachloroethane",
         "tex": "1,1,1,2-Tetrachloroethane",
