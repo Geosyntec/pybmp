@@ -26,9 +26,47 @@ __all__ = [
 ]
 
 
-def _handle_ND_factors(df, qualcol='qual', rescol='res', dlcol='DL', quals=None, nd_correction=2):
-    if quals is None:
-        quals = ['U', 'UK', 'UA', 'UC', 'K']
+def _handle_ND_factors(df, qualcol='qual', rescol='res', dlcol='DL', quals=None,
+                       nd_correction=2):
+    """ Determines the scaling factor to be applied to the water quality result
+    based on the result qualifiers in the BMP Database.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+    qualcol : str, optional (default = 'qual')
+        The column in *df* that contain the qualifiers.
+    rescol : str, optional (default = 'res')
+        The column in *df* that contain the results.
+    dlcol : str, optional (default = 'DL')
+        The column in *df* that contain the detection limts.
+    quals : list of str, optional.
+        A list of qualifiers that signify that a result is non-detect. Falls
+        back to ``['U', 'UK', 'UA', 'UC', 'K']`` when not provided.
+    nd_correction : float, optional (default = 2.0)
+        The factor by which non-detect results will be multiplied.
+
+    Returns
+    -------
+    factors : numpy.array
+
+    Notes
+    -----
+    The underlying assumption here is that the BMP Database reports non-detects
+    at half of their detection limit. So we need to double the reported value
+    to get the upper limit of the result for ROS/Kaplan-Meier imputation.
+
+    Also note that there are some weird cases where UJ-flagged data should be
+    given a different. This occurs when the reported result is greater than the
+    reported DL. Lastly, UJ-flagged data where the result is less than the DL
+    should be scaled by the ratio of the result to the DL, such that
+    result * factor = DL.
+
+    """
+
+    quals = wqio.validate.at_least_empty_list(quals)
+    if not quals:
+        quals.extend(['U', 'UK', 'UA', 'UC', 'K'])
 
     normal_ND = [df[qualcol].isin(quals), float(nd_correction)]
     weird_UJ = [(df[qualcol] == 'UJ') & (df[rescol] < df[dlcol]), df[dlcol] / df[rescol]]
@@ -36,8 +74,41 @@ def _handle_ND_factors(df, qualcol='qual', rescol='res', dlcol='DL', quals=None,
 
 
 def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=None):
-    if quals is None:
-        quals = ['U', 'UA', 'UI', 'UC', 'UK', 'K']
+    """ Determines final qualifier to be applied to the water quality result
+    based on the result qualifiers in the BMP Database. Non-detects get "ND",
+    detected values get "=".
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+    qualcol : str, optional (default = 'qual')
+        The column in *df* that contain the qualifiers.
+    rescol : str, optional (default = 'res')
+        The column in *df* that contain the results.
+    dlcol : str, optional (default = 'DL')
+        The column in *df* that contain the detection limts.
+    quals : list of str, optional.
+        A list of qualifiers that signify that a result is non-detect. Falls
+        back to ``['U', 'UA', 'UI', 'UC', 'UK', 'K']`` when not provided.
+
+    Returns
+    -------
+    qualifiers : numpy.array
+
+    See also
+    --------
+    _handle_ND_factors
+
+    Notes
+    -----
+    Same basic premise as _handle_ND_factors, but different qualifiers count
+    as ND compared to what we used to determine the ND-scaling factors.
+
+    """
+
+    quals = wqio.validate.at_least_empty_list(quals)
+    if not quals:
+        quals.extend(['U', 'UA', 'UI', 'UC', 'UK', 'K'])
 
     is_ND = df[qualcol].isin(quals) | ((df[qualcol] == 'UJ') & (df[rescol] <= df[dlcol]))
     return numpy.where(is_ND, 'ND', '=')
@@ -140,6 +211,7 @@ def load_from_access(dbfile, sqlquery=None, dbtable=None):
     Returns
     -------
     bmpdata : pandas.DataFrame
+
     """
 
     driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'

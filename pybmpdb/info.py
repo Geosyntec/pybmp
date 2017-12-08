@@ -1,14 +1,12 @@
 import json
 from pkg_resources import resource_filename
 
+from ._parameters import parameters
+from ._units import units
+
 
 __all__ = ['getUnits', 'getTexParam', 'getTexUnit',
            'getNormalization', 'getConversion']
-
-
-def _loader(fname):
-    with open(resource_filename('pybmpdb.data', fname), 'r') as f:
-        return json.load(f)
 
 
 def _find_by_name(value_string, list_of_dicts, key='name'):
@@ -74,7 +72,3 @@ def getConversion(param):
     p = _find_by_name(param, parameters)
 
     return getNormalization(p['units'])
-
-
-parameters = _loader('parameters.json')
-units = _loader('units.json')
