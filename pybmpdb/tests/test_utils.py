@@ -4,6 +4,7 @@ import glob
 from textwrap import dedent
 from io import StringIO
 from pkg_resources import resource_filename
+from tempfile import TemporaryDirectory
 
 from unittest import mock
 import pytest
@@ -112,25 +113,10 @@ def test_makeTexTable_allOptions():
     assert known == test
 
 
-class Test_makeLongLandscapeTexTable(object):
-    def setup(self):
-        self.maxDiff = None
-        dfdict = {
-            'W': {
-                'a': 0.84386963791251501,
-                'b': -0.22109837444207142,
-            },
-            'X': {
-                'a': 0.70049867715201963,
-                'b': 1.4764939161054218,
-            },
-            'Y': {
-                'a': -1.3477794473987552,
-                'b': -1.1939220296611821,
-            },
-        }
-        self.df = pandas.DataFrame.from_dict(dfdict)
-        self.known_nofootnote = dedent(r"""
+@pytest.fixture
+def long_landscape_tables():
+    tables = {
+        None: dedent(r"""
             \begin{landscape}
                 \centering
                 \rowcolors{1}{CVCWhite}{CVCLightGrey}
@@ -168,9 +154,8 @@ class Test_makeLongLandscapeTexTable(object):
             \end{landscape}
 
             \clearpage
-        """)
-
-        self.known_withfootnote = dedent(r"""
+        """),
+        'test note': dedent(r"""
             \begin{landscape}
                 \centering
                 \rowcolors{1}{CVCWhite}{CVCLightGrey}
@@ -209,14 +194,31 @@ class Test_makeLongLandscapeTexTable(object):
             test note
             \clearpage
         """)
+    }
+    return tables
 
-    def test_makeLongLandscapeTexTable_noFootnote(self):
-        test = utils.makeLongLandscapeTexTable(self.df, 'test caption', 'label')
-        assert self.known_nofootnote == test
 
-    def test_makeLongLandscapeTexTable_Footnote(self):
-        test = utils.makeLongLandscapeTexTable(self.df, 'test caption', 'label', 'test note')
-        assert self.known_withfootnote == test
+@pytest.mark.parametrize('footnote', ['test note', None])
+def test_makeLongLandscapeTexTable(footnote, long_landscape_tables):
+    dfdict = {
+        'W': {
+            'a': 0.84386963791251501,
+            'b': -0.22109837444207142,
+        },
+        'X': {
+            'a': 0.70049867715201963,
+            'b': 1.4764939161054218,
+        },
+        'Y': {
+            'a': -1.3477794473987552,
+            'b': -1.1939220296611821,
+        },
+    }
+    df = pandas.DataFrame.from_dict(dfdict)
+    result = utils.makeLongLandscapeTexTable(df, 'test caption', 'label',
+                                             footnotetext=footnote)
+    expected = long_landscape_tables[footnote]
+    helpers.assert_bigstring_equal(result, expected)
 
 
 def test_makeTexFigure():
@@ -238,88 +240,88 @@ def test_processFilename():
     assert endname == utils.processFilename(startname)
 
 
-class Test_LaTeXDirectory(object):
-    def setup(self):
-        self.origdir = os.getcwd()
-        self.deepdir = os.path.join(os.getcwd(), 'test1', 'test2', 'test3')
-        self.deepfile = os.path.join(self.deepdir, 'f.tex')
-        tex_content = dedent(r"""
-            \documentclass[12pt]{article}
-            \usepackage{lingmacros}
-            \usepackage{tree-dvips}
-            \begin{document}
+@pytest.fixture
+def deep_dir(latex_content):
+    with TemporaryDirectory() as td:
+        dd = os.path.join(td, 'test1', 'test2', 'test3')
+        os.makedirs(dd)
+        with open(os.path.join(dd, 'f.tex'), 'w') as f:
+            f.write(latex_content)
+        yield dd
 
-            \section*{Notes for My Paper}
 
-            Don't forget to include examples of topicalization.
-            They look like this:
+@pytest.fixture
+def latex_content():
+    return dedent(r"""
+        \documentclass[12pt]{article}
+        \usepackage{lingmacros}
+        \usepackage{tree-dvips}
+        \begin{document}
 
-            {\small
-            \enumsentence{Topicalization from sentential subject:\\
-            \shortex{7}{a John$_i$ [a & kltukl & [el &
-              {\bf l-}oltoir & er & ngii$_i$ & a Mary]]}
-            { & {\bf R-}clear & {\sc comp} &
-              {\bf IR}.{\sc 3s}-love   & P & him & }
-            {John, (it's) clear that Mary loves (him).}}
-            }
+        \section*{Notes for My Paper}
 
-            \subsection*{How to handle topicalization}
+        Don't forget to include examples of topicalization.
+        They look like this:
 
-            I'll just assume a tree structure like (\ex{1}).
+        {\small
+        \enumsentence{Topicalization from sentential subject:\\
+        \shortex{7}{a John$_i$ [a & kltukl & [el &
+            {\bf l-}oltoir & er & ngii$_i$ & a Mary]]}
+        { & {\bf R-}clear & {\sc comp} &
+            {\bf IR}.{\sc 3s}-love   & P & him & }
+        {John, (it's) clear that Mary loves (him).}}
+        }
 
-            {\small
-            \enumsentence{Structure of A$'$ Projections:\\ [2ex]
-            \begin{tabular}[t]{cccc}
-                & \node{i}{CP}\\ [2ex]
-                \node{ii}{Spec} &   &\node{iii}{C$'$}\\ [2ex]
-                    &\node{iv}{C} & & \node{v}{SAgrP}
-            \end{tabular}
-            \nodeconnect{i}{ii}
-            \nodeconnect{i}{iii}
-            \nodeconnect{iii}{iv}
-            \nodeconnect{iii}{v}
-            }
-            }
+        \subsection*{How to handle topicalization}
 
-            \subsection*{Mood}
+        I'll just assume a tree structure like (\ex{1}).
 
-            Mood changes when there is a topic, as well as when
-            there is WH-movement.  \emph{Irrealis} is the mood when
-            there is a non-subject topic or WH-phrase in Comp.
-            \emph{Realis} is the mood when there is a subject topic
-            or WH-phrase.
+        {\small
+        \enumsentence{Structure of A$'$ Projections:\\ [2ex]
+        \begin{tabular}[t]{cccc}
+            & \node{i}{CP}\\ [2ex]
+            \node{ii}{Spec} &   &\node{iii}{C$'$}\\ [2ex]
+                &\node{iv}{C} & & \node{v}{SAgrP}
+        \end{tabular}
+        \nodeconnect{i}{ii}
+        \nodeconnect{i}{iii}
+        \nodeconnect{iii}{iv}
+        \nodeconnect{iii}{v}
+        }
+        }
 
-            \end{document}
-        """)
+        \subsection*{Mood}
 
-        if os.path.exists(self.deepdir):
-            self.teardown()
+        Mood changes when there is a topic, as well as when
+        there is WH-movement.  \emph{Irrealis} is the mood when
+        there is a non-subject topic or WH-phrase in Comp.
+        \emph{Realis} is the mood when there is a subject topic
+        or WH-phrase.
 
-        os.makedirs(self.deepdir)
-        with open(self.deepfile, 'w') as dfile:
-            dfile.write(tex_content)
+        \end{document}
+    """)
 
-    def teardown(self):
-        allfiles = glob.glob(os.path.join(self.deepdir, "f.*"))
-        for af in allfiles:
-            os.remove(af)
-        os.removedirs(self.deepdir)
 
-    def test_dir(self):
-        assert os.getcwd() == self.origdir
-        with utils.LaTeXDirectory(self.deepdir):
-            assert os.getcwd() == self.deepdir
+def test_LaTeXDirectory_folder_only(deep_dir):
+    origdir = os.getcwd()
+    with utils.LaTeXDirectory(deep_dir):
+        assert os.getcwd() == deep_dir
 
-        assert os.getcwd() == self.origdir
+    assert os.getcwd() == origdir
 
-    def test_file(self):
-        assert os.getcwd() == self.origdir
-        with utils.LaTeXDirectory(self.deepfile):
-            assert os.getcwd() == self.deepdir
 
-        assert os.getcwd() == self.origdir
+def test_LaTeXDirectory_file(deep_dir):
+    origdir = os.getcwd()
+    deep_file = os.path.join(deep_dir, 'f.tex')
+    with utils.LaTeXDirectory(deep_file):
+        assert os.getcwd() == deep_dir
 
-    @pytest.mark.skipif(helpers.checkdep_tex() is None, reason='No LaTeX')
-    def test_compile_smoke(self):
-        with utils.LaTeXDirectory(self.deepfile) as latex:
-            latex.compile(self.deepfile)
+    assert os.getcwd() == origdir
+
+
+@pytest.mark.skipif(helpers.checkdep_tex() is None, reason='No LaTeX')
+def test_compile_smoke(deep_dir, latex_content):
+    deep_file = os.path.join(deep_dir, 'f.tex')
+
+    with utils.LaTeXDirectory(deep_file) as latex:
+        latex.compile(deep_file)

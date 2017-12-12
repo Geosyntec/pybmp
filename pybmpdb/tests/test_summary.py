@@ -2,6 +2,8 @@ import sys
 import os
 from io import StringIO
 from pkg_resources import resource_filename
+from textwrap import dedent
+from tempfile import TemporaryDirectory
 
 from unittest import mock
 import pytest
@@ -76,6 +78,7 @@ class mock_dataset(object):
             'parameter': mock_parameter(),
             'category': 'testbmp'
         }
+        self.scenario = (infl_include, effl_include)
 
     def scatterplot(self, *args, **kwargs):
         return mock_figure()
@@ -84,225 +87,133 @@ class mock_dataset(object):
         return mock_figure()
 
 
-class _base_DatasetSummary_Mixin(object):
+@pytest.fixture(params=[
+    (True, True),
+    (True, False),
+    (False, False),
+    (False, True)
+])
+def dset_sum(request):
+    ds = mock_dataset(request.param[0], request.param[1])
+    return summary.DatasetSummary(ds, 'Metals', 'testfigpath')
 
-    def main_setup(self):
-        self.known_paramgroup = 'Metals'
-        self.known_bmp = 'testbmp'
-        self.known_latex_file_name = 'metalstestbmpcarbondioxide'
-        self.ds_sum = summary.DatasetSummary(self.ds, self.known_paramgroup, 'testfigpath')
-        self.known_latex_input_tt = r"""\subsection{testbmp}
-        \begin{table}[h!]
-            \caption{test table title}
-            \centering
-            \begin{tabular}{l l l l l}
+
+def test_DatasetSummary_paramgroup(dset_sum):
+    assert dset_sum.paramgroup == 'Metals'
+
+
+def test_DatasetSummary_ds(dset_sum):
+    assert isinstance(dset_sum.ds, mock_dataset)
+
+
+def test_DatasetSummary_parameter(dset_sum):
+    assert dset_sum.parameter is dset_sum.ds.definition['parameter']
+
+
+def test_DatasetSummary_bmp(dset_sum):
+    assert dset_sum.bmp is dset_sum.ds.definition['category']
+
+
+def test_DatasetSummary_latex_file_name(dset_sum):
+    assert dset_sum.latex_file_name == 'metalstestbmpcarbondioxide'
+
+
+def test_DatasetSummary__tex_table_row_basic(dset_sum):
+    expected = {
+        (True, True): r'''
+                \midrule
+                The Medians & 1.23 & 1.23 \\''',
+        (True, False): r'''
+                \midrule
+                The Medians & 1.23 & NA \\''',
+        (False, True): r'''
+                \midrule
+                The Medians & NA & 1.23 \\''',
+        (False, False): r'''
+                \midrule
+                The Medians & NA & NA \\'''
+    }
+    result_row = dset_sum._tex_table_row('The Medians', 'median')
+    assert result_row == expected[dset_sum.ds.scenario]
+
+
+def test_DatasetSummary__tex_table_row_forceint(dset_sum):
+    expected = {
+        (True, True): r'''
+                \midrule
+                Counts & 25 & 25 \\''',
+        (True, False): r'''
+                \midrule
+                Counts & 25 & NA \\''',
+        (False, True): r'''
+                \midrule
+                Counts & NA & 25 \\''',
+        (False, False): r'''
+                \midrule
+                Counts & NA & NA \\'''
+    }
+    result_row = dset_sum._tex_table_row('Counts', 'N', forceint=True, sigfigs=1)
+    assert result_row == expected[dset_sum.ds.scenario]
+
+
+def test_DatasetSummary__tex_table_row_advanced(dset_sum):
+    expected = {
+        (True, True): r'''
                 \toprule
-                \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
+                Mean CI & (11; 13) & (11; 13) \\''',
+        (True, False): r'''
                 \toprule
-                Count & 25 & 25 \\
-                \midrule
-                Number of NDs & 5 & 5 \\
-                \midrule
-                Min; Max & 0.123; 123 & 0.123; 123 \\
-                \midrule
-                Mean & 12.3 & 12.3 \\
-                %%
-                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
-                \midrule
-                Standard Deviation & 4.56 & 4.56 \\
-                \midrule
-                Log. Mean & 12.3 & 12.3 \\
-                %%
-                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
-                \midrule
-                Log. Standard Deviation & 4.56 & 4.56 \\
-                \midrule
-                Geo. Mean & 12.3 & 12.3 \\
-                %%
-                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
-                \midrule
-                Coeff. of Variation & 5.61 & 5.61 \\
-                \midrule
-                Skewness & 6.12 & 6.12 \\
-                \midrule
-                Median & 1.23 & 1.23 \\
-                %%
-                (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
-                \midrule
-                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
+                Mean CI & (11; 13) & NA \\''',
+        (False, True): r'''
                 \toprule
-                Number of Pairs & \multicolumn{2}{c} {22} \\
-                \midrule
-                Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
-                \midrule
-                Mann-Whitney p-value & \multicolumn{2}{c} {0.456} \\
-                \bottomrule
-            \end{tabular}
-        \end{table}
-
-        \begin{figure}[hb]   % FIGURE
-            \centering
-            \includegraphics[scale=1.00]{testfigpath/statplot/metalstestbmpcarbondioxidestats.pdf}
-            \caption{Box and Probability Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure}
-
-        \begin{figure}[hb]   % FIGURE
-            \centering
-            \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
-            \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure} \clearpage""" + '\n'
-
-        self.known_latex_input_ff = ''
-        self.known_latex_input_ft = r"""\subsection{testbmp}
-        \begin{table}[h!]
-            \caption{test table title}
-            \centering
-            \begin{tabular}{l l l l l}
+                Mean CI & NA & (11; 13) \\''',
+        (False, False): r'''
                 \toprule
-                \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
-                \toprule
-                Count & NA & 25 \\
-                \midrule
-                Number of NDs & NA & 5 \\
-                \midrule
-                Min; Max & NA & 0.123; 123 \\
-                \midrule
-                Mean & NA & 12.3 \\
-                %%
-                (95\% confidence interval) & NA & (11.3; 13.3) \\
-                \midrule
-                Standard Deviation & NA & 4.56 \\
-                \midrule
-                Log. Mean & NA & 12.3 \\
-                %%
-                (95\% confidence interval) & NA & (11.3; 13.3) \\
-                \midrule
-                Log. Standard Deviation & NA & 4.56 \\
-                \midrule
-                Geo. Mean & NA & 12.3 \\
-                %%
-                (95\% confidence interval) & NA & (11.3; 13.3) \\
-                \midrule
-                Coeff. of Variation & NA & 5.61 \\
-                \midrule
-                Skewness & NA & 6.12 \\
-                \midrule
-                Median & NA & 1.23 \\
-                %%
-                (95\% confidence interval) & NA & (0.235; 2.23) \\
-                \midrule
-                Quartiles & NA & 0.612; 2.35 \\
-                \toprule
-                Number of Pairs & \multicolumn{2}{c} {NA} \\
-                \midrule
-                Wilcoxon p-value & \multicolumn{2}{c} {NA} \\
-                \midrule
-                Mann-Whitney p-value & \multicolumn{2}{c} {NA} \\
-                \bottomrule
-            \end{tabular}
-        \end{table}
+                Mean CI & NA & NA \\''',
+    }
+    result_row = dset_sum._tex_table_row('Mean CI', 'mean_conf_interval', rule='top',
+                                         twoval=True, ci=True, sigfigs=2)
+    assert result_row == expected[dset_sum.ds.scenario]
 
-        \begin{figure}[hb]   % FIGURE
-            \centering
-            \includegraphics[scale=1.00]{testfigpath/statplot/metalstestbmpcarbondioxidestats.pdf}
-            \caption{Box and Probability Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure}
 
-        \begin{figure}[hb]   % FIGURE
-            \centering
-            \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
-            \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure} \clearpage""" + '\n'
+def test_DatasetSummary__text_table_row_twoattrs(dset_sum):
+    expected = {
+        (True, True): r'''
+                \midrule
+                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\''',
+        (True, False): r'''
+                \midrule
+                Quartiles & 0.612; 2.35 & NA \\''',
+        (False, True): r'''
+                \midrule
+                Quartiles & NA & 0.612; 2.35 \\''',
+        (False, False): r'''
+                \midrule
+                Quartiles & NA & NA \\''',
+    }
+    result_row = dset_sum._tex_table_row('Quartiles', ['pctl25', 'pctl75'], twoval=True)
+    assert result_row == expected[dset_sum.ds.scenario]
 
-    def test_paramgroup(self):
-        assert isinstance(self.ds_sum.paramgroup, str)
-        assert self.ds_sum.paramgroup == self.known_paramgroup
 
-    def test_ds(self):
-        assert isinstance(self.ds_sum.ds, mock_dataset)
-
-    def test_parameter(self):
-        assert isinstance(self.ds_sum.parameter, mock_parameter)
-
-    def test_bmp(self):
-        assert isinstance(self.ds_sum.bmp, str)
-        assert self.ds_sum.bmp == self.known_bmp
-
-    def test_latex_file_name(self):
-        assert isinstance(self.ds_sum.latex_file_name, str)
-        assert self.ds_sum.latex_file_name == self.known_latex_file_name
-
-    def test__tex_table_row_basic(self):
-        r = self.ds_sum._tex_table_row('The Medians', 'median')
-        assert r == self.known_r_basic
-
-    def test__tex_table_row_forceint(self):
-        r = self.ds_sum._tex_table_row('Counts', 'N', forceint=True,
-                                       sigfigs=1)
-        assert r == self.known_r_forceint
-
-    def test__tex_table_row_advanced(self):
-        r = self.ds_sum._tex_table_row('Mean CI', 'mean_conf_interval', rule='top',
-                                       twoval=True, ci=True, sigfigs=2)
-        assert r == self.known_r_advanced
-
-    def test__text_table_row_twoattrs(self):
-        r = self.ds_sum._tex_table_row('Quartiles', ['pctl25', 'pctl75'], twoval=True)
-        assert r == self.known_r_twoattrs
-
-    def test__make_tex_figure(self):
-        fig = self.ds_sum._make_tex_figure('testfig.png', 'test caption')
-        known_fig = r"""
+def test_DatasetSummary__make_tex_figure(dset_sum):
+    fig = dset_sum._make_tex_figure('testfig.png', 'test caption')
+    known_fig = r"""
         \begin{figure}[hb]   % FIGURE
             \centering
             \includegraphics[scale=1.00]{testfig.png}
             \caption{test caption}
         \end{figure} \clearpage""" + '\n'
-        assert fig == known_fig
-
-    def test_makeTexInput(self):
-        if self.scenario == 'TT':
-            known_tstring = self.known_latex_input_tt
-        elif self.scenario == 'FT':
-            known_tstring = self.known_latex_input_ft
-        else:
-            known_tstring = self.known_latex_input_ff
-
-        tstring = self.ds_sum.makeTexInput('test table title')
-
-        helpers.assert_bigstring_equal(
-            tstring,
-            known_tstring,
-            '{}_out_test.test'.format(self.scenario),
-            '{}_out_known.test'.format(self.scenario)
-        )
+    assert fig == known_fig
 
 
-class Test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
-    def setup(self):
-        self.scenario = 'TT'
-        self.ds = mock_dataset(True, True)
-        self.known_r_basic = r'''
-                \midrule
-                The Medians & 1.23 & 1.23 \\'''
+def test_DatasetSummary_makeTexInput(dset_sum, expected_latext_input):
+    result = dset_sum.makeTexInput('test table title')
+    helpers.assert_bigstring_equal(result, expected_latext_input[dset_sum.ds.scenario])
 
-        self.known_r_advanced = r'''
-                \toprule
-                Mean CI & (11; 13) & (11; 13) \\'''
 
-        self.known_r_twoattrs = r'''
-                \midrule
-                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\'''
-
-        self.known_r_forceint = r'''
-                \midrule
-                Counts & 25 & 25 \\'''
-
-        self.main_setup()
-
-    def test__make_tex_table(self):
-        table = self.ds_sum._make_tex_table('test title')
-        known_table = r"""
+def test_DatasetSummary__make_tex_table(dset_sum):
+    if dset_sum.ds.scenario == (True, True):
+        expected = r"""
         \begin{table}[h!]
             \caption{test title}
             \centering
@@ -350,178 +261,20 @@ class Test_DatasetSummary_TT(_base_DatasetSummary_Mixin):
                 \bottomrule
             \end{tabular}
         \end{table}""" + '\n'
-        try:
-            assert (table == known_table)
-        except:
-            with open('make_tex_table_res.test', 'w') as f:
-                f.write(table)
-            with open('make_tex_table_exp.test', 'w') as f:
-                f.write(known_table)
-            raise
+        result = dset_sum._make_tex_table('test title')
+        helpers.assert_bigstring_equal(result, expected)
+    else:
+        pass
 
 
-class Test_DatasetSummary_TF(_base_DatasetSummary_Mixin):
-    def setup(self):
-        self.scenario = 'TF'
-        self.ds = mock_dataset(True, False)
-        self.main_setup()
-        self.known_r_basic = r'''
-                \midrule
-                The Medians & 1.23 & NA \\'''
-
-        self.known_r_advanced = r'''
-                \toprule
-                Mean CI & (11; 13) & NA \\'''
-
-        self.known_r_twoattrs = r'''
-                \midrule
-                Quartiles & 0.612; 2.35 & NA \\'''
-
-        self.known_r_forceint = r'''
-                \midrule
-                Counts & 25 & NA \\'''
-
-
-class Test_DatasetSummary_FT(_base_DatasetSummary_Mixin):
-    def setup(self):
-        self.scenario = 'FT'
-        self.ds = mock_dataset(False, True)
-        self.main_setup()
-        self.known_r_basic = r'''
-                \midrule
-                The Medians & NA & 1.23 \\'''
-
-        self.known_r_advanced = r'''
-                \toprule
-                Mean CI & NA & (11; 13) \\'''
-
-        self.known_r_twoattrs = r'''
-                \midrule
-                Quartiles & NA & 0.612; 2.35 \\'''
-
-        self.known_r_forceint = r'''
-                \midrule
-                Counts & NA & 25 \\'''
-
-
-class Test_DatasetSummary_FF(_base_DatasetSummary_Mixin):
-    def setup(self):
-        self.scenario = 'FF'
-        self.ds = mock_dataset(False, False)
-        self.main_setup()
-        self.known_r_basic = r'''
-                \midrule
-                The Medians & NA & NA \\'''
-
-        self.known_r_advanced = r'''
-                \toprule
-                Mean CI & NA & NA \\'''
-
-        self.known_r_twoattrs = r'''
-                \midrule
-                Quartiles & NA & NA \\'''
-
-        self.known_r_forceint = r'''
-                \midrule
-                Counts & NA & NA \\'''
-
-
-class Test_CategoricalSummary(object):
-    def setup(self):
-        includes = [
-            (True, True),
-            (True, False),
-            (True, True),
-            (False, False),
-            (False, True)
-        ]
-        self.datasets = [mock_dataset(*inc) for inc in includes]
-        self.known_paramgroup = 'Metals'
-        self.known_dataset_count = 3
-        self.csum = summary.CategoricalSummary(
-            self.datasets,
-            self.known_paramgroup,
-            'basepath',
-            'testfigpath'
-        )
-        self.known_latex_input_content = input_file_string
-        self.known_latex_report_content = (
-            '\\begin{document}test report title\n'
-            '\\input{testpath.tex}\n'
-            '\\end{document}\n'
-        )
-
-        self.test_templatefile = 'testtemplate.tex'
-        with open(self.test_templatefile, 'w') as f:
-            f.write('\\begin{document}__VARTITLE')
-
-    def teardown(self):
-        os.remove(self.test_templatefile)
-
-    def test_datasets(self):
-        for ds in self.csum.datasets:
-            assert isinstance(ds, mock_dataset)
-
-        assert self.known_dataset_count == len(self.csum.datasets)
-
-    def test_paramgroup(self):
-        assert isinstance(self.csum.paramgroup, str)
-        assert self.csum.paramgroup == self.known_paramgroup
-
-    @pytest.mark.skipif(PYTHON2, reason='legacy python')
-    def test__make_input_file_IO(self):
-        with StringIO() as inputIO:
-            self.csum._make_input_file_IO(inputIO)
-            input_string = inputIO.getvalue()
-
-        helpers.assert_bigstring_equal(
-            input_string,
-            self.known_latex_input_content,
-            'test__make_input_file_IO_res.tex',
-            'test__make_input_file_IO_exp.test'
-        )
-
-    @pytest.mark.skipif(PYTHON2, reason='legacy python')
-    def test__make_report_IO(self):
-        with StringIO() as reportIO:
-            with open(self.test_templatefile, 'r') as templateIO:
-                self.csum._make_report_IO(
-                    templateIO, 'testpath.tex', reportIO, 'test report title'
-                )
-
-                helpers.assert_bigstring_equal(
-                    reportIO.getvalue(),
-                    self.known_latex_report_content,
-                    'test_reportIO.tex',
-                    'test_reportIO_expected.tex'
-                )
-
-    @pytest.mark.skipif(PYTHON2, reason='legacy python')
-    def test_makeReport(self):
-        templatepath = get_tex_file('draft_template.tex')
-        inputpath = get_tex_file('inputs_{}.tex'.format(self.csum.paramgroup.lower()))
-        reportpath = get_tex_file('report_{}.tex'.format(self.csum.paramgroup.lower()))
-        self.csum.makeReport(
-            self.test_templatefile,
-            'testpath.tex',
-            reportpath,
-            'test report title',
-            regenfigs=False
-        )
-
-        with open(reportpath, 'r') as rp:
-            helpers.assert_bigstring_equal(
-                rp.read(),
-                self.known_latex_report_content,
-                'test_report.tex',
-                'test_report_expected.tex'
-            )
-
-
-input_file_string = r'''\section{Carbon Dioxide}
-\subsection{testbmp}
+@pytest.fixture
+def expected_latext_input():
+    return {
+        (False, False): '',
+        (True, False): '',
+        (True, True): r"""\subsection{testbmp}
         \begin{table}[h!]
-            \caption{Statistics for Carbon Dioxide (mg/L) at testbmp BMPs}
+            \caption{test table title}
             \centering
             \begin{tabular}{l l l l l}
                 \toprule
@@ -578,72 +331,10 @@ input_file_string = r'''\section{Carbon Dioxide}
             \centering
             \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
             \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure} \clearpage
-\clearpage
-\subsection{testbmp}
+        \end{figure} \clearpage""" + '\n',
+        (False, True): r"""\subsection{testbmp}
         \begin{table}[h!]
-            \caption{Statistics for Carbon Dioxide (mg/L) at testbmp BMPs}
-            \centering
-            \begin{tabular}{l l l l l}
-                \toprule
-                \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
-                \toprule
-                Count & 25 & 25 \\
-                \midrule
-                Number of NDs & 5 & 5 \\
-                \midrule
-                Min; Max & 0.123; 123 & 0.123; 123 \\
-                \midrule
-                Mean & 12.3 & 12.3 \\
-                %%
-                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
-                \midrule
-                Standard Deviation & 4.56 & 4.56 \\
-                \midrule
-                Log. Mean & 12.3 & 12.3 \\
-                %%
-                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
-                \midrule
-                Log. Standard Deviation & 4.56 & 4.56 \\
-                \midrule
-                Geo. Mean & 12.3 & 12.3 \\
-                %%
-                (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
-                \midrule
-                Coeff. of Variation & 5.61 & 5.61 \\
-                \midrule
-                Skewness & 6.12 & 6.12 \\
-                \midrule
-                Median & 1.23 & 1.23 \\
-                %%
-                (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
-                \midrule
-                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
-                \toprule
-                Number of Pairs & \multicolumn{2}{c} {22} \\
-                \midrule
-                Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
-                \midrule
-                Mann-Whitney p-value & \multicolumn{2}{c} {0.456} \\
-                \bottomrule
-            \end{tabular}
-        \end{table}
-
-        \begin{figure}[hb]   % FIGURE
-            \centering
-            \includegraphics[scale=1.00]{testfigpath/statplot/metalstestbmpcarbondioxidestats.pdf}
-            \caption{Box and Probability Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure}
-
-        \begin{figure}[hb]   % FIGURE
-            \centering
-            \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
-            \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure} \clearpage
-\clearpage
-\subsection{testbmp}
-        \begin{table}[h!]
-            \caption{Statistics for Carbon Dioxide (mg/L) at testbmp BMPs}
+            \caption{test table title}
             \centering
             \begin{tabular}{l l l l l}
                 \toprule
@@ -700,9 +391,280 @@ input_file_string = r'''\section{Carbon Dioxide}
             \centering
             \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
             \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure} \clearpage
-\clearpage
-'''
+        \end{figure} \clearpage""" + '\n'
+    }
+
+
+@pytest.fixture
+def cat_sum():
+    includes = [
+        (True, True),
+        (True, False),
+        (True, True),
+        (False, False),
+        (False, True)
+    ]
+    cs = summary.CategoricalSummary(
+        [mock_dataset(*inc) for inc in includes],
+        'Metals',
+        'basepath',
+        'testfigpath'
+    )
+    return cs
+
+
+@pytest.fixture
+def expected_latex_report():
+    report = dedent("""\
+        \\begin{document}test report title
+        \\input{testpath.tex}
+        \\end{document}
+    """)
+    return report
+
+
+@ pytest.fixture
+def temp_template():
+    with TemporaryDirectory() as datadir:
+        filename = os.path.join(datadir, 'testtemplate.tex')
+        with open(filename, 'w') as f:
+            f.write('\\begin{document}__VARTITLE')
+
+        yield filename
+
+
+def test_CategoricalSummary_datasets(cat_sum):
+    for ds in cat_sum.datasets:
+        assert isinstance(ds, mock_dataset)
+
+    assert len(cat_sum.datasets) == 3
+
+
+def test_CategoricalSummary_paramgroup(cat_sum):
+    assert isinstance(cat_sum.paramgroup, str)
+    assert cat_sum.paramgroup == 'Metals'
+
+
+def test_CategoricalSummary__make_input_file_IO(cat_sum, expected_latext_content):
+    with StringIO() as inputIO:
+        cat_sum._make_input_file_IO(inputIO)
+        input_string = inputIO.getvalue()
+
+    helpers.assert_bigstring_equal(input_string, expected_latext_content)
+
+
+def test_CategoricalSummary__make_report_IO(cat_sum, expected_latex_report, temp_template):
+    with StringIO() as report, open(temp_template, 'r') as template:
+        cat_sum._make_report_IO(template, 'testpath.tex', report, 'test report title')
+        helpers.assert_bigstring_equal(report.getvalue(), expected_latex_report)
+
+
+def test_CategoricalSummary_makeReport(cat_sum, expected_latex_report, temp_template):
+    templatepath = get_tex_file('draft_template.tex')
+    inputpath = get_tex_file('inputs_{}.tex'.format(cat_sum.paramgroup.lower()))
+    with TemporaryDirectory() as tmpdir:
+        reportpath = os.path.join(tmpdir, 'report_{}.tex'.format(cat_sum.paramgroup.lower()))
+        testpath = os.path.join(tmpdir, 'testpath.tex'.format(cat_sum.paramgroup.lower()))
+        cat_sum.makeReport(
+            temp_template,
+            testpath,
+            reportpath,
+            'test report title',
+            regenfigs=False
+        )
+
+        with open(reportpath, 'r') as rp:
+            helpers.assert_bigstring_equal(rp.read(), expected_latex_report)
+
+
+@pytest.fixture
+def expected_latext_content():
+    content = dedent(r"""        \section{Carbon Dioxide}
+        \subsection{testbmp}
+                \begin{table}[h!]
+                    \caption{Statistics for Carbon Dioxide (mg/L) at testbmp BMPs}
+                    \centering
+                    \begin{tabular}{l l l l l}
+                        \toprule
+                        \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
+                        \toprule
+                        Count & 25 & 25 \\
+                        \midrule
+                        Number of NDs & 5 & 5 \\
+                        \midrule
+                        Min; Max & 0.123; 123 & 0.123; 123 \\
+                        \midrule
+                        Mean & 12.3 & 12.3 \\
+                        %%
+                        (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
+                        \midrule
+                        Standard Deviation & 4.56 & 4.56 \\
+                        \midrule
+                        Log. Mean & 12.3 & 12.3 \\
+                        %%
+                        (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
+                        \midrule
+                        Log. Standard Deviation & 4.56 & 4.56 \\
+                        \midrule
+                        Geo. Mean & 12.3 & 12.3 \\
+                        %%
+                        (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
+                        \midrule
+                        Coeff. of Variation & 5.61 & 5.61 \\
+                        \midrule
+                        Skewness & 6.12 & 6.12 \\
+                        \midrule
+                        Median & 1.23 & 1.23 \\
+                        %%
+                        (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
+                        \midrule
+                        Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
+                        \toprule
+                        Number of Pairs & \multicolumn{2}{c} {22} \\
+                        \midrule
+                        Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
+                        \midrule
+                        Mann-Whitney p-value & \multicolumn{2}{c} {0.456} \\
+                        \bottomrule
+                    \end{tabular}
+                \end{table}
+
+                \begin{figure}[hb]   % FIGURE
+                    \centering
+                    \includegraphics[scale=1.00]{testfigpath/statplot/metalstestbmpcarbondioxidestats.pdf}
+                    \caption{Box and Probability Plots of Carbon Dioxide at testbmp BMPs}
+                \end{figure}
+
+                \begin{figure}[hb]   % FIGURE
+                    \centering
+                    \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
+                    \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
+                \end{figure} \clearpage
+        \clearpage
+        \subsection{testbmp}
+                \begin{table}[h!]
+                    \caption{Statistics for Carbon Dioxide (mg/L) at testbmp BMPs}
+                    \centering
+                    \begin{tabular}{l l l l l}
+                        \toprule
+                        \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
+                        \toprule
+                        Count & 25 & 25 \\
+                        \midrule
+                        Number of NDs & 5 & 5 \\
+                        \midrule
+                        Min; Max & 0.123; 123 & 0.123; 123 \\
+                        \midrule
+                        Mean & 12.3 & 12.3 \\
+                        %%
+                        (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
+                        \midrule
+                        Standard Deviation & 4.56 & 4.56 \\
+                        \midrule
+                        Log. Mean & 12.3 & 12.3 \\
+                        %%
+                        (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
+                        \midrule
+                        Log. Standard Deviation & 4.56 & 4.56 \\
+                        \midrule
+                        Geo. Mean & 12.3 & 12.3 \\
+                        %%
+                        (95\% confidence interval) & (11.3; 13.3) & (11.3; 13.3) \\
+                        \midrule
+                        Coeff. of Variation & 5.61 & 5.61 \\
+                        \midrule
+                        Skewness & 6.12 & 6.12 \\
+                        \midrule
+                        Median & 1.23 & 1.23 \\
+                        %%
+                        (95\% confidence interval) & (0.235; 2.23) & (0.235; 2.23) \\
+                        \midrule
+                        Quartiles & 0.612; 2.35 & 0.612; 2.35 \\
+                        \toprule
+                        Number of Pairs & \multicolumn{2}{c} {22} \\
+                        \midrule
+                        Wilcoxon p-value & \multicolumn{2}{c} {$<0.001$} \\
+                        \midrule
+                        Mann-Whitney p-value & \multicolumn{2}{c} {0.456} \\
+                        \bottomrule
+                    \end{tabular}
+                \end{table}
+
+                \begin{figure}[hb]   % FIGURE
+                    \centering
+                    \includegraphics[scale=1.00]{testfigpath/statplot/metalstestbmpcarbondioxidestats.pdf}
+                    \caption{Box and Probability Plots of Carbon Dioxide at testbmp BMPs}
+                \end{figure}
+
+                \begin{figure}[hb]   % FIGURE
+                    \centering
+                    \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
+                    \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
+                \end{figure} \clearpage
+        \clearpage
+        \subsection{testbmp}
+                \begin{table}[h!]
+                    \caption{Statistics for Carbon Dioxide (mg/L) at testbmp BMPs}
+                    \centering
+                    \begin{tabular}{l l l l l}
+                        \toprule
+                        \textbf{Statistic} & \textbf{Inlet} & \textbf{Outlet} \\
+                        \toprule
+                        Count & NA & 25 \\
+                        \midrule
+                        Number of NDs & NA & 5 \\
+                        \midrule
+                        Min; Max & NA & 0.123; 123 \\
+                        \midrule
+                        Mean & NA & 12.3 \\
+                        %%
+                        (95\% confidence interval) & NA & (11.3; 13.3) \\
+                        \midrule
+                        Standard Deviation & NA & 4.56 \\
+                        \midrule
+                        Log. Mean & NA & 12.3 \\
+                        %%
+                        (95\% confidence interval) & NA & (11.3; 13.3) \\
+                        \midrule
+                        Log. Standard Deviation & NA & 4.56 \\
+                        \midrule
+                        Geo. Mean & NA & 12.3 \\
+                        %%
+                        (95\% confidence interval) & NA & (11.3; 13.3) \\
+                        \midrule
+                        Coeff. of Variation & NA & 5.61 \\
+                        \midrule
+                        Skewness & NA & 6.12 \\
+                        \midrule
+                        Median & NA & 1.23 \\
+                        %%
+                        (95\% confidence interval) & NA & (0.235; 2.23) \\
+                        \midrule
+                        Quartiles & NA & 0.612; 2.35 \\
+                        \toprule
+                        Number of Pairs & \multicolumn{2}{c} {NA} \\
+                        \midrule
+                        Wilcoxon p-value & \multicolumn{2}{c} {NA} \\
+                        \midrule
+                        Mann-Whitney p-value & \multicolumn{2}{c} {NA} \\
+                        \bottomrule
+                    \end{tabular}
+                \end{table}
+
+                \begin{figure}[hb]   % FIGURE
+                    \centering
+                    \includegraphics[scale=1.00]{testfigpath/statplot/metalstestbmpcarbondioxidestats.pdf}
+                    \caption{Box and Probability Plots of Carbon Dioxide at testbmp BMPs}
+                \end{figure}
+
+                \begin{figure}[hb]   % FIGURE
+                    \centering
+                    \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
+                    \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
+                \end{figure} \clearpage
+        \clearpage
+    """)
+    return content
 
 
 def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
