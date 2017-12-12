@@ -462,17 +462,19 @@ def test_CategoricalSummary__make_report_IO(cat_sum, expected_latex_report, temp
 def test_CategoricalSummary_makeReport(cat_sum, expected_latex_report, temp_template):
     templatepath = get_tex_file('draft_template.tex')
     inputpath = get_tex_file('inputs_{}.tex'.format(cat_sum.paramgroup.lower()))
-    reportpath = get_tex_file('report_{}.tex'.format(cat_sum.paramgroup.lower()))
-    cat_sum.makeReport(
-        temp_template,
-        'testpath.tex',
-        reportpath,
-        'test report title',
-        regenfigs=False
-    )
+    with TemporaryDirectory() as tmpdir:
+        reportpath = os.path.join(tmpdir, 'report_{}.tex'.format(cat_sum.paramgroup.lower()))
+        testpath = os.path.join(tmpdir, 'testpath.tex'.format(cat_sum.paramgroup.lower()))
+        cat_sum.makeReport(
+            temp_template,
+            testpath,
+            reportpath,
+            'test report title',
+            regenfigs=False
+        )
 
-    with open(reportpath, 'r') as rp:
-        helpers.assert_bigstring_equal(rp.read(), expected_latex_report)
+        with open(reportpath, 'r') as rp:
+            helpers.assert_bigstring_equal(rp.read(), expected_latex_report)
 
 
 @pytest.fixture
