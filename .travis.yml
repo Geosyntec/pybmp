@@ -17,11 +17,8 @@ before_install:
   - conda update --yes conda
 
 install:
-  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
+  - conda create --yes --channel=conda-forge -n test python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib statsmodels seaborn mpl-probscale requests pyyaml coverage docopt pytest pytest-pep8
   - source activate test
-  - conda install --yes requests pyyaml mpl-probscale --channel=conda-forge
-  - conda install --yes --channel=conda-forge numpy scipy matplotlib statsmodels seaborn mpl-probscale
-  - conda install --yes coverage docopt pytest pytest-pep8 --channel=conda-forge
   - pip install git+https://github.com/Geosyntec/wqio.git
   - pip install codecov
   - pip install . --no-deps
@@ -31,7 +28,6 @@ script:
 
 after_success:
   - if [ ${COVERAGE} = true ]; then
-      
       coverage report -m;
       codecov;
     fi
