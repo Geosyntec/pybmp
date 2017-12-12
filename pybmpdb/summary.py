@@ -35,7 +35,7 @@ def filterlocation(location, count=5, column='bmp'):
 
 def _pick_non_null(dataframe, maincol, preferred, secondary):
     return numpy.where(
-        ~dataframe[(maincol, preferred)].isnull(),
+        dataframe[(maincol, preferred)].notnull(),
         dataframe[(maincol, preferred)],
         dataframe[(maincol, secondary)],
     )
@@ -82,10 +82,7 @@ def _pick_best_station(dataframe):
 
 def _pick_best_sampletype(dataframe):
     orig_cols = dataframe.columns
-    xtab = (
-        dataframe.pipe(utils.refresh_index)
-            .unstack(level='sampletype')
-    )
+    xtab = dataframe.pipe(utils.refresh_index).unstack(level='sampletype')
     for col in orig_cols:
         grabvalues = numpy.where(
             xtab[(col, 'composite')].isnull(),
@@ -161,7 +158,8 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
             'Nitrogen, Nitrate (NO3) as N'
         ]
 
-        picker = partial(_pick_non_null, preferred=nitro_components[0], secondary=nitro_components[1])
+        picker = partial(_pick_non_null, preferred=nitro_components[0],
+                         secondary=nitro_components[1])
         nitro_combined = 'Nitrogen, NOx as N'
         df = dataAccess.transform_parameters(
             df, nitro_components, nitro_combined, 'mg/L',
