@@ -33,56 +33,46 @@ def filterlocation(location, count=5, column='bmp'):
     ) >= count
 
 
-def _pick_non_null(dataframe, maincol, preferred, secondary):
-    return numpy.where(
-        dataframe[(maincol, preferred)].notnull(),
-        dataframe[(maincol, preferred)],
-        dataframe[(maincol, secondary)],
-    )
+def _pick_non_null(df, maincol, preferred, secondary):
+    return df[(maincol, preferred)].combine_first(df[(maincol, secondary)])
 
 
-def _pick_best_station(dataframe):
+def _pick_best_station(df):
     def best_col(df, mainstation, backupstation, valcol):
         for sta in [mainstation, backupstation]:
             if (sta, valcol) not in df.columns:
                 df = wqio.utils.assign_multilevel_column(df, numpy.nan, sta, valcol)
 
-        values = numpy.where(
-            df[(mainstation, valcol)].isnull(),
-            df[(backupstation, valcol)],
-            df[(mainstation, valcol)]
-        )
-        return values
+        return df[(mainstation, valcol)].combine_first(df[(backupstation, valcol)])
 
-    orig_index = dataframe.index.names
+    orig_index = df.index.names
     data = (
-        dataframe
-            .pipe(utils.refresh_index)
-            .unstack(level='station')
-            .pipe(wqio.utils.swap_column_levels, 0, 1)
-            .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: best_col(df, 'outflow', 'subsurface', 'res'),
-                  'final_outflow', 'res')
-            .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: best_col(df, 'outflow', 'subsurface', 'qual'),
-                  'final_outflow', 'qual')
-            .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: best_col(df, 'inflow', 'reference outflow', 'res'),
-                  'final_inflow', 'res')
-            .pipe(wqio.utils.assign_multilevel_column,
-                  lambda df: best_col(df, 'inflow', 'reference outflow', 'qual'),
-                  'final_inflow', 'qual')
-            .loc[:, lambda df: df.columns.map(lambda c: 'final_' in c[0])]
-            .rename(columns=lambda col: col.replace('final_', ''))
-            .stack(level='station')
+        df.pipe(utils.refresh_index)
+          .unstack(level='station')
+          .pipe(wqio.utils.swap_column_levels, 0, 1)
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'outflow', 'subsurface', 'res'),
+                'final_outflow', 'res')
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'outflow', 'subsurface', 'qual'),
+                'final_outflow', 'qual')
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'inflow', 'reference outflow', 'res'),
+                'final_inflow', 'res')
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'inflow', 'reference outflow', 'qual'),
+                'final_inflow', 'qual')
+          .loc[:, lambda df: df.columns.map(lambda c: 'final_' in c[0])]
+          .rename(columns=lambda col: col.replace('final_', ''))
+          .stack(level='station')
     )
 
     return data
 
 
-def _pick_best_sampletype(dataframe):
-    orig_cols = dataframe.columns
-    xtab = dataframe.pipe(utils.refresh_index).unstack(level='sampletype')
+def _pick_best_sampletype(df):
+    orig_cols = df.columns
+    xtab = df.pipe(utils.refresh_index).unstack(level='sampletype')
     for col in orig_cols:
         grabvalues = numpy.where(
             xtab[(col, 'composite')].isnull(),
@@ -98,37 +88,39 @@ def _pick_best_sampletype(dataframe):
     return data
 
 
-def _filter_onesided_BMPs(dataframe, execute=True):
+def _filter_onesided_BMPs(df, execute=True):
     grouplevels = ['site', 'bmp', 'parameter', 'category']
     pivotlevel = 'station'
 
     if execute:
         data = (
-            dataframe.unstack(level=pivotlevel)
-                     .groupby(level=grouplevels)
-                     .filter(lambda g: numpy.all(g['res'].describe().loc['count'] > 0))
-                     .stack(level=pivotlevel)
+            df.unstack(level=pivotlevel)
+              .groupby(level=grouplevels)
+              .filter(lambda g: numpy.all(g['res'].describe().loc['count'] > 0))
+              .stack(level=pivotlevel)
         )
     else:
-        data = dataframe.copy()
+        data = df.copy()
     return data
 
 
-def _filter_by_storm_count(dataframe, minstorms):
+def _filter_by_storm_count(df, minstorms):
     # filter out all monitoring stations with less than /N/ storms
     grouplevels = ['site', 'bmp', 'parameter', 'station']
 
-    data = dataframe.groupby(level=grouplevels).filter(
-        lambda g: g.count()['res'] >= minstorms
+    data = (
+        df.groupby(level=grouplevels)
+          .filter(lambda g: g.count()['res'] >= minstorms)
     )
     return data
 
 
-def _filter_by_BMP_count(dataframe, minbmps):
+def _filter_by_BMP_count(df, minbmps):
     grouplevels = ['category', 'parameter', 'station']
 
-    data = dataframe.groupby(level=grouplevels).filter(
-        lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps
+    data = (
+        df.groupby(level=grouplevels)
+          .filter(lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps)
     )
     return data
 
