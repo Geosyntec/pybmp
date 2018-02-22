@@ -1,10 +1,10 @@
 package:
   name: pybmpdb
-  version: "0.1.2"
+  version: "0.2.0"
 
 source:
   git_url: https://github.com/Geosyntec/pybmpdb.git
-  git_tag: v0.1.2
+  git_tag: v0.2.0
 #  patches:
    # List any patch files here
    # - fix.patch
@@ -39,13 +39,6 @@ requirements:
 test:
   imports:
     - pybmpdb
-
-  requires:
-    - pytest
-    - wqio
-
-  commands:
-    - python -c "import sys, pybmpdb; sys.exit(pybmpdb.test())"
 
 about:
   home: https://github.com/Geosyntec/pybmpdb.git

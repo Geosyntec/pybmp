@@ -10,7 +10,7 @@ source:
    # - fix.patch
 
 build:
-  number: 3
+  number: 4
   script: python setup.py install
 
 requirements:
@@ -39,13 +39,6 @@ requirements:
 test:
   imports:
     - pybmpdb
-
-  requires:
-    - pytest
-    - wqio
-
-  commands:
-    - python -c "import sys, pybmpdb; sys.exit(pybmpdb.test())"
 
 about:
   home: https://github.com/Geosyntec/pybmpdb.git
