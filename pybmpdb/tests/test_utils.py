@@ -33,6 +33,9 @@ def test_refresh_index():
     )
     pdtest.assert_frame_equal(df, utils.refresh_index(df))
 
+    dfr = df.reset_index()
+    assert dfr is utils.refresh_index(dfr)
+
 
 def test_get_level_position():
     idx = pandas.MultiIndex.from_product([

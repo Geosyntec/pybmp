@@ -17,7 +17,7 @@ before_install:
   - conda update --yes conda
 
 install:
-  - conda create --yes --channel=conda-forge -n test python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib statsmodels seaborn mpl-probscale requests pyyaml coverage docopt pytest pytest-pep8
+  - conda create --yes --channel=conda-forge -n test python=$TRAVIS_PYTHON_VERSION numpy=1.15 scipy matplotlib statsmodels seaborn mpl-probscale requests pyyaml coverage docopt pytest=3.5 pytest-pep8
   - source activate test
   - pip install git+https://github.com/Geosyntec/wqio.git
   - pip install codecov

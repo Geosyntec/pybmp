@@ -22,8 +22,10 @@ def refresh_index(df):
     """ gets around weird pandas block manager bugs that rise with
     deeply nested indexes
     """
-    index_names = df.index.names
-    return df.reset_index().set_index(index_names)
+    if isinstance(df.index, pandas.MultiIndex):
+        return df.reset_index().set_index(df.index.names)
+    else:
+        return df
 
 
 def get_level_position(df, levelname):
