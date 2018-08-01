@@ -14,25 +14,23 @@ def getDataFiles(folder):
     return files
 
 
-
 DESCRIPTION = "pybmpdb: Analyze data from the International Stormwater BMP Database"
 LONG_DESCRIPTION = DESCRIPTION
 NAME = "pybmpdb"
-VERSION = "0.2.x"
+VERSION = "0.2.0"
 AUTHOR = "Paul Hobson (Geosyntec Consultants)"
 AUTHOR_EMAIL = "phobson@geosyntec.com"
 URL = "https://github.com/Geosyntec/pybmpdb"
 DOWNLOAD_URL = "https://github.com/Geosyntec/pybmpdb/archive/master.zip"
 LICENSE = "BSD 3-clause"
 PACKAGES = find_packages(exclude=[])
-PLATFORMS = "Python 3.4 and later."
+PLATFORMS = "Python 3.5 and later."
 CLASSIFIERS = [
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Intended Audience :: Science/Research",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
 ]
