@@ -235,7 +235,7 @@ def prepare_data(raw_df):
         'station', 'storm', 'sampletype', 'watertype',
         'paramgroup', 'units', 'parameter', 'fraction',
         'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-        'bmptype', 'pdf_id', 'site_id', 'bmp_id',
+        'bmptype', 'pdf_id', 'ws_id', 'site_id', 'bmp_id',
     ]
 
     units_norm = {
@@ -355,7 +355,11 @@ def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn
                                                       criteria=None, dropold=True)
 
     # return the *full* dataset (preserving original params)
-    return pandas.concat([df.reset_index(), transformed.reset_index()]).set_index(index_name_cache)
+    result = pandas.concat([
+        df.reset_index(),
+        transformed.reset_index()
+    ], sort=False).set_index(index_name_cache)
+    return result
 
 
 def to_DataCollection(df, **kwargs):  # pragma: no cover
