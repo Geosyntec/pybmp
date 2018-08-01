@@ -71,6 +71,7 @@ pybmpdb/*/tests/*.xlsx
 .coverage
 pybmpdb.egg-info/*
 result_images/*
+.pytest_cache
 
 # scratch files #
 #################
