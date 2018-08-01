@@ -19,8 +19,12 @@ requirements:
     - setuptools
     - pandas
     - numexpr
-    - seaborn
     - pyodbc
+    - seaborn
+    - statsmodels
+    - openpyxl
+    - xlrd
+    - six
     - wqio
 
   run:
