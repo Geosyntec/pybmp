@@ -323,15 +323,6 @@ def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn
     -------
     transformed : pandas.DataFrame
 
-    Example
-    -------
-    >>> csvpath = 'bmp/data/data_pybmpdb.csv'
-    >>> db = bmp.dataAccess.Database(file=csvpath)
-    >>> db.transformParameters(['pH'], 'protons',
-    ...     lambda x, junk: wqio.utils.pH2concentration(x[('res', 'pH')]),
-    ...     lambda x, junk: x[('qual', 'pH')], 'mg/L'
-    ... )
-
     """
 
     index_name_cache = df.index.names

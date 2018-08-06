@@ -19,7 +19,7 @@ try:
 except ImportError:
     pyodbc = None
 
-from pybmpdb import dataAccess
+from pybmpdb import bmpdb
 import wqio
 
 
@@ -50,12 +50,12 @@ def df_for_quals():
 
 def test__handle_ND_factors(df_for_quals):
     expected = numpy.array([2, 2, 2, 2, 2, 3, 2, 1, 1, 1])
-    result = dataAccess._handle_ND_factors(df_for_quals)
+    result = bmpdb._handle_ND_factors(df_for_quals)
     nptest.assert_array_equal(result, expected)
 
 
 def test__handle_ND_qualifiers(df_for_quals):
-    result = dataAccess._handle_ND_qualifiers(df_for_quals)
+    result = bmpdb._handle_ND_qualifiers(df_for_quals)
     expected = numpy.array(['ND', 'ND', 'ND', 'ND', 'ND', 'ND', 'ND', '=', 'ND', '='])
     nptest.assert_array_equal(result, expected)
 
@@ -65,7 +65,7 @@ def test__process_screening():
         'screen': ['Yes', 'INC', 'No', 'eXC', 'junk']
     })
     expected = numpy.array(['yes', 'yes', 'no', 'no', 'invalid'])
-    result = dataAccess._process_screening(df, 'screen')
+    result = bmpdb._process_screening(df, 'screen')
     nptest.assert_array_equal(result, expected)
 
 
@@ -74,37 +74,37 @@ def test__process_sampletype():
         'sampletype': ['SRL GraB asdf', 'SeL cOMPositE df', 'jeL LSDR as']
     })
     expected = numpy.array(['grab', 'composite', 'unknown'])
-    result = dataAccess._process_sampletype(df, 'sampletype')
+    result = bmpdb._process_sampletype(df, 'sampletype')
     nptest.assert_array_equal(result, expected)
 
 
 def test__check_levelnames():
-    dataAccess._check_levelnames(['epazone', 'category'])
+    bmpdb._check_levelnames(['epazone', 'category'])
 
     with pytest.raises(ValueError):
-        dataAccess._check_levelnames(['site', 'junk'])
+        bmpdb._check_levelnames(['site', 'junk'])
 
 
 @pytest.mark.skipif('NO_ACCESS')
 def test_db_connection():
     dbfile = get_data_file('bmpdata.accdb')
     try:
-        cnn = dataAccess.db_connection(dbfile)
+        cnn = bmpdb.db_connection(dbfile)
         assert isinstance(cnn, pyodbc.Connection)
         cnn.close()
     except:
         raise
 
 
-@patch.object(dataAccess, 'db_connection')
+@patch.object(bmpdb, 'db_connection')
 @patch.object(pandas, 'read_sql', return_value=1)
 def test_get_data(mock_sql, mock_cnn):
-    dataAccess.get_data('select * from table', 'test.mdb')
+    bmpdb.get_data('select * from table', 'test.mdb')
     mock_sql.assert_called_once_with('select * from table', mock_cnn().__enter__())
 
 
-@patch.object(dataAccess, 'get_default_query', return_value='select * from [{}]')
-@patch.object(dataAccess, 'get_data')
+@patch.object(bmpdb, 'get_default_query', return_value='select * from [{}]')
+@patch.object(bmpdb, 'get_data')
 @pytest.mark.parametrize(('sql', 'table', 'expected_sql'), [
     (None, None, 'select * from [bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014]'),
     ('select * from bmp_data', None, 'select * from bmp_data'),
@@ -113,7 +113,7 @@ def test_get_data(mock_sql, mock_cnn):
 ])
 def test_load_from_access(get_data, get_dq, sql, table, expected_sql):
     dbfile = 'test.mdb'
-    _ = dataAccess.load_from_access(dbfile, sqlquery=sql, dbtable=table)
+    _ = bmpdb.load_from_access(dbfile, sqlquery=sql, dbtable=table)
     get_data.assert_called_once_with(
         expected_sql,
         dbfile,
@@ -123,7 +123,7 @@ def test_load_from_access(get_data, get_dq, sql, table, expected_sql):
 
 @patch.object(pandas, 'read_csv')
 def test_load_from_csv(read_csv):
-    dataAccess.load_from_csv('bmp.csv')
+    bmpdb.load_from_csv('bmp.csv')
     read_csv.assert_called_once_with('bmp.csv', parse_dates=['sampledate'], encoding='utf-8')
 
 
@@ -152,7 +152,7 @@ def test_transform_parameters():
 
     old_params = ['A', 'B']
     new_param = 'C'
-    result = dataAccess.transform_parameters(
+    result = bmpdb.transform_parameters(
         df, old_params, new_param, 'ug/L',
         lambda x: 1000 * x['res'].sum(axis=1),
         lambda x: x[('qual', 'B')],

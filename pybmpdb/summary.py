@@ -14,7 +14,7 @@ from statsmodels.tools.decorators import (
 
 import wqio
 
-from . import dataAccess, info, utils
+from . import bmpdb, info, utils
 
 
 def filterlocation(location, count=5, column='bmp'):
@@ -153,7 +153,7 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
         picker = partial(_pick_non_null, preferred=nitro_components[0],
                          secondary=nitro_components[1])
         nitro_combined = 'Nitrogen, NOx as N'
-        df = dataAccess.transform_parameters(
+        df = bmpdb.transform_parameters(
             df, nitro_components, nitro_combined, 'mg/L',
             partial(picker, maincol='res'),
             partial(picker, maincol='qual')
