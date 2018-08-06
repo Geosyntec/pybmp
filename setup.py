@@ -34,7 +34,7 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
 ]
-INSTALL_REQUIRES = ['wqio', 'numpy', 'matplotlib', 'pandas', 'statsmodels', 'openpyxl', 'seaborn']
+INSTALL_REQUIRES = ['wqio', 'numpy', 'matplotlib', 'pandas', 'statsmodels', 'openpyxl', 'seaborn', 'engarde']
 PACKAGE_DATA = {
     'pybmpdb.data': ['*.csv', '*.sql'],
     'pybmpdb.tests._data': ['bmpdata*'],
