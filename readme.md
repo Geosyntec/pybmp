@@ -21,7 +21,7 @@ In short, `pybmp.prepare_data` does the following:
   1. Remove "Biofilter - " from "Biofileter - Grass Strip" and "Biofilter - Grass Swale"
   1. Assign the final `units` column as the preferred unit for each analyter per [the parameters dictionary](https://github.com/Geosyntec/pybmpdb/blob/master/pybmpdb/_parameters.py)
   1. Normalize the results based on their original units and final units per the [the units dictionary](https://github.com/Geosyntec/pybmpdb/blob/master/pybmpdb/_units.py)
-  1. Remove duplicate values by selecting the maximum result, most restrictive qualifier, and first sample date based the following index columns:
+  1. Remove duplicate values by selecting the mean result, most restrictive qualifier, and first sample date based the following index columns:
       1. 'category'
       1. 'epazone'
       1. 'state'
