@@ -686,6 +686,13 @@ parameters = [
         "fraction": "total"
     },
     {
+        "name": "benzofluoranthene",
+        "tex": "Benzofluoranthene",
+        "units": "ug/L",
+        "unicode": "Benzofluoranthene",
+        "fraction": "total"
+    },
+    {
         "name": "benzo(b)fluoranthene",
         "tex": "Benzo(b)fluoranthene",
         "units": "ug/L",
@@ -1442,6 +1449,20 @@ parameters = [
         "fraction": "total"
     },
     {
+        "name": "male specific coliphage",
+        "tex": "Male Specific Coliphage",
+        "units": "PFU/100 mL",
+        "unicode": "Male Specific Coliphage",
+        "fraction": "total"
+    },
+    {
+        "name": "somatic coliphage",
+        "tex": "Somatic Coliphage",
+        "units": "PFU/100 mL",
+        "unicode": "Somatic Coliphage",
+        "fraction": "total"
+    },
+    {
         "name": "ethyl methacrylate",
         "tex": "Ethyl Methacrylate",
         "units": "ug/L",
@@ -1720,6 +1741,13 @@ parameters = [
         "units": "mg/L",
         "unicode": "Kjeldahl Nitrogen",
         "fraction": "suspended"
+    },
+    {
+        "name": "Kjeldahl Phosphate (TKP)",
+        "tex": "Total Kjeldahl Phosphate",
+        "units":"mg/L",
+        "unicode": "Kjeldahl Phosphate",
+        "fraction": "total"
     },
     {
         "name": "lead, dissolved",
@@ -2702,6 +2730,20 @@ parameters = [
         "fraction": "total"
     },
     {
+        "name": "salmonella",
+        "tex": "Salmonella",
+        "units": "MPN/100 mL",
+        "unicode": "Salmonella",
+        "fraction": "total"
+    },
+    {
+        "name": "C. perfringens spores",
+        "tex": "C. perfringens Spores",
+        "units": "MPN/100 mL",
+        "unicode": "C. perfringens Spores",
+        "fraction": "total"
+    },
+    {
         "name": "total dissolved solids",
         "tex": "Total Dissolved Solids",
         "units": "mg/L",
@@ -3329,6 +3371,205 @@ parameters = [
         "tex": "Particle Size, Percent > 50 microns",
         "units": "ug/L",
         "unicode": "Particle Size, Percent >50 µm",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <0.34 um, >0.21 um",
+        "tex": "Particle Size, % between 0.34 and 0.21 micros",
+        "units": "%",
+        "unicode": "Particle Size, % between 0.34 and 0.21 micros",
+        "fraction": "total"
+    },
+# 'Particle Concentration ',
+# 'C. perfringens spores ',
+# 'Salmonella ',
+    {
+        "name": "Particle Size,  % <0.43 um, >0.34 um",
+        "tex": "Particle Size, % between 0.43 and 0.34 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 0.43 and 0.34 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <0.66 um, >0.43 um",
+        "tex": "Particle Size, % between 0.66 and 0.43 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 0.66 and 0.43 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <1.01 um, >0.66 um",
+        "tex": "Particle Size, % between 1.01 and 0.66 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 1.01 and 0.66 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <1.69 um, >1.01 um",
+        "tex": "Particle Size, % between 1.69 and 1.01 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 1.69 and 1.01 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <10.5 um, >7.46 um",
+        "tex": "Particle Size, % between 10.5 and 7.46 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 10.5 and 7.46 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <1000 um, >42.2 um",
+        "tex": "Particle Size, % between 1000 and 42.2 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 1000 and 42.2 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <1000 um, >62 um, sum",
+        "tex": "Particle Size, % between 1000 and 62 um, smicrons",
+        "units": "%",
+        "unicode": "Particle Size, % between 1000 and 62 um, smicrons",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <1000 um, >704 um",
+        "tex": "Particle Size, % between 1000 and 704 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 1000 and 704 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <125 um, >88 um",
+        "tex": "Particle Size, % between 125 and 88 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 125 and 88 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <14.9 um, >10.5 um",
+        "tex": "Particle Size, % between 14.9 and 10.5 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 14.9 and 10.5 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <176 um, >125 um",
+        "tex": "Particle Size, % between 176 and 125 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 176 and 125 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <2.63 um, >0.10 um, sum",
+        "tex": "Particle Size, % between 2.63 and 0.10 um, smicrons",
+        "units": "%",
+        "unicode": "Particle Size, % between 2.63 and 0.10 um, smicrons",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <2.63 um, >1.69 um",
+        "tex": "Particle Size, % between 2.63 and 1.69 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 2.63 and 1.69 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <21.1 um, >14.9 um",
+        "tex": "Particle Size, % between 21.1 and 14.9 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 21.1 and 14.9 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <250 um, >176 um",
+        "tex": "Particle Size, % between 250 and 176 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 250 and 176 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <29.8 um, >21.1 um",
+        "tex": "Particle Size, % between 29.8 and 21.1 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 29.8 and 21.1 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <3.73 um, >2.63 um",
+        "tex": "Particle Size, % between 3.73 and 2.63 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 3.73 and 2.63 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <352 um, >250 um",
+        "tex": "Particle Size, % between 352 and 250 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 352 and 250 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <42.2 um",
+        "tex": "Particle Size, % <42.2 micros",
+        "units": "%",
+        "unicode": "Particle Size, % <42.2 micros",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <42.2 um, >29.8 um",
+        "tex": "Particle Size, % between 42.2 and 29.8 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 42.2 and 29.8 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <5.27 um, >3.73 um",
+        "tex": "Particle Size, % between 5.27 and 3.73 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 5.27 and 3.73 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <500 um, >352 um",
+        "tex": "Particle Size, % between 500 and 352 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 500 and 352 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <62 um, >2.63 um, sum",
+        "tex": "Particle Size, % between 62 and 2.63 um, smicrons",
+        "units": "%",
+        "unicode": "Particle Size, % between 62 and 2.63 um, smicrons",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <62 um, >42.2 um",
+        "tex": "Particle Size, % between 62 and 42.2 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 62 and 42.2 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <7.46 um, >5.27 um",
+        "tex": "Particle Size, % between 7.46 and 5.27 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 7.46 and 5.27 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <704 um, >500 um",
+        "tex": "Particle Size, % between 704 and 500 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 704 and 500 microns",
+        "fraction": "total"
+    },
+    {
+        "name": "Particle Size,  % <88 um, >62 um",
+        "tex": "Particle Size, % between 88 and 62 microns",
+        "units": "%",
+        "unicode": "Particle Size, % between 88 and 62 microns",
         "fraction": "total"
     },
     {
