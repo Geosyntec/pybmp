@@ -11,10 +11,15 @@ import pandas
 from statsmodels.tools.decorators import (
     resettable_cache, cache_readonly
 )
+from engarde import checks
 
 import wqio
 
 from . import bmpdb, info, utils
+try:
+    from tqdm import tqdm
+except ImportError:
+    tdqm = wqio.utils.misc.no_op
 
 
 def filterlocation(location, count=5, column='bmp'):
@@ -127,10 +132,12 @@ def _filter_by_BMP_count(df, minbmps):
 
 def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
                      removegrabs=True, grab_categories=None, combine_WB_RP=True,
-                     excludedbmps=None, excludedparams=None, balancedonly=True):
+                     excludedbmps=None, excludedparams=None, balancedonly=True,
+                     fixPFCs=True):
 
     _cats = utils.get_level_position(df, 'category')
     grab_categories = wqio.validate.at_least_empty_list(grab_categories)
+    summarizable = df.copy()
     if not grab_categories:
         grab_categories = ['Retention Pond', 'Wetland Basin']
 
@@ -139,8 +146,15 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
         # the original records
         WBRP_combo = 'Wetland Basin/Retention Pond'
 
-        df = wqio.utils.redefine_index_level(df, 'category', WBRP_combo, dropold=False,
-                                             criteria=lambda row: row[_cats] in grab_categories)
+        summarizable = (
+            summarizable.pipe(
+                wqio.utils.redefine_index_level,
+                'category',
+                WBRP_combo,
+                dropold=False,
+                criteria=lambda row: row[_cats] in ['Retention Pond', 'Wetland Basin']
+            ).pipe(checks.verify_any, lambda df: df.index.get_level_values('category') == WBRP_combo)
+        )
         grab_categories.append(WBRP_combo)
 
     if combine_nox:
@@ -149,19 +163,32 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
             'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
             'Nitrogen, Nitrate (NO3) as N'
         ]
+        nitro_combined = 'Nitrogen, NOx as N'
 
         picker = partial(_pick_non_null, preferred=nitro_components[0],
                          secondary=nitro_components[1])
-        nitro_combined = 'Nitrogen, NOx as N'
-        df = bmpdb.transform_parameters(
-            df, nitro_components, nitro_combined, 'mg/L',
-            partial(picker, maincol='res'),
-            partial(picker, maincol='qual')
+
+        summarizable = (
+            summarizable.pipe(
+                bmpdb.transform_parameters,
+                nitro_components,
+                nitro_combined,
+                'mg/L',
+                partial(picker, maincol='res'),
+                partial(picker, maincol='qual')
+            ).pipe(checks.verify_any, lambda df: df.index.get_level_values('parameter') == nitro_combined)
         )
 
-    PFC = 'Permeable Friction Course'
-    df = wqio.utils.redefine_index_level(df, 'category', PFC, dropold=True,
-                                         criteria=lambda row: row[_cats] == 'PF')
+    if fixPFCs:
+        summarizable = (
+            summarizable.pipe(
+                wqio.utils.redefine_index_level,
+                'category',
+                'Permeable Friction Course',
+                dropold=True,
+                criteria=lambda row: row[_cats] == 'PF'
+            ).pipe(checks.verify_any, lambda df: df.index.get_level_values('category') == PFC)
+        )
 
     # all data should be compisite data, but grabs are allowed
     # for bacteria at all BMPs, and all parameter groups at
@@ -173,22 +200,23 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
             "(((category in @grab_categories) | (paramgroup == 'Biological')) & "
             "  (sampletype != 'unknown'))"
         )
-        df = df.query(querytxt)
+        summarizable = summarizable.query(querytxt)
 
     excludedbmps = wqio.validate.at_least_empty_list(excludedbmps)
     excludedparams = wqio.validate.at_least_empty_list(excludedparams)
 
-    df = (
-        df.query("bmp not in @excludedbmps")
-          .query("parameter not in @excludedparams")
-          .pipe(_pick_best_sampletype)
-          .pipe(_pick_best_station)
-          .pipe(_filter_onesided_BMPs, execute=balancedonly)
-          .pipe(_filter_by_storm_count, minstorms)
-          .pipe(_filter_by_BMP_count, minbmps)
+    summarizable = (
+        summarizable
+            .query("bmp not in @excludedbmps")
+            .query("parameter not in @excludedparams")
+            .pipe(_pick_best_sampletype)
+            .pipe(_pick_best_station)
+            .pipe(_filter_onesided_BMPs, execute=balancedonly)
+            .pipe(_filter_by_storm_count, minstorms)
+            .pipe(_filter_by_BMP_count, minbmps)
     )
 
-    return df
+    return summarizable
 
 
 def paired_qual(df, qualin='qual_inflow', qualout='qual_outflow'):
@@ -197,64 +225,6 @@ def paired_qual(df, qualin='qual_inflow', qualout='qual_outflow'):
     ND_out = [(df[qualin] == '=') & (df[qualout] == 'ND'), 'Effluent ND']
     ND_both = [(df[qualin] == 'ND') & (df[qualout] == 'ND'), 'Both ND']
     return wqio.utils.selector('=', ND_neither, ND_in, ND_out, ND_both)
-
-
-def website_data(df):
-    # Capitalize some words/phrases
-    cap_old = ['composite', 'grab', 'unknown', 'ZZ']
-    cap_new = ['Composite', 'Grab', 'Unknown', 'ZZ - Unknown']
-
-    # flag the manufactured devices to be excluded from the
-    # category-level analysis
-    _cache_of_index_names = df.index.names
-    dont_use = ['Manufactured Device']
-    df = (
-        df.reset_index()
-          .assign(use=lambda df: numpy.where(df['category'].isin(dont_use), 'no', 'yes'))
-          .replace(cap_old, cap_new)
-          .set_index(_cache_of_index_names)
-    )
-
-    # To rename columns
-    bmp_dict = {
-        'sampledatetime': 'date',
-        'res': 'value'
-    }
-
-    # Extra columns for flat data
-    columns_to_drop = [
-        'epazone',
-        'storm',
-        'watertype',
-        'paramgroup',
-        'wqscreen',
-        'catscreen',
-        'balanced',
-        'WQID'
-    ]
-
-    flat = (
-        df.reset_index()
-          .drop(columns_to_drop, axis=1)
-          .rename(columns=bmp_dict)
-          .assign(date=lambda df: pandas.to_datetime(df['date']).dt.strftime('%Y-%m-%d'))
-    )
-
-    xtab = (
-        df.set_index('use', append=True)
-          .reset_index(level='sampledatetime')
-          .assign(sampledatetime=lambda df: pandas.to_datetime(df['sampledatetime']))
-          .unstack(level='station')
-          .assign(date=lambda df: df['sampledatetime'].min(axis=1))
-          .drop('sampledatetime', axis=1)
-          .pipe(wqio.utils.flatten_columns)
-          .dropna(subset=['res_inflow', 'res_outflow'])
-          .rename(columns={'date_': 'sampledatetime'})
-          .assign(pair=lambda df: paired_qual(df))
-          .reset_index()
-    )
-
-    return flat, xtab
 
 
 def setMPLStyle(serif=False):
@@ -834,57 +804,33 @@ def _get_fmt(paramgroup):
         return lambda x: '{:.2f}'.format(x)
 
 
-def categorical_stats(datacollection):
-    diff_marks = {
-        True: '◆',
-        False: '◇',
-        None: '◇',
-    }
-    stat_dict = {}
-    for ds in datacollection.datasets('inflow', 'outflow'):
-        pgroup = ds.definition['paramgroup']
-        paramunit = '{} ({})'.format(ds.definition['parameter'], ds.definition['units'])
-        key = (paramunit, pgroup, ds.definition['category'])
-        fmt = _get_fmt(pgroup)
-
-        stat_dict[key] = {}
-        for n, loc in zip(['In', 'Out'], [ds.influent, ds.effluent]):
-            if loc is not None:
-                medians = [loc.median] + loc.median_conf_interval.tolist()
-                stat_dict[key][('EMCs', n)] = loc.N
-                stat_dict[key][('BMPs', n)] = loc.raw_data.reset_index()['bmp'].unique().shape[0]
-                stat_dict[key][('25th', n)] = fmt(loc.pctl25)
-                stat_dict[key][('Median', n)] = '{} ({}, {})'.format(*map(fmt, medians))
-                stat_dict[key][('75th', n)] = fmt(loc.pctl75)
-            else:
-                stat_dict[key][('EMCs', n)] = 0
-                stat_dict[key][('BMPs', n)] = 0
-                stat_dict[key][('25th', n)] = None
-                stat_dict[key][('Median', n)] = None
-                stat_dict[key][('75th', n)] = None
-
-        if ds.influent is not None and ds.effluent is not None:
-            truth_array = [
-                not ds.medianCIsOverlap if ds.medianCIsOverlap is not None else False,
-                ds.mannwhitney_p <= 0.05 if ds.mannwhitney_p is not None else False,
-                ds.wilcoxon_p <= 0.05 if ds.wilcoxon_p is not None else False,
-            ]
-            stat_dict[key][('Median', 'Difference')] = ''.join(map(diff_marks.get, truth_array))
-        else:
-            stat_dict[key][('Median', 'Difference')] = None
-
-    final_cols = [
-        ('BMPs', 'In'), ('BMPs', 'Out'),
-        ('EMCs', 'In'), ('EMCs', 'Out'),
-        ('25th', 'In'), ('25th', 'Out'),
-        ('Median', 'In'), ('Median', 'Out'), ('Median', 'Difference'),
-        ('75th', 'In'), ('75th', 'Out'),
-    ]
-    index_names = ['paramunit', 'paramgroup', 'BMP Category']
-    stat_df = (
-        pandas.DataFrame(stat_dict)
-              .transpose()
-              .reindex(columns=final_cols)
-              .rename_axis(index_names, axis='index')
+def categorical_stats(dc, simple=False):
+    return (
+        dc.data
+        .loc[:, dc.groupcols + ['bmp_id']]
+        .drop_duplicates()
+        .groupby(dc.groupcols)
+        .size()
+        .unstack(level='station')
+        .fillna(0).astype(int)
+        .pipe(wqio.utils.add_column_level, 'BMPs', 'result')
+        .swaplevel(axis='columns')
+        .join(dc.count.fillna(0).astype(int))
+        .join(dc.percentile(25).round(2))
+        .join(dc.median.round(2))
+        .join(dc.percentile(75).round(2))
+        .pipe(wqio.utils.flatten_columns)
+        .assign(diff_medianci=~wqio.utils.checkIntervalOverlap(
+            dc.median['inflow'], dc.median['outflow'], axis=1, oneway=False)
+        )
+        .assign(diff_mannwhitney=(dc.mann_whitney['pvalue'] < 0.05).xs(('inflow', 'outflow'), level=['station_1', 'station_2']))
+        .assign(diff_wilcoxon=(dc.wilcoxon['pvalue'] < 0.05).xs(('inflow', 'outflow'), level=['station_1', 'station_2']))
+        .assign(diff_symbol=lambda df:
+            wqio.utils.symbolize_bools(
+                df.loc[:, lambda df: df.columns.map(lambda c: c.startswith('diff'))],
+                true_symbol='◆', false_symbol='◇', other_symbol='✖', join_char=' '
+            )
+        )
+        .pipe(wqio.utils.expand_columns, sep='_', names=['result', 'value'])
+        .swaplevel(axis='columns')
     )
-    return stat_df
