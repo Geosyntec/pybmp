@@ -1,7 +1,16 @@
 import sys
 import matplotlib
+from matplotlib import style
+
 matplotlib.use('agg')
+style.use('classic')
 
 import pybmpdb
-status = pybmpdb.test(*sys.argv[1:])
-sys.exit(status)
+
+if '--strict' in sys.argv:
+    sys.argv.remove('--strict')
+    tester = pybmpdb.teststrict
+else:
+    tester = pybmpdb.test
+
+sys.exit(tester(*sys.argv[1:]))

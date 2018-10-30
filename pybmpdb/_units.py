@@ -36,6 +36,12 @@ units = [
         "unicode": "MPN/100 mL"
     },
     {
+        "name": "MPN/1L",
+        "factor": 0.1,
+        "tex": "MPN\\si[per-mode=symbol]{\\per100\\milli\\liter}",
+        "unicode": "MPN/100 mL"
+    },
+    {
         "name": "MPN/100mL",
         "factor": 1,
         "tex": "MPN\\si[per-mode=symbol]{\\per100\\milli\\liter}",
@@ -52,6 +58,12 @@ units = [
         "factor": 1,
         "tex": "CFU\\si[per-mode=symbol]{\\per100\\milli\\liter}",
         "unicode": "CFU/100 mL"
+    },
+    {
+        "name": "PFU/100 mL",
+        "factor": 1,
+        "tex": "PFU\\si[per-mode=symbol]{\\per100\\milli\\liter}",
+        "unicode": "PFU/100 mL"
     },
     {
         "name": "NT",
@@ -100,6 +112,12 @@ units = [
         "factor": 0.001,
         "tex": "\\si[per-mode=symbol]{\\milli\\gram\\per\\liter}",
         "unicode": "mg/L"
+    },
+    {
+        "name": "mg CaCO3/L",
+        "factor": 0.001,
+        "tex": "\\si[per-mode=symbol]{\\milli\\gram\\per\\liter}",
+        "unicode": "mg CaCO₃/L"
     },
     {
         "name": "ug/L",

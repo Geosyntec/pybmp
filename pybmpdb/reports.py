@@ -1,5 +1,6 @@
-import summary
 import os
+
+from pybmpdb import summary
 
 
 def test_run():
