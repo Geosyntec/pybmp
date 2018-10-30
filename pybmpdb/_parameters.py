@@ -1745,7 +1745,7 @@ parameters = [
     {
         "name": "Kjeldahl Phosphate (TKP)",
         "tex": "Total Kjeldahl Phosphate",
-        "units":"mg/L",
+        "units": "mg/L",
         "unicode": "Kjeldahl Phosphate",
         "fraction": "total"
     },
@@ -3380,9 +3380,6 @@ parameters = [
         "unicode": "Particle Size, % between 0.34 and 0.21 micros",
         "fraction": "total"
     },
-# 'Particle Concentration ',
-# 'C. perfringens spores ',
-# 'Salmonella ',
     {
         "name": "Particle Size,  % <0.43 um, >0.34 um",
         "tex": "Particle Size, % between 0.43 and 0.34 microns",

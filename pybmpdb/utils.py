@@ -384,8 +384,8 @@ def processFilename(filename):
 
     Example
     -------
-    >>> processFilename('FigureBenzon/Inzo_1')
-    FigureBenzonInzo1
+    >>> processFilename('FigureBenzo/Inzo_1')
+    'FigureBenzoInzo1'
 
     """
 

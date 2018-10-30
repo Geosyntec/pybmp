@@ -825,12 +825,10 @@ def categorical_stats(dc, simple=False):
         )
         .assign(diff_mannwhitney=(dc.mann_whitney['pvalue'] < 0.05).xs(('inflow', 'outflow'), level=['station_1', 'station_2']))
         .assign(diff_wilcoxon=(dc.wilcoxon['pvalue'] < 0.05).xs(('inflow', 'outflow'), level=['station_1', 'station_2']))
-        .assign(diff_symbol=lambda df:
-            wqio.utils.symbolize_bools(
-                df.loc[:, lambda df: df.columns.map(lambda c: c.startswith('diff'))],
-                true_symbol='◆', false_symbol='◇', other_symbol='✖', join_char=' '
-            )
-        )
+        .assign(diff_symbol=lambda df: wqio.utils.symbolize_bools(
+            df.loc[:, lambda df: df.columns.map(lambda c: c.startswith('diff'))],
+            true_symbol='◆', false_symbol='◇', other_symbol='✖', join_char=' '
+        ))
         .pipe(wqio.utils.expand_columns, sep='_', names=['result', 'value'])
         .swaplevel(axis='columns')
     )

@@ -2,9 +2,13 @@ language: python
 
 matrix:
   include:
-    - python: 3.5
+    - python: 3.7
+      language: python
+      sudo: required
+      dist: xenial
       env:
         - COVERAGE=false
+        - ARGS=""
     - python: 3.6
       env:
         - COVERAGE=true
@@ -17,14 +21,15 @@ before_install:
   - conda update --yes conda
 
 install:
-  - conda create --yes --channel=conda-forge -n test python=$TRAVIS_PYTHON_VERSION numpy=1.15 scipy matplotlib statsmodels seaborn mpl-probscale requests pyyaml coverage docopt pytest=3.5 pytest-pep8 engarde
+  - conda create --name=test python=$TRAVIS_PYTHON_VERSION nomkl --channel=conda-forge --yes
   - source activate test
+  - conda install numpy scipy pandas matplotlib statsmodels seaborn mpl-probscale engarde pytest pytest-cov pytest-mpl pytest-pep8 coverage docopt requests pyyaml tqdm --channel=conda-forge --yes
   - pip install git+https://github.com/Geosyntec/wqio.git
   - pip install codecov
   - pip install . --no-deps
 
 script:
-  - coverage run --source pybmpdb check_pybmpdb.py --verbose --pep8
+  - coverage run --source pybmpdb check_pybmpdb.py --verbose --strict
 
 after_success:
   - if [ ${COVERAGE} = true ]; then
