@@ -8,6 +8,7 @@ except ImportError:
 
 import numpy
 import pandas
+from engarde import checks
 
 from . import info, utils
 
@@ -117,7 +118,7 @@ def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=No
 def _process_screening(df, screencol):
     yes = df[screencol].str.lower().isin(['inc', 'yes'])
     no = df[screencol].str.lower().isin(['exc', 'no'])
-    return numpy.select([yes, no], ['yes', 'no'], 'invalid')
+    return wqio.utils.selector('invalid', [yes, 'yes'], [no, 'no'])
 
 
 def _process_sampletype(df, sampletype):
@@ -257,13 +258,15 @@ def prepare_data(raw_df):
         'category': 'category'
     }
 
+    expected_rows = raw_df.loc[:, 'wq_value'].groupby(lambda x: x > 0).count().loc[True]
+
     biofilters = {
         'Biofilter - Grass Swale': 'Grass Swale',
         'Biofilter - Grass Strip': 'Grass Strip',
     }
 
     drop_columns = ['ms', '_parameter']
-    data = (
+    prepped = (
         raw_df
             .fillna({'wq_qual': '='})
             .rename(columns=rename_columns)
@@ -279,17 +282,19 @@ def prepare_data(raw_df):
             .assign(sampledatetime=lambda df: df.apply(wqio.utils.makeTimestamp, axis=1))
             .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
             .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
-            .assign(fraction=lambda df: df['fraction'].str.lower().str.strip())
+            .assign(fraction=lambda df: numpy.where(df['_parameter'].str.lower().str.contains('dissolved'), 'dissolved', 'total'))
             .replace({'category': biofilters})
             .pipe(wqio.utils.normalize_units, units_norm, target_units, paramcol='_parameter',
                   rescol='res', unitcol='units', napolicy='raise')
             .drop(drop_columns, axis=1)
             .query("res > 0")
+            .pipe(checks.none_missing, columns=_row_headers)
             .groupby(by=_row_headers)
             .agg({'res': 'mean', 'qual': 'min', 'sampledatetime': 'min'})
             .set_index('sampledatetime', append=True)
+            .pipe(checks.unique_index)
     )
-    return data
+    return prepped
 
 
 def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn,
@@ -354,7 +359,6 @@ def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn
 
 
 def to_DataCollection(df, **kwargs):  # pragma: no cover
-    selection_dict = wqio.validate.at_least_empty_dict(selection_dict)
     othergroups = kwargs.pop('othergroups', ['category', 'units'])
     pairgroups = kwargs.pop('pairgroups', ['category', 'units', 'bmp_id', 'site_id', 'storm'])
     dc = (
