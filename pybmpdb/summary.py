@@ -179,12 +179,13 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
             ).pipe(checks.verify_any, lambda df: df.index.get_level_values('parameter') == nitro_combined)
         )
 
+    PFC = 'Permeable Friction Course'
     if fixPFCs:
         summarizable = (
             summarizable.pipe(
                 wqio.utils.redefine_index_level,
                 'category',
-                'Permeable Friction Course',
+                PFC,
                 dropold=True,
                 criteria=lambda row: row[_cats] == 'PF'
             ).pipe(checks.verify_any, lambda df: df.index.get_level_values('category') == PFC)
