@@ -1,0 +1,25 @@
+bmp,category,storm,units,parameter,res,qual
+A,Wetland Basin,1,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",10.0,=
+A,Wetland Basin,1,mg/L,"Nitrogen, Nitrate (NO3) as N",8.0,<
+A,Wetland Basin,2,mg/L,"Nitrogen, Nitrate (NO3) as N",12.0,=
+A,Wetland Basin,3,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",14.0,=
+B,Wetland Basin,1,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",16.0,<
+B,Wetland Basin,1,mg/L,"Nitrogen, Nitrate (NO3) as N",17.0,<
+B,Wetland Basin,2,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",18.0,=
+B,Wetland Basin,2,mg/L,"Nitrogen, Nitrate (NO3) as N",19.0,=
+C,Retention Pond,1,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",20.0,<
+D,Retention Pond,1,mg/L,"Nitrogen, Nitrate (NO3) as N",22.0,=
+D,Retention Pond,2,mg/L,"Nitrogen, Nitrate (NO3) as N",23.0,=
+D,Retention Pond,2,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",24.0,=
+A,Wetland Basin/Retention Pond,1,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",10.0,=
+A,Wetland Basin/Retention Pond,1,mg/L,"Nitrogen, Nitrate (NO3) as N",8.0,<
+A,Wetland Basin/Retention Pond,2,mg/L,"Nitrogen, Nitrate (NO3) as N",12.0,=
+A,Wetland Basin/Retention Pond,3,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",14.0,=
+B,Wetland Basin/Retention Pond,1,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",16.0,<
+B,Wetland Basin/Retention Pond,1,mg/L,"Nitrogen, Nitrate (NO3) as N",17.0,<
+B,Wetland Basin/Retention Pond,2,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",18.0,=
+B,Wetland Basin/Retention Pond,2,mg/L,"Nitrogen, Nitrate (NO3) as N",19.0,=
+C,Wetland Basin/Retention Pond,1,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",20.0,<
+D,Wetland Basin/Retention Pond,1,mg/L,"Nitrogen, Nitrate (NO3) as N",22.0,=
+D,Wetland Basin/Retention Pond,2,mg/L,"Nitrogen, Nitrate (NO3) as N",23.0,=
+D,Wetland Basin/Retention Pond,2,mg/L,"Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",24.0,=

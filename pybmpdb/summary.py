@@ -167,6 +167,8 @@ def _maybe_combine_nox(df, combine_nox, paramlevel='parameter', rescol='res',
             checks.verify_any,
             lambda df: df.index.get_level_values(paramlevel) == nitro_combined
         )
+    else:
+        return df
 
 
 def _maybe_fix_PFCs(df, fix_PFCs, catlevel='category', typelevel='bmptype'):
@@ -174,7 +176,8 @@ def _maybe_fix_PFCs(df, fix_PFCs, catlevel='category', typelevel='bmptype'):
         PFC = 'Permeable Friction Course'
         type_level_pos = utils.get_level_position(df, typelevel)
         return wqio.utils.redefine_index_level(
-            df, catlevel, PFC, dropold=True, criteria=lambda row: row[type_level_pos] == 'PF'
+            df, catlevel, PFC, dropold=True,
+            criteria=lambda row: row[type_level_pos] == 'PF'
         ).pipe(
             checks.verify_any,
             lambda df: df.index.get_level_values(catlevel) == PFC
@@ -183,7 +186,11 @@ def _maybe_fix_PFCs(df, fix_PFCs, catlevel='category', typelevel='bmptype'):
         return df
 
 
-def _maybe_remove_grabs(df, remove_grabs, grab_ok_bmps):
+def _maybe_remove_grabs(df, remove_grabs, grab_ok_bmps='default'):
+    if grab_ok_bmps == 'default':
+        grab_ok_bmps = ['Retention Pond', 'Wetland Basin', 'Wetland Basin/Retention Pond']
+
+    grab_ok_bmps = wqio.validate.at_least_empty_list(grab_ok_bmps)
     if remove_grabs:
         querytxt = (
             "(sampletype == 'composite') | "
@@ -217,8 +224,8 @@ def prep_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP
         BMP category: Retention Pond/Wetland Basin.
     remove_grabs : bool (default = True)
         Toggles removing grab samples from the dataset except for:
-          * biological parameters
-          * BMPs categories that are whitelisted via *grab_ok_bmps
+          - biological parameters
+          - BMPs categories that are whitelisted via *grab_ok_bmps*
     grab_ok_bmps : sequence of str, optional
         BMP categories for which grab data should be included. By default, this
         inclues Retention Ponds, Wetland Basins, and the combined
@@ -238,10 +245,6 @@ def prep_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP
 
     """
 
-    if grab_ok_bmps == 'default':
-        grab_ok_bmps = ['Retention Pond', 'Wetland Basin', 'Wetland Basin/Retention Pond']
-
-    grab_ok_bmps = wqio.validate.at_least_empty_list(grab_ok_bmps)
     excluded_bmps = wqio.validate.at_least_empty_list(excluded_bmps)
     excluded_params = wqio.validate.at_least_empty_list(excluded_params)
 

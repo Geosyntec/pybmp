@@ -14,8 +14,10 @@ from wqio.tests import helpers
 import numpy
 from matplotlib import pyplot
 import pandas
+from engarde import checks
 
-from pybmpdb import summary
+import wqio
+from pybmpdb import summary, utils, bmpdb
 
 
 mock_figure = mock.Mock(spec=pyplot.Figure)
@@ -672,22 +674,40 @@ def expected_latext_content():
      'test_pick_station_input.csv', 'test_pick_station_output.csv'),
     (summary._pick_best_sampletype, [], ['site', 'bmp', 'storm', 'parameter', 'station', 'sampletype'],
      'test_pick_sampletype_input.csv', 'test_pick_sampletype_output.csv'),
-    (summary._maybe_filter_onesided_BMPs, [True], ['category', 'site', 'bmp', 'storm', 'parameter', 'station'],
-     'test_filter_onesidedbmps_input.csv', 'test_filter_onesidedbmps_output.csv'),
     (summary._filter_by_storm_count, [6], ['category', 'site', 'bmp', 'storm', 'parameter', 'station'],
      'test_filter_bmp-storm_counts_input.csv', 'test_filter_storm_counts_output.csv'),
     (summary._filter_by_BMP_count, [4], ['category', 'site', 'bmp', 'parameter', 'station'],
      'test_filter_bmp-storm_counts_input.csv', 'test_filter_bmp_counts_output.csv',),
 ])
 def test_summary_filter_functions(fxn, args, index_cols, infilename, outfilename):
-    infile = get_data_file(infilename)
-    outfile = get_data_file(outfilename)
-
-    input_df = pandas.read_csv(infile, index_col=index_cols)
-    expected_df = pandas.read_csv(outfile, index_col=index_cols).sort_index()
+    input_df = pandas.read_csv(get_data_file(infilename), index_col=index_cols)
+    expected_df = pandas.read_csv(get_data_file(outfilename), index_col=index_cols).sort_index()
 
     test_df = fxn(input_df, *args).sort_index()
     pdtest.assert_frame_equal(expected_df.reset_index(), test_df.reset_index())
+
+
+@pytest.mark.parametrize('doit', [True, False])
+@pytest.mark.parametrize(('fxn', 'index_cols', 'infilename', 'outfilename'), [
+    (summary._maybe_filter_onesided_BMPs, ['category', 'site', 'bmp', 'storm', 'parameter', 'station'],
+     'test_filter_onesidedbmps_input.csv', 'test_filter_onesidedbmps_output.csv'),
+    (summary._maybe_combine_nox, ['bmp', 'category', 'storm', 'units', 'parameter'],
+     'test_WBRP_NOx_input.csv', 'test_NOx_output.csv'),
+    (summary._maybe_combine_WB_RP, ['bmp', 'category', 'storm', 'units', 'parameter'],
+     'test_WBRP_NOx_input.csv', 'test_WBRP_output.csv'),
+    (summary._maybe_fix_PFCs, ['bmp', 'category', 'bmptype', 'storm', 'parameter'],
+     'test_PFCs_input.csv', 'test_PFCs_output.csv'),
+    (summary._maybe_remove_grabs, ['bmp', 'category', 'sampletype', 'storm'],
+     'test_grabsample_input.csv', 'test_grabsample_output.csv')
+])
+def test__maybe_filter_functions(fxn, doit, index_cols, infilename, outfilename):
+    input_df = pandas.read_csv(get_data_file(infilename), index_col=index_cols)
+    result = fxn(input_df, doit).sort_index()
+    if doit:
+        expected = pandas.read_csv(get_data_file(outfilename), index_col=index_cols).sort_index()
+    else:
+        expected = input_df.copy().sort_index()
+    pdtest.assert_frame_equal(result, expected)
 
 
 def test__pick_non_null():
