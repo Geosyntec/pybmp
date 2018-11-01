@@ -93,20 +93,19 @@ def _pick_best_sampletype(df):
     return data
 
 
-def _filter_onesided_BMPs(df, execute=True):
+def _maybe_filter_onesided_BMPs(df, balanced_only):
     grouplevels = ['site', 'bmp', 'parameter', 'category']
     pivotlevel = 'station'
 
-    if execute:
-        data = (
+    if balanced_only:
+        return (
             df.unstack(level=pivotlevel)
               .groupby(level=grouplevels)
               .filter(lambda g: numpy.all(g['res'].describe().loc['count'] > 0))
               .stack(level=pivotlevel)
         )
     else:
-        data = df.copy()
-    return data
+        return df
 
 
 def _filter_by_storm_count(df, minstorms):
@@ -130,33 +129,26 @@ def _filter_by_BMP_count(df, minbmps):
     return data
 
 
-def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
-                     removegrabs=True, grab_categories=None, combine_WB_RP=True,
-                     excludedbmps=None, excludedparams=None, balancedonly=True,
-                     fixPFCs=True):
-
-    _cats = utils.get_level_position(df, 'category')
-    grab_categories = wqio.validate.at_least_empty_list(grab_categories)
-    summarizable = df.copy()
-    if not grab_categories:
-        grab_categories = ['Retention Pond', 'Wetland Basin']
-
+def _maybe_combine_WB_RP(df, combine_WB_RP, catlevel='category'):
     if combine_WB_RP:
         # merge Wetland Basins and Retention ponds, keeping
         # the original records
-        WBRP_combo = 'Wetland Basin/Retention Pond'
-
-        summarizable = (
-            summarizable.pipe(
-                wqio.utils.redefine_index_level,
-                'category',
-                WBRP_combo,
-                dropold=False,
-                criteria=lambda row: row[_cats] in ['Retention Pond', 'Wetland Basin']
-            ).pipe(checks.verify_any, lambda df: df.index.get_level_values('category') == WBRP_combo)
+        wbrp_indiv = ['Retention Pond', 'Wetland Basin']
+        wbrp_combo = 'Wetland Basin/Retention Pond'
+        level_pos = utils.get_level_position(df, catlevel)
+        return wqio.utils.redefine_index_level(
+            df, catlevel, wbrp_combo, dropold=False,
+            criteria=lambda row: row[level_pos] in wbrp_indiv
+        ).pipe(
+            checks.verify_any,
+            lambda df: df.index.get_level_values(catlevel) == wbrp_combo
         )
-        grab_categories.append(WBRP_combo)
+    else:
+        return df
 
+
+def _maybe_combine_nox(df, combine_nox, paramlevel='parameter', rescol='res',
+                       qualcol='qual', finalunits='mg/L'):
     if combine_nox:
         # combine NO3+NO2 and NO3 into NOx
         nitro_components = [
@@ -168,56 +160,104 @@ def prep_for_summary(df, minstorms=3, minbmps=3, useTex=False, combine_nox=True,
         picker = partial(_pick_non_null, preferred=nitro_components[0],
                          secondary=nitro_components[1])
 
-        summarizable = (
-            summarizable.pipe(
-                bmpdb.transform_parameters,
-                nitro_components,
-                nitro_combined,
-                'mg/L',
-                partial(picker, maincol='res'),
-                partial(picker, maincol='qual')
-            ).pipe(checks.verify_any, lambda df: df.index.get_level_values('parameter') == nitro_combined)
+        return bmpdb.transform_parameters(
+            df, nitro_components, nitro_combined, finalunits,
+            partial(picker, maincol=rescol), partial(picker, maincol=qualcol)
+        ).pipe(
+            checks.verify_any,
+            lambda df: df.index.get_level_values(paramlevel) == nitro_combined
         )
 
-    PFC = 'Permeable Friction Course'
-    if fixPFCs:
-        summarizable = (
-            summarizable.pipe(
-                wqio.utils.redefine_index_level,
-                'category',
-                PFC,
-                dropold=True,
-                criteria=lambda row: row[_cats] == 'PF'
-            ).pipe(checks.verify_any, lambda df: df.index.get_level_values('category') == PFC)
-        )
 
-    # all data should be compisite data, but grabs are allowed
-    # for bacteria at all BMPs, and all parameter groups at
-    # retention ponds and wetland basins. Samples of an unknown
-    # type are excluded
-    if removegrabs:
+def _maybe_fix_PFCs(df, fix_PFCs, catlevel='category', typelevel='bmptype'):
+    if fix_PFCs:
+        PFC = 'Permeable Friction Course'
+        type_level_pos = utils.get_level_position(df, typelevel)
+        return wqio.utils.redefine_index_level(
+            df, catlevel, PFC, dropold=True, criteria=lambda row: row[type_level_pos] == 'PF'
+        ).pipe(
+            checks.verify_any,
+            lambda df: df.index.get_level_values(catlevel) == PFC
+        )
+    else:
+        return df
+
+
+def _maybe_remove_grabs(df, remove_grabs, grab_ok_bmps):
+    if remove_grabs:
         querytxt = (
             "(sampletype == 'composite') | "
-            "(((category in @grab_categories) | (paramgroup == 'Biological')) & "
+            "(((category in @grab_ok_bmps) | (paramgroup == 'Biological')) & "
             "  (sampletype != 'unknown'))"
         )
-        summarizable = summarizable.query(querytxt)
+        return df.query(querytxt)
+    else:
+        return df
 
-    excludedbmps = wqio.validate.at_least_empty_list(excludedbmps)
-    excludedparams = wqio.validate.at_least_empty_list(excludedparams)
 
-    summarizable = (
-        summarizable
-            .query("bmp not in @excludedbmps")
-            .query("parameter not in @excludedparams")
-            .pipe(_pick_best_sampletype)
-            .pipe(_pick_best_station)
-            .pipe(_filter_onesided_BMPs, execute=balancedonly)
-            .pipe(_filter_by_storm_count, minstorms)
-            .pipe(_filter_by_BMP_count, minbmps)
+def prep_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
+                     remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
+                     fix_PFCs=True, excluded_bmps=None, excluded_params=None):
+    """ Prepare data for categorical summaries
+
+    Parameter
+    ---------
+    df : pandas.DataFrame
+    minstorms : int (default = 3)
+        Minimum number of storms (monitoring events) for a BMP study to be included
+    minbmps : int (default = 3)
+        Minimum number of BMP studies for a parameter to be included
+    combine_nox : bool (default = True)
+        Toggles combining NO3 and NO2+NO3 into as new parameter NOx, giving
+        preference to NO2+NO3 when both parameters are observed for an event.
+        The underlying assuption is that NO2 concentrations are typically much
+        smaller than NO3, thus NO2+NO3 ~ NO3.
+    combine_WB_RP : bool (default = True)
+        Toggles combining Retention Pond and Wetland Basin data into a new
+        BMP category: Retention Pond/Wetland Basin.
+    remove_grabs : bool (default = True)
+        Toggles removing grab samples from the dataset except for:
+          * biological parameters
+          * BMPs categories that are whitelisted via *grab_ok_bmps
+    grab_ok_bmps : sequence of str, optional
+        BMP categories for which grab data should be included. By default, this
+        inclues Retention Ponds, Wetland Basins, and the combined
+        Retention Pond/Wetland Basin category created when *combine_WB_RP* is
+        True.
+    balanced_only : bool (default = True)
+        Toggles removing BMP studies which have only influent or effluent data,
+        exclusively.
+    fix_PFCs : bool (default = True)
+        Makes correction to the category of Permeable Friction Course BMPs
+    excluded_bmps, excluded_params : sequence of str, optional
+        List of BMPs studies and parameters to exclude from the data.
+
+    Returns
+    -------
+    summarizable : pandas.DataFrame
+
+    """
+
+    if grab_ok_bmps == 'default':
+        grab_ok_bmps = ['Retention Pond', 'Wetland Basin', 'Wetland Basin/Retention Pond']
+
+    grab_ok_bmps = wqio.validate.at_least_empty_list(grab_ok_bmps)
+    excluded_bmps = wqio.validate.at_least_empty_list(excluded_bmps)
+    excluded_params = wqio.validate.at_least_empty_list(excluded_params)
+
+    return (
+        df.pipe(_maybe_combine_WB_RP, combine_WB_RP)
+          .pipe(_maybe_combine_nox, combine_nox)
+          .pipe(_maybe_fix_PFCs, fix_PFCs)
+          .pipe(_maybe_remove_grabs, remove_grabs, grab_ok_bmps)
+          .query("bmp not in @excluded_bmps")
+          .query("parameter not in @excluded_params")
+          .pipe(_pick_best_sampletype)
+          .pipe(_pick_best_station)
+          .pipe(_maybe_filter_onesided_BMPs, balanced_only)
+          .pipe(_filter_by_storm_count, minstorms)
+          .pipe(_filter_by_BMP_count, minbmps)
     )
-
-    return summarizable
 
 
 def paired_qual(df, qualin='qual_inflow', qualout='qual_outflow'):
