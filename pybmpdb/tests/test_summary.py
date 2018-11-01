@@ -667,7 +667,19 @@ def expected_latext_content():
     return content
 
 
-def _do_filter_test(index_cols, infilename, outfilename, fxn, *args):
+@pytest.mark.parametrize(('fxn', 'args', 'index_cols', 'infilename', 'outfilename'), [
+    (summary._pick_best_station, [], ['site', 'bmp', 'storm', 'parameter', 'station'],
+     'test_pick_station_input.csv', 'test_pick_station_output.csv'),
+    (summary._pick_best_sampletype, [], ['site', 'bmp', 'storm', 'parameter', 'station', 'sampletype'],
+     'test_pick_sampletype_input.csv', 'test_pick_sampletype_output.csv'),
+    (summary._maybe_filter_onesided_BMPs, [True], ['category', 'site', 'bmp', 'storm', 'parameter', 'station'],
+     'test_filter_onesidedbmps_input.csv', 'test_filter_onesidedbmps_output.csv'),
+    (summary._filter_by_storm_count, [6], ['category', 'site', 'bmp', 'storm', 'parameter', 'station'],
+     'test_filter_bmp-storm_counts_input.csv', 'test_filter_storm_counts_output.csv'),
+    (summary._filter_by_BMP_count, [4], ['category', 'site', 'bmp', 'parameter', 'station'],
+     'test_filter_bmp-storm_counts_input.csv', 'test_filter_bmp_counts_output.csv',),
+])
+def test_summary_filter_functions(fxn, args, index_cols, infilename, outfilename):
     infile = get_data_file(infilename)
     outfile = get_data_file(outfilename)
 
@@ -686,62 +698,6 @@ def test__pick_non_null():
     expected = numpy.array([1.0, numpy.nan, 2.0, 3.0])
     result = summary._pick_non_null(df, 'res', 'this', 'that')
     nptest.assert_array_equal(result, expected)
-
-
-def test__pick_best_station():
-    index_cols = ['site', 'bmp', 'storm', 'parameter', 'station']
-    _do_filter_test(
-        index_cols,
-        'test_pick_station_input.csv',
-        'test_pick_station_output.csv',
-        summary._pick_best_station
-    )
-
-
-def test__pick_best_sampletype():
-    index_cols = ['site', 'bmp', 'storm', 'parameter', 'station', 'sampletype']
-
-    _do_filter_test(
-        index_cols,
-        'test_pick_sampletype_input.csv',
-        'test_pick_sampletype_output.csv',
-        summary._pick_best_sampletype
-    )
-
-
-def test__filter_onesided_BMPs():
-    index_cols = ['category', 'site', 'bmp', 'storm', 'parameter', 'station']
-
-    _do_filter_test(
-        index_cols,
-        'test_filter_onesidedbmps_input.csv',
-        'test_filter_onesidedbmps_output.csv',
-        summary._filter_onesided_BMPs
-    )
-
-
-def test__filter_by_storm_count():
-    index_cols = ['category', 'site', 'bmp', 'storm', 'parameter', 'station']
-
-    _do_filter_test(
-        index_cols,
-        'test_filter_bmp-storm_counts_input.csv',
-        'test_filter_storm_counts_output.csv',
-        summary._filter_by_storm_count,
-        6
-    )
-
-
-def test__filter_by_BMP_count():
-    index_cols = ['category', 'site', 'bmp', 'parameter', 'station']
-
-    _do_filter_test(
-        index_cols,
-        'test_filter_bmp-storm_counts_input.csv',
-        'test_filter_bmp_counts_output.csv',
-        summary._filter_by_BMP_count,
-        4
-    )
 
 
 def test_paired_qual():
