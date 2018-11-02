@@ -1,10 +1,11 @@
 import sys
 import os
-from io import StringIO
-from pkg_resources import resource_filename
 import tempfile
 import zipfile
+from io import StringIO
+from pkg_resources import resource_filename
 from urllib import request
+from pathlib import Path
 
 from unittest.mock import patch
 import pytest
@@ -14,21 +15,12 @@ import pandas.util.testing as pdtest
 import numpy
 import pandas
 
-try:
-    import pyodbc
-except ImportError:
-    pyodbc = None
-
 from pybmpdb import bmpdb
 import wqio
 
 
 def get_data_file(filename):
     return resource_filename("pybmpdb.tests._data", filename)
-
-
-_no_access_file = not os.path.exists(get_data_file('bmpdata.accdb'))
-NO_ACCESS = (pyodbc is None) or (os.name == 'posix') or _no_access_file
 
 
 @pytest.fixture
@@ -85,50 +77,14 @@ def test__check_levelnames():
         bmpdb._check_levelnames(['site', 'junk'])
 
 
-@pytest.mark.skipif('NO_ACCESS')
-def test_db_connection():
-    dbfile = get_data_file('bmpdata.accdb')
-    try:
-        cnn = bmpdb.db_connection(dbfile)
-        assert isinstance(cnn, pyodbc.Connection)
-        cnn.close()
-    except:
-        raise
-
-
-@patch.object(bmpdb, 'db_connection')
-@patch.object(pandas, 'read_sql', return_value=1)
-def test_get_data(mock_sql, mock_cnn):
-    bmpdb.get_data('select * from table', 'test.mdb')
-    mock_sql.assert_called_once_with('select * from table', mock_cnn().__enter__())
-
-
-@patch.object(bmpdb, 'get_default_query', return_value='select * from [{}]')
-@patch.object(bmpdb, 'get_data')
-@pytest.mark.parametrize(('sql', 'table', 'expected_sql'), [
-    (None, None, 'select * from [bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014]'),
-    ('select * from bmp_data', None, 'select * from bmp_data'),
-    (None, 'bmp_data', 'select * from bmp_data'),
-    ('select * from bmp_data', 'another_table', 'select * from bmp_data'),
-])
-def test_load_from_access(get_data, get_dq, sql, table, expected_sql):
-    dbfile = 'test.mdb'
-    _ = bmpdb.load_from_access(dbfile, sqlquery=sql, dbtable=table)
-    get_data.assert_called_once_with(
-        expected_sql,
-        dbfile,
-        driver=r'{Microsoft Access Driver (*.mdb, *.accdb)}'
-    )
-
-
 @patch.object(pandas, 'read_csv')
-def test_load_from_csv(read_csv):
-    bmpdb.load_from_csv('bmp.csv')
-    read_csv.assert_called_once_with('bmp.csv', parse_dates=['sampledate'], encoding='utf-8')
+def test_load_data(read_csv):
+    bmpdb.load_data('bmp.csv')
+    read_csv.assert_called_once_with(Path('bmp.csv'), parse_dates=['sampledate'], encoding='utf-8')
 
 
 @pytest.mark.skipif(True, reason='test not ready')
-def test_prepare_data():
+def test_clean_raw_data():
     pass
 
 
@@ -159,3 +115,64 @@ def test_transform_parameters():
         paramlevel='param'
     )
     pdtest.assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize(('fxn', 'args', 'index_cols', 'infilename', 'outfilename'), [
+    (bmpdb._pick_best_station, [], ['site', 'bmp', 'storm', 'parameter', 'station'],
+     'test_pick_station_input.csv', 'test_pick_station_output.csv'),
+    (bmpdb._pick_best_sampletype, [], ['site', 'bmp', 'storm', 'parameter', 'station', 'sampletype'],
+     'test_pick_sampletype_input.csv', 'test_pick_sampletype_output.csv'),
+    (bmpdb._filter_by_storm_count, [6], ['category', 'site', 'bmp', 'storm', 'parameter', 'station'],
+     'test_filter_bmp-storm_counts_input.csv', 'test_filter_storm_counts_output.csv'),
+    (bmpdb._filter_by_BMP_count, [4], ['category', 'site', 'bmp', 'parameter', 'station'],
+     'test_filter_bmp-storm_counts_input.csv', 'test_filter_bmp_counts_output.csv',),
+])
+def test_summary_filter_functions(fxn, args, index_cols, infilename, outfilename):
+    input_df = pandas.read_csv(get_data_file(infilename), index_col=index_cols)
+    expected_df = pandas.read_csv(get_data_file(outfilename), index_col=index_cols).sort_index()
+
+    test_df = fxn(input_df, *args).sort_index()
+    pdtest.assert_frame_equal(expected_df.reset_index(), test_df.reset_index())
+
+
+@pytest.mark.parametrize('doit', [True, False])
+@pytest.mark.parametrize(('fxn', 'index_cols', 'infilename', 'outfilename'), [
+    (bmpdb._maybe_filter_onesided_BMPs, ['category', 'site', 'bmp', 'storm', 'parameter', 'station'],
+     'test_filter_onesidedbmps_input.csv', 'test_filter_onesidedbmps_output.csv'),
+    (bmpdb._maybe_combine_nox, ['bmp', 'category', 'storm', 'units', 'parameter'],
+     'test_WBRP_NOx_input.csv', 'test_NOx_output.csv'),
+    (bmpdb._maybe_combine_WB_RP, ['bmp', 'category', 'storm', 'units', 'parameter'],
+     'test_WBRP_NOx_input.csv', 'test_WBRP_output.csv'),
+    (bmpdb._maybe_fix_PFCs, ['bmp', 'category', 'bmptype', 'storm', 'parameter'],
+     'test_PFCs_input.csv', 'test_PFCs_output.csv'),
+    (bmpdb._maybe_remove_grabs, ['bmp', 'category', 'sampletype', 'storm'],
+     'test_grabsample_input.csv', 'test_grabsample_output.csv')
+])
+def test__maybe_filter_functions(fxn, doit, index_cols, infilename, outfilename):
+    input_df = pandas.read_csv(get_data_file(infilename), index_col=index_cols)
+    result = fxn(input_df, doit).sort_index()
+    if doit:
+        expected = pandas.read_csv(get_data_file(outfilename), index_col=index_cols).sort_index()
+    else:
+        expected = input_df.copy().sort_index()
+    pdtest.assert_frame_equal(result, expected)
+
+
+def test__pick_non_null():
+    df = pandas.DataFrame({
+        ('res', 'this'): [1.0, numpy.nan, 2.0, numpy.nan],
+        ('res', 'that'): [numpy.nan, numpy.nan, 9.0, 3.0]
+    })
+    expected = numpy.array([1.0, numpy.nan, 2.0, 3.0])
+    result = bmpdb._pick_non_null(df, 'res', 'this', 'that')
+    nptest.assert_array_equal(result, expected)
+
+
+def test_paired_qual():
+    df = pandas.DataFrame({
+        'in_qual': ['=', '=', 'ND', 'ND'],
+        'out_qual': ['=', 'ND', '=', 'ND']
+    })
+    expected = ['Pair', 'Effluent ND', 'Influent ND', 'Both ND']
+    result = bmpdb.paired_qual(df, 'in_qual', 'out_qual')
+    nptest.assert_array_equal(result, expected)

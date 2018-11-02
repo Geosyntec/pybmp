@@ -1,42 +1,25 @@
 from pkg_resources import resource_filename
+from pathlib import Path
 
 import numpy as np
 import pandas
 
 import pytest
 import numpy.testing as nptest
+from unittest.mock import patch
 
 import pybmpdb
 from pybmpdb import nsqd
+import wqio
 
 
-class Test_NSQData:
-    def setup(self):
-        self.testfile = resource_filename('pybmpdb.tests._data', 'nsqdata.csv')
-
-        self.data = nsqd.NSQData(datapath=self.testfile)
-        self.known_landuses = np.array([
-            'Commercial', 'Freeway', 'Industrial', 'Institutional',
-            'Open Space', 'Residential', 'Unknown'
-        ])
-
-        self.known_columns = [
-            'epa_rain_zone', 'state', 'location_code', 'station_name',
-            'jurisdiction_county', 'jurisdiction_city', 'primary_landuse',
-            'secondary_landuse', 'percent_impervious', 'start_date',
-            'days since last rain', 'precipitation_depth_(in)', 'season',
-            'parameter', 'fraction', 'units', 'res', 'qual',
-            'drainage_area_acres', 'latitude', 'longitude',
-        ]
-
-        self.known_commerical_copper_shape = (329, 22)
-
-    def test_data(self):
-        assert (hasattr(self.data, 'data'))
-        assert isinstance(self.data.data, pandas.DataFrame)
-        assert (self.data.data.columns.tolist() == self.known_columns)
-
-    def test_data_season(self):
-        known_seasons = ['FA', 'SP', 'SU', 'WI']
-        seasons = sorted(self.data.data['season'].unique().tolist())
-        assert (seasons == known_seasons)
+@pytest.mark.parametrize('as_df', [True, False])
+@patch.object(wqio, 'DataCollection')
+@patch.object(wqio, 'download', return_value=Path('./data/nsqd.csv'))
+@patch.object(pandas, 'read_csv', return_value='NSQD_DataFrame')
+def test_load_data(read_csv, download, dc, as_df):
+    nsqd.load_data()
+    download.assert_called_once_with('nsqd')
+    read_csv.assert_called_once_with(Path('./data/nsqd.csv'), encoding='utf-8')
+    if not as_df:
+        dc.assert_called_once_with('NSQD_DataFrame')

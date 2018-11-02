@@ -6,37 +6,27 @@ from engarde import checks
 import wqio
 
 
-__all__ = ['NSQData', 'load_data']
-
-
-class NSQData(object):
-    """ Class representing the National Stormwater Quality Dataset.
-
+def load_data(datapath=None, as_dataframe=False, **dc_kwargs):
+    """
     Parameters
     ----------
-    datapath : string, optional.
-        Optional path the file to read. If not provided, the bundeled
-        data will be used.
+    datapath : str or pathlib.Path, optional
+        Path to the raw data CSV. If not provided, the latest data will be
+        downloaded.
+    as_dataframe : bool (default = False)
+        When False, a wqio.DataCollection is returned
+
+    Additional Parameters
+    ---------------------
+    Any additional keword arguments will be passed to wqio.DataCollection.
+
+    Returns
+    -------
+    nsqd : pandas.DataFrame or wqio.DataCollection
 
     """
-
-    def __init__(self, datapath=None):
-        # read my heavily modified version of the database
-        self.datapath = Path(datapath or wqio.download('nsqd'))
-        self._data = None
-
-    @property
-    def data(self):
-        if self._data is None:
-            self._data = pandas.read_csv(self.datapath)
-        return self._data
-
-    def to_DataCollection(self, *args, **kwargs):
-        return wqio.DataCollection(self.data, *args, **kwargs)
-
-
-def load_data(datapath=None, as_dataframe=False, **kwargs):
-    nsqd = NSQData(datapath=datapath)
+    datapath = Path(datapath or wqio.download('nsqd'))
+    nsqd = pandas.read_csv(datapath, encoding='utf-8')
     if as_dataframe:
-        return nsqd.data
-    return nsqd.to_DataCollection(**kwargs)
+        return nsqd
+    return wqio.DataCollection(nsqd, **dc_kwargs)
