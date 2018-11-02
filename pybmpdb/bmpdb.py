@@ -21,7 +21,6 @@ __all__ = [
     'load_data',
     'transform_parameters',
     'paired_qual',
-    'to_DataCollection'
 ]
 
 
@@ -443,8 +442,8 @@ def _clean_raw_data(raw_df):
 
 
 def _prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
-                        remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
-                        fix_PFCs=True, excluded_bmps=None, excluded_params=None):
+                         remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
+                         fix_PFCs=True, excluded_bmps=None, excluded_params=None):
     """ Prepare data for categorical summaries
 
     Parameter
@@ -503,14 +502,17 @@ def _prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_W
     )
 
 
-def load_data(csvfile=None, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
+def load_data(datapath=None, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
               remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
-              fix_PFCs=True, excluded_bmps=None, excluded_params=None):
+              fix_PFCs=True, excluded_bmps=None, excluded_params=None,
+              as_dataframe=False, **dc_kwargs):
     """ Prepare data for categorical summaries
 
     Parameter
     ---------
-    df : pandas.DataFrame
+    datapath : Path-like, optional
+        Path to the raw data CSV. If not provided, the latest data will be
+        downloaded.
     minstorms : int (default = 3)
         Minimum number of storms (monitoring events) for a BMP study to be included
     minbmps : int (default = 3)
@@ -539,14 +541,27 @@ def load_data(csvfile=None, minstorms=3, minbmps=3, combine_nox=True, combine_WB
         Makes correction to the category of Permeable Friction Course BMPs
     excluded_bmps, excluded_params : sequence of str, optional
         List of BMPs studies and parameters to exclude from the data.
+    as_dataframe : bool (default = False)
+        When False, a wqio.DataCollection is returned
+
+    Additional Parameters
+    ---------------------
+    Any additional keword arguments will be passed to wqio.DataCollection.
 
     Returns
     -------
-    summarizable : pandas.DataFrame
+    bmp : pandas.DataFrame or wqio.DataCollection
 
     """
-    return (
-        _load_raw_data(csvfile)
+    othergroups = dc_kwargs.pop('othergroups', ['category', 'units'])
+    pairgroups = dc_kwargs.pop('pairgroups', ['category', 'units', 'bmp_id', 'site_id', 'storm'])
+    rescol = dc_kwargs.pop('rescol', 'res')
+    qualcol = dc_kwargs.pop('qualcol', 'qual')
+    ndval = dc_kwargs.pop('ndval', ['ND', '<'],)
+    stationcol = dc_kwargs.pop('stationcol', 'station')
+    paramcol = dc_kwargs.pop('paramcol', 'parameter')
+    bmp = (
+        _load_raw_data(datapath)
         .pipe(_clean_raw_data)
         .pipe(_prepare_for_summary, minstorms=minstorms, minbmps=minbmps,
               combine_nox=combine_nox, combine_WB_RP=combine_WB_RP,
@@ -554,15 +569,9 @@ def load_data(csvfile=None, minstorms=3, minbmps=3, combine_nox=True, combine_WB
               balanced_only=balanced_only, fix_PFCs=fix_PFCs,
               excluded_bmps=excluded_bmps, excluded_params=excluded_params)
     )
-
-
-def to_DataCollection(df, **kwargs):  # pragma: no cover
-    othergroups = kwargs.pop('othergroups', ['category', 'units'])
-    pairgroups = kwargs.pop('pairgroups', ['category', 'units', 'bmp_id', 'site_id', 'storm'])
-    dc = (
-        df.reset_index()
-          .pipe(wqio.DataCollection, rescol='res', qualcol='qual', ndval=['ND'],
-                stationcol='station', paramcol='parameter', othergroups=othergroups,
-                pairgroups=pairgroups, **kwargs)
-    )
-    return dc
+    if as_dataframe:
+        return bmp
+    return wqio.DataCollection(bmp, rescol='res', qualcol='qual', ndval=['ND'],
+                               stationcol='station', paramcol='parameter',
+                               othergroups=othergroups, pairgroups=pairgroups,
+                               **dc_kwargs)
