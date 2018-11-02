@@ -1,0 +1,13 @@
+bmp,category,bmptype,storm,parameter,res,qual
+A,Wetland Basin,WB,1,Cu,10,=
+A,Wetland Basin,WB,1,Zn,8,<
+A,Wetland Basin,WB,2,Cu,12,=
+A,Wetland Basin,WB,3,Zn,14,=
+B,Wetland Basin,WB,1,Cu,16,<
+B,Wetland Basin,WB,1,Zn,17,<
+B,Wetland Basin,PF,2,Cu,18,=
+B,Wetland Basin,PF,2,Zn,19,=
+C,Retention Pond,RP,1,Cu,20,<
+D,Retention Pond,RP,1,Zn,22,=
+D,Retention Pond,RP,2,Cu,23,=
+D,Retention Pond,PF,2,Zn,24,=

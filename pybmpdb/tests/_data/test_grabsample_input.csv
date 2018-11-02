@@ -1,0 +1,13 @@
+bmp,category,paramgroup,sampletype,storm,res,qual
+A,Bioretention,metals,composite,1,10.0,=
+A,Bioretention,metals,grab,1,8.0,<
+A,Bioretention,metals,composite,2,12.0,=
+A,Bioretention,metals,grab,3,14.0,=
+B,Retention Pond,metals,composite,1,16.0,<
+B,Retention Pond,metals,grab,1,17.0,<
+B,Retention Pond,metals,grab,2,18.0,=
+C,Wetland Basin,metals,grab,1,20.0,<
+D,Bioretention,metals,composite,1,22.0,=
+D,Bioretention,metals,unknown,2,23.0,=
+D,Bioretention,metals,composite,2,24.0,=
+D,Bioretention,Biological,composite,3,26.0,=
