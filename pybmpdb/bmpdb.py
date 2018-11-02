@@ -19,9 +19,8 @@ import wqio
 
 __all__ = [
     'load_data',
-    'clean_raw_data',
-    'prepare_for_summary',
     'transform_parameters',
+    'paired_qual',
     'to_DataCollection'
 ]
 
@@ -371,12 +370,12 @@ def _maybe_remove_grabs(df, remove_grabs, grab_ok_bmps='default'):
         return df
 
 
-def load_data(csvfile):
+def _load_raw_data(csvfile=None):
     csvfile = Path(csvfile or wqio.download('bmpdata'))
     return pandas.read_csv(csvfile, parse_dates=['sampledate'], encoding='utf-8')
 
 
-def clean_raw_data(raw_df):
+def _clean_raw_data(raw_df):
     _row_headers = [
         'category', 'epazone', 'state', 'site', 'bmp',
         'station', 'storm', 'sampletype', 'watertype',
@@ -443,7 +442,7 @@ def clean_raw_data(raw_df):
     return prepped
 
 
-def prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
+def _prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
                         remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
                         fix_PFCs=True, excluded_bmps=None, excluded_params=None):
     """ Prepare data for categorical summaries
@@ -501,6 +500,59 @@ def prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB
           .pipe(utils._maybe_filter_onesided_BMPs, balanced_only)
           .pipe(utils._filter_by_storm_count, minstorms)
           .pipe(utils._filter_by_BMP_count, minbmps)
+    )
+
+
+def load_data(csvfile=None, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
+              remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
+              fix_PFCs=True, excluded_bmps=None, excluded_params=None):
+    """ Prepare data for categorical summaries
+
+    Parameter
+    ---------
+    df : pandas.DataFrame
+    minstorms : int (default = 3)
+        Minimum number of storms (monitoring events) for a BMP study to be included
+    minbmps : int (default = 3)
+        Minimum number of BMP studies for a parameter to be included
+    combine_nox : bool (default = True)
+        Toggles combining NO3 and NO2+NO3 into as new parameter NOx, giving
+        preference to NO2+NO3 when both parameters are observed for an event.
+        The underlying assuption is that NO2 concentrations are typically much
+        smaller than NO3, thus NO2+NO3 ~ NO3.
+    combine_WB_RP : bool (default = True)
+        Toggles combining Retention Pond and Wetland Basin data into a new
+        BMP category: Retention Pond/Wetland Basin.
+    remove_grabs : bool (default = True)
+        Toggles removing grab samples from the dataset except for:
+          - biological parameters
+          - BMPs categories that are whitelisted via *grab_ok_bmps*
+    grab_ok_bmps : sequence of str, optional
+        BMP categories for which grab data should be included. By default, this
+        inclues Retention Ponds, Wetland Basins, and the combined
+        Retention Pond/Wetland Basin category created when *combine_WB_RP* is
+        True.
+    balanced_only : bool (default = True)
+        Toggles removing BMP studies which have only influent or effluent data,
+        exclusively.
+    fix_PFCs : bool (default = True)
+        Makes correction to the category of Permeable Friction Course BMPs
+    excluded_bmps, excluded_params : sequence of str, optional
+        List of BMPs studies and parameters to exclude from the data.
+
+    Returns
+    -------
+    summarizable : pandas.DataFrame
+
+    """
+    return (
+        _load_raw_data(csvfile)
+        .pipe(_clean_raw_data)
+        .pipe(_prepare_for_summary, minstorms=minstorms, minbmps=minbmps,
+              combine_nox=combine_nox, combine_WB_RP=combine_WB_RP,
+              remove_grabs=remove_grabs, grab_ok_bmps=grab_ok_bmps,
+              balanced_only=balanced_only, fix_PFCs=fix_PFCs,
+              excluded_bmps=excluded_bmps, excluded_params=excluded_params)
     )
 
 
