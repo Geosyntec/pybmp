@@ -1,5 +1,7 @@
 import os
 from pkg_resources import resource_filename
+from functools import partial
+from pathlib import Path
 
 try:
     import pyodbc
@@ -16,12 +18,9 @@ import wqio
 
 
 __all__ = [
-    'db_connection',
-    'get_default_query',
-    'get_data',
-    'load_from_access',
-    'load_from_csv',
-    'prepare_data',
+    'load_data',
+    'clean_raw_data',
+    'prepare_for_summary',
     'transform_parameters',
     'to_DataCollection'
 ]
@@ -139,98 +138,245 @@ def _check_levelnames(levels):
             raise ValueError(msg)
 
 
-def db_connection(dbfile, driver=None):
-    """ Connect to an Access database with pyodbc
-
-    Parameters
-    dbfile : str
-        Path to the Access database file
-    driver : str, optional
-        Database driver to be used by pyodbc. Defaults to
-        "{Microsoft Access Driver (*.mdb, *.accdb)}"
-
-    Returns
-    -------
-    connection
-
-    """
-
-    if driver is None:
-        driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
-
-    connection_string = r'Driver={};DBQ={}'.format(driver, os.path.abspath(dbfile))
-    try:
-        cnn = pyodbc.connect(connection_string)
-        return cnn
-    except:
-        msg = "Unable to connect to {} using {}"
-        raise RuntimeError(msg.format(dbfile, driver))
-
-
-def get_default_query():  # pragma: no cover
-    """ Loads the default BMP Database query packaged with pybmpdb.
-    """
-
-    sqlfile = resource_filename('pybmpdb.data', 'default.sql')
-    with open(sqlfile, 'r') as sql:
-        sqlquery = sql.read()
-    return sqlquery
-
-
-def get_data(cmd, dbfile, driver=None):
-    """ Fetch data from an Access database
+def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn,
+                         indexMods=None, paramlevel='parameter'):
+    """ Apply an arbitrary transformation to a parameter in the data
 
     Parameters
     ----------
-    cmd : str
-        SQL (JET) query to run
-    dbfile : str
-        Path to the database file
-    driver : str, optional
-        Database driver for `pyodbc`
+    df : pandas.DataFrame
+    existingparams : list of strings
+        List of the existing parameters that will be used to compute
+        the new values
+    newparam : string
+        Name of the new parameter to be generated
+    newunits : string
+        Units of the newly computed values
+    resfxn : callable
+        Function (or lambda) that will determine the result of
+        ``newparam`` based on the values of ``existingparams``.
+        Function must assume to be operating on a row of
+        ``self.data`` with the elements of ``existingparams`` stored
+        as columns.
+    qualfxn : function
+        Same as ``resfxn``, but for determining the final qualifier
+        of the ``newparam`` results.
+    indexMods : dict, optional (keys = index level names)
+        Dictionary of index level name whose values are the new
+        values of those levels where ``parameter == newparam``.
 
     Returns
     -------
-    query_data : pandas.DataFrame
+    transformed : pandas.DataFrame
 
     """
 
-    with db_connection(dbfile, driver=driver) as cnn:
-        return pandas.read_sql(cmd, cnn)
+    index_name_cache = df.index.names
+    existingparams = wqio.validate.at_least_empty_list(existingparams)
+
+    transformed = (
+        df.query("{} in @existingparams".format(paramlevel))
+          .pipe(utils.refresh_index)
+          .unstack(level=paramlevel)
+          .pipe(wqio.utils.assign_multilevel_column, qualfxn, 'qual', newparam)
+          .pipe(wqio.utils.assign_multilevel_column, resfxn, 'res', newparam)
+          .xs(newparam, level=paramlevel, axis='columns', drop_level=False)
+          .stack(level=paramlevel)
+    )
+
+    indexMods = wqio.validate.at_least_empty_dict(indexMods, units=newunits)
+    # add the units into indexMod, apply all changes
+    indexMods['units'] = newunits
+    for levelname, value in indexMods.items():
+        transformed = wqio.utils.redefine_index_level(transformed, levelname, value,
+                                                      criteria=None, dropold=True)
+
+    # return the *full* dataset (preserving original params)
+    result = pandas.concat([
+        df.reset_index(),
+        transformed.reset_index()
+    ], sort=False).set_index(index_name_cache)
+    return result
 
 
-def load_from_access(dbfile, sqlquery=None, dbtable=None):
-    """ Load BMP performance data from the Access database
-
-    Parameters
-    ----------
-    dbfile : str
-        Path to the Access database.
-    sqlquery : str, optional
-        SQL (JET) query to run.
-
-    Returns
-    -------
-    bmpdata : pandas.DataFrame
-
-    """
-
-    driver = r'{Microsoft Access Driver (*.mdb, *.accdb)}'
-    if not sqlquery:
-        if dbtable:
-            sqlquery = "select * from {}".format(dbtable)
-        else:
-            dbtable = 'bWQ BMP FlatFile BMP Indiv Anal_Rev 10-2014'
-            sqlquery = get_default_query().format(dbtable)
-
-    return get_data(sqlquery, dbfile, driver=driver)
+def paired_qual(df, qualin='qual_inflow', qualout='qual_outflow'):
+    ND_neither = [(df[qualin] == '=') & (df[qualout] == '='), 'Pair']
+    ND_in = [(df[qualin] == 'ND') & (df[qualout] == '='), 'Influent ND']
+    ND_out = [(df[qualin] == '=') & (df[qualout] == 'ND'), 'Effluent ND']
+    ND_both = [(df[qualin] == 'ND') & (df[qualout] == 'ND'), 'Both ND']
+    return wqio.utils.selector('=', ND_neither, ND_in, ND_out, ND_both)
 
 
-def load_from_csv(csvfile):
+def _pick_non_null(df, maincol, preferred, secondary):
+    return df[(maincol, preferred)].combine_first(df[(maincol, secondary)])
+
+
+def _pick_best_station(df):
+    def best_col(df, mainstation, backupstation, valcol):
+        for sta in [mainstation, backupstation]:
+            if (sta, valcol) not in df.columns:
+                df = wqio.utils.assign_multilevel_column(df, numpy.nan, sta, valcol)
+
+        return df[(mainstation, valcol)].combine_first(df[(backupstation, valcol)])
+
+    orig_index = df.index.names
+    data = (
+        df.pipe(utils.refresh_index)
+          .unstack(level='station')
+          .pipe(wqio.utils.swap_column_levels, 0, 1)
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'outflow', 'subsurface', 'res'),
+                'final_outflow', 'res')
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'outflow', 'subsurface', 'qual'),
+                'final_outflow', 'qual')
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'inflow', 'reference outflow', 'res'),
+                'final_inflow', 'res')
+          .pipe(wqio.utils.assign_multilevel_column,
+                lambda df: best_col(df, 'inflow', 'reference outflow', 'qual'),
+                'final_inflow', 'qual')
+          .loc[:, lambda df: df.columns.map(lambda c: 'final_' in c[0])]
+          .rename(columns=lambda col: col.replace('final_', ''))
+          .stack(level='station')
+    )
+
+    return data
+
+
+def _pick_best_sampletype(df):
+    orig_cols = df.columns
+    xtab = df.pipe(utils.refresh_index).unstack(level='sampletype')
+    for col in orig_cols:
+        grabvalues = numpy.where(
+            xtab[(col, 'composite')].isnull(),
+            xtab[(col, 'grab')],
+            numpy.nan
+        )
+        xtab = wqio.utils.assign_multilevel_column(xtab, grabvalues, col, 'grab')
+
+    data = (
+        xtab.loc[:, xtab.columns.map(lambda c: c[1] != 'unknown')]
+            .stack(level=['sampletype'])
+    )
+    return data
+
+
+def _maybe_filter_onesided_BMPs(df, balanced_only):
+    grouplevels = ['site', 'bmp', 'parameter', 'category']
+    pivotlevel = 'station'
+
+    if balanced_only:
+        return (
+            df.unstack(level=pivotlevel)
+              .groupby(level=grouplevels)
+              .filter(lambda g: numpy.all(g['res'].describe().loc['count'] > 0))
+              .stack(level=pivotlevel)
+        )
+    else:
+        return df
+
+
+def _filter_by_storm_count(df, minstorms):
+    # filter out all monitoring stations with less than /N/ storms
+    grouplevels = ['site', 'bmp', 'parameter', 'station']
+
+    data = (
+        df.groupby(level=grouplevels)
+          .filter(lambda g: g.count()['res'] >= minstorms)
+    )
+    return data
+
+
+def _filter_by_BMP_count(df, minbmps):
+    grouplevels = ['category', 'parameter', 'station']
+
+    data = (
+        df.groupby(level=grouplevels)
+          .filter(lambda g: g.index.get_level_values('bmp').unique().shape[0] >= minbmps)
+    )
+    return data
+
+
+def _maybe_combine_WB_RP(df, combine_WB_RP, catlevel='category'):
+    if combine_WB_RP:
+        # merge Wetland Basins and Retention ponds, keeping
+        # the original records
+        wbrp_indiv = ['Retention Pond', 'Wetland Basin']
+        wbrp_combo = 'Wetland Basin/Retention Pond'
+        level_pos = utils.get_level_position(df, catlevel)
+        return wqio.utils.redefine_index_level(
+            df, catlevel, wbrp_combo, dropold=False,
+            criteria=lambda row: row[level_pos] in wbrp_indiv
+        ).pipe(
+            checks.verify_any,
+            lambda df: df.index.get_level_values(catlevel) == wbrp_combo
+        )
+    else:
+        return df
+
+
+def _maybe_combine_nox(df, combine_nox, paramlevel='parameter', rescol='res',
+                       qualcol='qual', finalunits='mg/L'):
+    if combine_nox:
+        # combine NO3+NO2 and NO3 into NOx
+        nitro_components = [
+            'Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',
+            'Nitrogen, Nitrate (NO3) as N'
+        ]
+        nitro_combined = 'Nitrogen, NOx as N'
+
+        picker = partial(_pick_non_null, preferred=nitro_components[0],
+                         secondary=nitro_components[1])
+
+        return transform_parameters(
+            df, nitro_components, nitro_combined, finalunits,
+            partial(picker, maincol=rescol), partial(picker, maincol=qualcol)
+        ).pipe(
+            checks.verify_any,
+            lambda df: df.index.get_level_values(paramlevel) == nitro_combined
+        )
+    else:
+        return df
+
+
+def _maybe_fix_PFCs(df, fix_PFCs, catlevel='category', typelevel='bmptype'):
+    if fix_PFCs:
+        PFC = 'Permeable Friction Course'
+        type_level_pos = utils.get_level_position(df, typelevel)
+        return wqio.utils.redefine_index_level(
+            df, catlevel, PFC, dropold=True,
+            criteria=lambda row: row[type_level_pos] == 'PF'
+        ).pipe(
+            checks.verify_any,
+            lambda df: df.index.get_level_values(catlevel) == PFC
+        )
+    else:
+        return df
+
+
+def _maybe_remove_grabs(df, remove_grabs, grab_ok_bmps='default'):
+    if grab_ok_bmps == 'default':
+        grab_ok_bmps = ['Retention Pond', 'Wetland Basin', 'Wetland Basin/Retention Pond']
+
+    grab_ok_bmps = wqio.validate.at_least_empty_list(grab_ok_bmps)
+    if remove_grabs:
+        querytxt = (
+            "(sampletype == 'composite') | "
+            "(((category in @grab_ok_bmps) | (paramgroup == 'Biological')) & "
+            "  (sampletype != 'unknown'))"
+        )
+        return df.query(querytxt)
+    else:
+        return df
+
+
+def load_data(csvfile):
+    csvfile = Path(csvfile or wqio.download('bmpdata'))
     return pandas.read_csv(csvfile, parse_dates=['sampledate'], encoding='utf-8')
 
 
-def prepare_data(raw_df):
+def clean_raw_data(raw_df):
     _row_headers = [
         'category', 'epazone', 'state', 'site', 'bmp',
         'station', 'storm', 'sampletype', 'watertype',
@@ -297,65 +443,65 @@ def prepare_data(raw_df):
     return prepped
 
 
-def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn,
-                         indexMods=None, paramlevel='parameter'):
-    """ Apply an arbitrary transformation to a parameter in the data
+def prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
+                        remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
+                        fix_PFCs=True, excluded_bmps=None, excluded_params=None):
+    """ Prepare data for categorical summaries
 
-    Parameters
-    ----------
+    Parameter
+    ---------
     df : pandas.DataFrame
-    existingparams : list of strings
-        List of the existing parameters that will be used to compute
-        the new values
-    newparam : string
-        Name of the new parameter to be generated
-    newunits : string
-        Units of the newly computed values
-    resfxn : callable
-        Function (or lambda) that will determine the result of
-        ``newparam`` based on the values of ``existingparams``.
-        Function must assume to be operating on a row of
-        ``self.data`` with the elements of ``existingparams`` stored
-        as columns.
-    qualfxn : function
-        Same as ``resfxn``, but for determining the final qualifier
-        of the ``newparam`` results.
-    indexMods : dict, optional (keys = index level names)
-        Dictionary of index level name whose values are the new
-        values of those levels where ``parameter == newparam``.
+    minstorms : int (default = 3)
+        Minimum number of storms (monitoring events) for a BMP study to be included
+    minbmps : int (default = 3)
+        Minimum number of BMP studies for a parameter to be included
+    combine_nox : bool (default = True)
+        Toggles combining NO3 and NO2+NO3 into as new parameter NOx, giving
+        preference to NO2+NO3 when both parameters are observed for an event.
+        The underlying assuption is that NO2 concentrations are typically much
+        smaller than NO3, thus NO2+NO3 ~ NO3.
+    combine_WB_RP : bool (default = True)
+        Toggles combining Retention Pond and Wetland Basin data into a new
+        BMP category: Retention Pond/Wetland Basin.
+    remove_grabs : bool (default = True)
+        Toggles removing grab samples from the dataset except for:
+          - biological parameters
+          - BMPs categories that are whitelisted via *grab_ok_bmps*
+    grab_ok_bmps : sequence of str, optional
+        BMP categories for which grab data should be included. By default, this
+        inclues Retention Ponds, Wetland Basins, and the combined
+        Retention Pond/Wetland Basin category created when *combine_WB_RP* is
+        True.
+    balanced_only : bool (default = True)
+        Toggles removing BMP studies which have only influent or effluent data,
+        exclusively.
+    fix_PFCs : bool (default = True)
+        Makes correction to the category of Permeable Friction Course BMPs
+    excluded_bmps, excluded_params : sequence of str, optional
+        List of BMPs studies and parameters to exclude from the data.
 
     Returns
     -------
-    transformed : pandas.DataFrame
+    summarizable : pandas.DataFrame
 
     """
 
-    index_name_cache = df.index.names
-    existingparams = wqio.validate.at_least_empty_list(existingparams)
+    excluded_bmps = wqio.validate.at_least_empty_list(excluded_bmps)
+    excluded_params = wqio.validate.at_least_empty_list(excluded_params)
 
-    transformed = (
-        df.query("{} in @existingparams".format(paramlevel))
-          .pipe(utils.refresh_index)
-          .unstack(level=paramlevel)
-          .pipe(wqio.utils.assign_multilevel_column, qualfxn, 'qual', newparam)
-          .pipe(wqio.utils.assign_multilevel_column, resfxn, 'res', newparam)
-          .xs(newparam, level=paramlevel, axis='columns', drop_level=False)
-          .stack(level=paramlevel)
+    return (
+        df.pipe(utils._maybe_combine_WB_RP, combine_WB_RP)
+          .pipe(utils._maybe_combine_nox, combine_nox)
+          .pipe(utils._maybe_fix_PFCs, fix_PFCs)
+          .pipe(utils._maybe_remove_grabs, remove_grabs, grab_ok_bmps)
+          .query("bmp not in @excluded_bmps")
+          .query("parameter not in @excluded_params")
+          .pipe(utils._pick_best_sampletype)
+          .pipe(utils._pick_best_station)
+          .pipe(utils._maybe_filter_onesided_BMPs, balanced_only)
+          .pipe(utils._filter_by_storm_count, minstorms)
+          .pipe(utils._filter_by_BMP_count, minbmps)
     )
-
-    indexMods = wqio.validate.at_least_empty_dict(indexMods, units=newunits)
-    # add the units into indexMod, apply all changes
-    indexMods['units'] = newunits
-    for levelname, value in indexMods.items():
-        transformed = wqio.utils.redefine_index_level(transformed, levelname, value,
-                                                      criteria=None, dropold=True)
-
-    # return the *full* dataset (preserving original params)
-    result = pandas.concat([
-        df.reset_index(),
-        transformed.reset_index()
-    ], sort=False).set_index(index_name_cache)
-    return result
 
 
 def to_DataCollection(df, **kwargs):  # pragma: no cover

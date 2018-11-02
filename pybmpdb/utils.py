@@ -396,6 +396,49 @@ def processFilename(filename):
     return fn
 
 
+def setMPLStyle(serif=False):
+    if serif:
+        fontfamily = 'serif'
+        preamble = [
+            r'\usepackage{siunitx}',
+            r'\sisetup{detect-all}',
+            r'\usepackage{fourier}'
+        ]
+    else:
+        fontfamily = 'sans-serif'
+        preamble = [
+            r'\usepackage{siunitx}',
+            r'\sisetup{detect-all}',
+            r'\usepackage{helvet}',
+            r'\usepackage{sansmath}',
+            r'\sansmath'
+        ]
+    style_dict = {
+        'text.usetex': True,
+        'font.family': [fontfamily],
+        'font.serif': ['Utopia', 'Palantino'],
+        'font.sans-serif': ['Helvetica', 'Arial'],
+        'lines.linewidth': 0.5,
+        'patch.linewidth': 0.5,
+        'text.latex.preamble': preamble,
+        'axes.linewidth': 0.5,
+        'axes.grid': True,
+        'axes.titlesize': 12,
+        'axes.labelsize': 10,
+        'xtick.labelsize': 10,
+        'xtick.direction': 'out',
+        'ytick.labelsize': 10,
+        'ytick.direction': 'out',
+        'grid.linewidth': 0.5,
+        'legend.fancybox': True,
+        'legend.numpoints': 1,
+        'legend.fontsize': 8,
+        'figure.figsize': (6.5, 3.5),
+        'savefig.dpi': 300
+    }
+    matplotlib.rcParams.update(style_dict)
+
+
 class LaTeXDirectory(object):
     """ Context manager to help compile latex docs from python.
 
