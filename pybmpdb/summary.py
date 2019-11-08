@@ -4,9 +4,7 @@ import numpy
 import matplotlib
 from matplotlib import pyplot
 import seaborn
-from statsmodels.tools.decorators import (
-    resettable_cache, cache_readonly
-)
+from statsmodels.tools.decorators import cache_readonly
 
 import wqio
 from . import bmpdb, utils
@@ -375,7 +373,7 @@ class CategoricalSummary(object):
     def __init__(self, datasets, paramgroup, basepath, figpath,
                  showprogress=False, applyfilters=False,
                  filtercount=5, filtercolumn='bmp'):
-        self._cache = resettable_cache()
+        self._cache = {}
         self._applyfilters = applyfilters
         self.filtercount = filtercount
         self.filtercolumn = filtercolumn

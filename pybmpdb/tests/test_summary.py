@@ -425,7 +425,7 @@ def expected_latex_report():
     return report
 
 
-@ pytest.fixture
+@pytest.fixture
 def temp_template():
     with TemporaryDirectory() as datadir:
         filename = os.path.join(datadir, 'testtemplate.tex')

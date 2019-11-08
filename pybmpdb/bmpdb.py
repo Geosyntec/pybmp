@@ -1,4 +1,5 @@
 import os
+import logging
 from pkg_resources import resource_filename
 from functools import partial
 from pathlib import Path
@@ -24,6 +25,10 @@ __all__ = [
 ]
 
 
+_logger = logging.getLogger(__name__)
+
+
+@wqio.utils.log_df_shape(_logger)
 def _handle_ND_factors(df, qualcol='qual', rescol='res', dlcol='DL', quals=None,
                        nd_correction=2):
     """ Determines the scaling factor to be applied to the water quality result
@@ -71,6 +76,7 @@ def _handle_ND_factors(df, qualcol='qual', rescol='res', dlcol='DL', quals=None,
     return wqio.utils.selector(1, normal_ND, weird_UJ)
 
 
+@wqio.utils.log_df_shape(_logger)
 def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=None):
     """ Determines final qualifier to be applied to the water quality result
     based on the result qualifiers in the BMP Database. Non-detects get "ND",
@@ -97,9 +103,9 @@ def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=No
     --------
     _handle_ND_factors
 
-    Notes
+ , nd   Notes
     -----
-    Same basic premise as _handle_ND_factors, but different qualifiers count
+    Same basic premise as _handle_ND_factors, b, ndut different qualifiers count
     as ND compared to what we used to determine the ND-scaling factors.
 
     """
@@ -112,15 +118,20 @@ def _handle_ND_qualifiers(df, qualcol='qual', rescol='res', dlcol='DL', quals=No
     return numpy.where(is_ND, 'ND', '=')
 
 
+@wqio.utils.log_df_shape(_logger)
 def _process_screening(df, screencol):
-    yes = df[screencol].str.lower().isin(['inc', 'yes'])
-    no = df[screencol].str.lower().isin(['exc', 'no'])
+    yes = df[screencol].str.lower().isin(['inc', 'yes', 'y'])
+    no = df[screencol].str.lower().isin(['exc', 'no', 'n'])
     return wqio.utils.selector('invalid', [yes, 'yes'], [no, 'no'])
 
 
+@wqio.utils.log_df_shape(_logger)
 def _process_sampletype(df, sampletype):
     grab = [df[sampletype].str.lower().str.contains('grab'), 'grab']
-    composite = [df[sampletype].str.lower().str.contains('composite'), 'composite']
+    composite = [
+        df[sampletype].str.lower().str.contains('emc') | df[sampletype].str.lower().str.contains('comp'),
+        'composite'
+    ]
     return wqio.utils.selector('unknown', grab, composite)
 
 
@@ -136,6 +147,7 @@ def _check_levelnames(levels):
             raise ValueError(msg)
 
 
+@wqio.utils.log_df_shape(_logger)
 def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn,
                          indexMods=None, paramlevel='parameter'):
     """ Apply an arbitrary transformation to a parameter in the data
@@ -197,6 +209,7 @@ def transform_parameters(df, existingparams, newparam, newunits, resfxn, qualfxn
     return result
 
 
+@wqio.utils.log_df_shape(_logger)
 def paired_qual(df, qualin='qual_inflow', qualout='qual_outflow'):
     ND_neither = [(df[qualin] == '=') & (df[qualout] == '='), 'Pair']
     ND_in = [(df[qualin] == 'ND') & (df[qualout] == '='), 'Influent ND']
@@ -205,10 +218,12 @@ def paired_qual(df, qualin='qual_inflow', qualout='qual_outflow'):
     return wqio.utils.selector('=', ND_neither, ND_in, ND_out, ND_both)
 
 
+@wqio.utils.log_df_shape(_logger)
 def _pick_non_null(df, maincol, preferred, secondary):
     return df[(maincol, preferred)].combine_first(df[(maincol, secondary)])
 
 
+@wqio.utils.log_df_shape(_logger)
 def _pick_best_station(df):
     def best_col(df, mainstation, backupstation, valcol):
         for sta in [mainstation, backupstation]:
@@ -242,6 +257,7 @@ def _pick_best_station(df):
     return data
 
 
+@wqio.utils.log_df_shape(_logger)
 def _pick_best_sampletype(df):
     orig_cols = df.columns
     xtab = df.pipe(utils.refresh_index).unstack(level='sampletype')
@@ -260,6 +276,7 @@ def _pick_best_sampletype(df):
     return data
 
 
+@wqio.utils.log_df_shape(_logger)
 def _maybe_filter_onesided_BMPs(df, balanced_only):
     grouplevels = ['site', 'bmp', 'parameter', 'category']
     pivotlevel = 'station'
@@ -275,6 +292,7 @@ def _maybe_filter_onesided_BMPs(df, balanced_only):
         return df
 
 
+@wqio.utils.log_df_shape(_logger)
 def _filter_by_storm_count(df, minstorms):
     # filter out all monitoring stations with less than /N/ storms
     grouplevels = ['site', 'bmp', 'parameter', 'station']
@@ -286,6 +304,7 @@ def _filter_by_storm_count(df, minstorms):
     return data
 
 
+@wqio.utils.log_df_shape(_logger)
 def _filter_by_BMP_count(df, minbmps):
     grouplevels = ['category', 'parameter', 'station']
 
@@ -296,6 +315,7 @@ def _filter_by_BMP_count(df, minbmps):
     return data
 
 
+@wqio.utils.log_df_shape(_logger)
 def _maybe_combine_WB_RP(df, combine_WB_RP, catlevel='category'):
     if combine_WB_RP:
         # merge Wetland Basins and Retention ponds, keeping
@@ -314,6 +334,7 @@ def _maybe_combine_WB_RP(df, combine_WB_RP, catlevel='category'):
         return df
 
 
+@wqio.utils.log_df_shape(_logger)
 def _maybe_combine_nox(df, combine_nox, paramlevel='parameter', rescol='res',
                        qualcol='qual', finalunits='mg/L'):
     if combine_nox:
@@ -338,6 +359,7 @@ def _maybe_combine_nox(df, combine_nox, paramlevel='parameter', rescol='res',
         return df
 
 
+@wqio.utils.log_df_shape(_logger)
 def _maybe_fix_PFCs(df, fix_PFCs, catlevel='category', typelevel='bmptype'):
     if fix_PFCs:
         PFC = 'Permeable Friction Course'
@@ -353,20 +375,25 @@ def _maybe_fix_PFCs(df, fix_PFCs, catlevel='category', typelevel='bmptype'):
         return df
 
 
+@wqio.utils.log_df_shape(_logger)
 def _maybe_remove_grabs(df, remove_grabs, grab_ok_bmps='default'):
-    if grab_ok_bmps == 'default':
-        grab_ok_bmps = ['Retention Pond', 'Wetland Basin', 'Wetland Basin/Retention Pond']
-
-    grab_ok_bmps = wqio.validate.at_least_empty_list(grab_ok_bmps)
     if remove_grabs:
+        if grab_ok_bmps.lower() == 'default':
+            grab_ok_bmps = [
+                'Retention Pond',
+                'Wetland Basin',
+                'Wetland Basin/Retention Pond',
+            ]
+
+        grab_ok_bmps = wqio.validate.at_least_empty_list(grab_ok_bmps)
+
         querytxt = (
             "(sampletype == 'composite') | "
             "(((category in @grab_ok_bmps) | (paramgroup == 'Biological')) & "
             "  (sampletype != 'unknown'))"
         )
         return df.query(querytxt)
-    else:
-        return df
+    return df
 
 
 def _load_raw_data(csvfile=None):
@@ -374,13 +401,14 @@ def _load_raw_data(csvfile=None):
     return pandas.read_csv(csvfile, parse_dates=['sampledate'], encoding='utf-8')
 
 
-def _clean_raw_data(raw_df):
+@wqio.utils.log_df_shape(_logger)
+def _clean_raw_data(raw_df, nd_correction=2):
     _row_headers = [
         'category', 'epazone', 'state', 'site', 'bmp',
         'station', 'storm', 'sampletype', 'watertype',
         'paramgroup', 'units', 'parameter', 'fraction',
-        'initialscreen', 'wqscreen', 'catscreen', 'balanced',
-        'bmptype', 'pdf_id', 'ws_id', 'site_id', 'bmp_id',
+        'initialscreen', 'wqscreen', 'catscreen',
+        'bmptype', 'ws_id', 'site_id', 'bmp_id', 'dot_type'
     ]
 
     units_norm = {
@@ -393,30 +421,20 @@ def _clean_raw_data(raw_df):
         for p in info.parameters
     }
 
-    # rename columns:
-    rename_columns = {
-        'wq_qual': 'qual',
-        'wq_value': 'res',
-        'wq_units': 'units',
-        'raw_parameter': 'general_parameter',
-        'category': 'category'
-    }
-
-    expected_rows = raw_df.loc[:, 'wq_value'].groupby(lambda x: x > 0).count().loc[True]
-
-    biofilters = {
-        'Biofilter - Grass Swale': 'Grass Swale',
-        'Biofilter - Grass Strip': 'Grass Strip',
-    }
+    expected_rows = (
+        raw_df.loc[:, 'res']
+            .groupby(lambda x: x > 0)
+            .count()
+            .loc[True]
+    )
 
     drop_columns = ['ms', '_parameter']
     prepped = (
         raw_df
-            .fillna({'wq_qual': '='})
-            .rename(columns=rename_columns)
+            .fillna({'qual': '='})
             .dropna(subset=['res'])
             .assign(qual=lambda df: df['qual'].str.strip())
-            .assign(res=lambda df: df['res'] * _handle_ND_factors(df))
+            .assign(res=lambda df: df['res'] * _handle_ND_factors(df, nd_correction=nd_correction))
             .assign(qual=lambda df: _handle_ND_qualifiers(df))
             .assign(initialscreen=lambda df: _process_screening(df, 'initialscreen'))
             .assign(wqscreen=lambda df: _process_screening(df, 'wqscreen'))
@@ -426,8 +444,7 @@ def _clean_raw_data(raw_df):
             .assign(sampledatetime=lambda df: df.apply(wqio.utils.makeTimestamp, axis=1))
             .assign(units=lambda df: df['units'].map(lambda u: info.getUnits(u, attr='unicode')))
             .assign(_parameter=lambda df: df['parameter'].str.lower().str.strip())
-            .assign(fraction=lambda df: numpy.where(df['_parameter'].str.lower().str.contains('dissolved'), 'dissolved', 'total'))
-            .replace({'category': biofilters})
+            .assign(fraction=lambda df: numpy.where(df['_parameter'].str.contains('dissolved'), 'dissolved', 'total'))
             .pipe(wqio.utils.normalize_units, units_norm, target_units, paramcol='_parameter',
                   rescol='res', unitcol='units', napolicy='raise')
             .drop(drop_columns, axis=1)
@@ -441,6 +458,7 @@ def _clean_raw_data(raw_df):
     return prepped
 
 
+@wqio.utils.log_df_shape(_logger)
 def _prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_WB_RP=True,
                          remove_grabs=True, grab_ok_bmps='default', balanced_only=True,
                          fix_PFCs=True, excluded_bmps=None, excluded_params=None):
@@ -488,17 +506,17 @@ def _prepare_for_summary(df, minstorms=3, minbmps=3, combine_nox=True, combine_W
     excluded_params = wqio.validate.at_least_empty_list(excluded_params)
 
     return (
-        df.pipe(utils._maybe_combine_WB_RP, combine_WB_RP)
-          .pipe(utils._maybe_combine_nox, combine_nox)
-          .pipe(utils._maybe_fix_PFCs, fix_PFCs)
-          .pipe(utils._maybe_remove_grabs, remove_grabs, grab_ok_bmps)
+        df.pipe(_maybe_combine_WB_RP, combine_WB_RP)
+          .pipe(_maybe_combine_nox, combine_nox)
+          .pipe(_maybe_fix_PFCs, fix_PFCs)
+          .pipe(_maybe_remove_grabs, remove_grabs, grab_ok_bmps)
           .query("bmp not in @excluded_bmps")
           .query("parameter not in @excluded_params")
-          .pipe(utils._pick_best_sampletype)
-          .pipe(utils._pick_best_station)
-          .pipe(utils._maybe_filter_onesided_BMPs, balanced_only)
-          .pipe(utils._filter_by_storm_count, minstorms)
-          .pipe(utils._filter_by_BMP_count, minbmps)
+          .pipe(_pick_best_sampletype)
+          .pipe(_pick_best_station)
+          .pipe(_maybe_filter_onesided_BMPs, balanced_only)
+          .pipe(_filter_by_storm_count, minstorms)
+          .pipe(_filter_by_BMP_count, minbmps)
     )
 
 
