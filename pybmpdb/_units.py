@@ -146,6 +146,12 @@ units = [
         "unicode": "ng/L"
     },
     {
+        "name": "pg/L",
+        "factor": 1e-12,
+        "tex": "\\si[per-mode=symbol]{\\pico\\gram\\per\\liter}",
+        "unicode": "pg/L"
+    },
+    {
         "name": "°C",
         "factor": 1,
         "tex": "\\si{\\degreeCelsius}",

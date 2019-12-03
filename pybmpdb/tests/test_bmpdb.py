@@ -1,6 +1,5 @@
 import sys
 import os
-import tempfile
 import zipfile
 from io import StringIO
 from pkg_resources import resource_filename
