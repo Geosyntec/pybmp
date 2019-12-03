@@ -36,12 +36,12 @@ def get_tex_file(filename):
 
 class mock_parameter(object):
     def __init__(self):
-        self.name = 'Carbon Dioxide'
-        self.tex = r'$[\mathrm{CO}_2]$'
-        self.units = 'mg/L'
+        self.name = "Carbon Dioxide"
+        self.tex = r"$[\mathrm{CO}_2]$"
+        self.units = "mg/L"
 
     def paramunit(self, *args, **kwargs):
-        return 'Carbon Dioxide (mg/L)'
+        return "Carbon Dioxide (mg/L)"
 
 
 class mock_location(object):
@@ -76,10 +76,7 @@ class mock_dataset(object):
         self.n_pairs = 22
         self.wilcoxon_p = 0.0005
         self.mannwhitney_p = 0.456123
-        self.definition = {
-            'parameter': mock_parameter(),
-            'category': 'testbmp'
-        }
+        self.definition = {"parameter": mock_parameter(), "category": "testbmp"}
         self.scenario = (infl_include, effl_include)
 
     def scatterplot(self, *args, **kwargs):
@@ -89,19 +86,14 @@ class mock_dataset(object):
         return mock_figure()
 
 
-@pytest.fixture(params=[
-    (True, True),
-    (True, False),
-    (False, False),
-    (False, True)
-])
+@pytest.fixture(params=[(True, True), (True, False), (False, False), (False, True)])
 def dset_sum(request):
     ds = mock_dataset(request.param[0], request.param[1])
-    return summary.DatasetSummary(ds, 'Metals', 'testfigpath')
+    return summary.DatasetSummary(ds, "Metals", "testfigpath")
 
 
 def test_DatasetSummary_paramgroup(dset_sum):
-    assert dset_sum.paramgroup == 'Metals'
+    assert dset_sum.paramgroup == "Metals"
 
 
 def test_DatasetSummary_ds(dset_sum):
@@ -109,113 +101,166 @@ def test_DatasetSummary_ds(dset_sum):
 
 
 def test_DatasetSummary_parameter(dset_sum):
-    assert dset_sum.parameter is dset_sum.ds.definition['parameter']
+    assert dset_sum.parameter is dset_sum.ds.definition["parameter"]
 
 
 def test_DatasetSummary_bmp(dset_sum):
-    assert dset_sum.bmp is dset_sum.ds.definition['category']
+    assert dset_sum.bmp is dset_sum.ds.definition["category"]
 
 
 def test_DatasetSummary_latex_file_name(dset_sum):
-    assert dset_sum.latex_file_name == 'metalstestbmpcarbondioxide'
+    assert dset_sum.latex_file_name == "metalstestbmpcarbondioxide"
 
 
 def test_DatasetSummary__tex_table_row_basic(dset_sum):
     expected = {
-        (True, True): r'''
+        (
+            True,
+            True,
+        ): r"""
                 \midrule
-                The Medians & 1.23 & 1.23 \\''',
-        (True, False): r'''
+                The Medians & 1.23 & 1.23 \\""",
+        (
+            True,
+            False,
+        ): r"""
                 \midrule
-                The Medians & 1.23 & NA \\''',
-        (False, True): r'''
+                The Medians & 1.23 & NA \\""",
+        (
+            False,
+            True,
+        ): r"""
                 \midrule
-                The Medians & NA & 1.23 \\''',
-        (False, False): r'''
+                The Medians & NA & 1.23 \\""",
+        (
+            False,
+            False,
+        ): r"""
                 \midrule
-                The Medians & NA & NA \\'''
+                The Medians & NA & NA \\""",
     }
-    result_row = dset_sum._tex_table_row('The Medians', 'median')
+    result_row = dset_sum._tex_table_row("The Medians", "median")
     assert result_row == expected[dset_sum.ds.scenario]
 
 
 def test_DatasetSummary__tex_table_row_forceint(dset_sum):
     expected = {
-        (True, True): r'''
+        (
+            True,
+            True,
+        ): r"""
                 \midrule
-                Counts & 25 & 25 \\''',
-        (True, False): r'''
+                Counts & 25 & 25 \\""",
+        (
+            True,
+            False,
+        ): r"""
                 \midrule
-                Counts & 25 & NA \\''',
-        (False, True): r'''
+                Counts & 25 & NA \\""",
+        (
+            False,
+            True,
+        ): r"""
                 \midrule
-                Counts & NA & 25 \\''',
-        (False, False): r'''
+                Counts & NA & 25 \\""",
+        (
+            False,
+            False,
+        ): r"""
                 \midrule
-                Counts & NA & NA \\'''
+                Counts & NA & NA \\""",
     }
-    result_row = dset_sum._tex_table_row('Counts', 'N', forceint=True, sigfigs=1)
+    result_row = dset_sum._tex_table_row("Counts", "N", forceint=True, sigfigs=1)
     assert result_row == expected[dset_sum.ds.scenario]
 
 
 def test_DatasetSummary__tex_table_row_advanced(dset_sum):
     expected = {
-        (True, True): r'''
+        (
+            True,
+            True,
+        ): r"""
                 \toprule
-                Mean CI & (11; 13) & (11; 13) \\''',
-        (True, False): r'''
+                Mean CI & (11; 13) & (11; 13) \\""",
+        (
+            True,
+            False,
+        ): r"""
                 \toprule
-                Mean CI & (11; 13) & NA \\''',
-        (False, True): r'''
+                Mean CI & (11; 13) & NA \\""",
+        (
+            False,
+            True,
+        ): r"""
                 \toprule
-                Mean CI & NA & (11; 13) \\''',
-        (False, False): r'''
+                Mean CI & NA & (11; 13) \\""",
+        (
+            False,
+            False,
+        ): r"""
                 \toprule
-                Mean CI & NA & NA \\''',
+                Mean CI & NA & NA \\""",
     }
-    result_row = dset_sum._tex_table_row('Mean CI', 'mean_conf_interval', rule='top',
-                                         twoval=True, ci=True, sigfigs=2)
+    result_row = dset_sum._tex_table_row(
+        "Mean CI", "mean_conf_interval", rule="top", twoval=True, ci=True, sigfigs=2
+    )
     assert result_row == expected[dset_sum.ds.scenario]
 
 
 def test_DatasetSummary__text_table_row_twoattrs(dset_sum):
     expected = {
-        (True, True): r'''
+        (
+            True,
+            True,
+        ): r"""
                 \midrule
-                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\''',
-        (True, False): r'''
+                Quartiles & 0.612; 2.35 & 0.612; 2.35 \\""",
+        (
+            True,
+            False,
+        ): r"""
                 \midrule
-                Quartiles & 0.612; 2.35 & NA \\''',
-        (False, True): r'''
+                Quartiles & 0.612; 2.35 & NA \\""",
+        (
+            False,
+            True,
+        ): r"""
                 \midrule
-                Quartiles & NA & 0.612; 2.35 \\''',
-        (False, False): r'''
+                Quartiles & NA & 0.612; 2.35 \\""",
+        (
+            False,
+            False,
+        ): r"""
                 \midrule
-                Quartiles & NA & NA \\''',
+                Quartiles & NA & NA \\""",
     }
-    result_row = dset_sum._tex_table_row('Quartiles', ['pctl25', 'pctl75'], twoval=True)
+    result_row = dset_sum._tex_table_row("Quartiles", ["pctl25", "pctl75"], twoval=True)
     assert result_row == expected[dset_sum.ds.scenario]
 
 
 def test_DatasetSummary__make_tex_figure(dset_sum):
-    fig = dset_sum._make_tex_figure('testfig.png', 'test caption')
-    known_fig = r"""
+    fig = dset_sum._make_tex_figure("testfig.png", "test caption")
+    known_fig = (
+        r"""
         \begin{figure}[hb]   % FIGURE
             \centering
             \includegraphics[scale=1.00]{testfig.png}
             \caption{test caption}
-        \end{figure} \clearpage""" + '\n'
+        \end{figure} \clearpage"""
+        + "\n"
+    )
     assert fig == known_fig
 
 
 def test_DatasetSummary_makeTexInput(dset_sum, expected_latext_input):
-    result = dset_sum.makeTexInput('test table title')
+    result = dset_sum.makeTexInput("test table title")
     helpers.assert_bigstring_equal(result, expected_latext_input[dset_sum.ds.scenario])
 
 
 def test_DatasetSummary__make_tex_table(dset_sum):
     if dset_sum.ds.scenario == (True, True):
-        expected = r"""
+        expected = (
+            r"""
         \begin{table}[h!]
             \caption{test title}
             \centering
@@ -262,8 +307,10 @@ def test_DatasetSummary__make_tex_table(dset_sum):
                 Mann-Whitney p-value & \multicolumn{2}{c} {0.456} \\
                 \bottomrule
             \end{tabular}
-        \end{table}""" + '\n'
-        result = dset_sum._make_tex_table('test title')
+        \end{table}"""
+            + "\n"
+        )
+        result = dset_sum._make_tex_table("test title")
         helpers.assert_bigstring_equal(result, expected)
     else:
         pass
@@ -272,9 +319,12 @@ def test_DatasetSummary__make_tex_table(dset_sum):
 @pytest.fixture
 def expected_latext_input():
     return {
-        (False, False): '',
-        (True, False): '',
-        (True, True): r"""\subsection{testbmp}
+        (False, False): "",
+        (True, False): "",
+        (
+            True,
+            True,
+        ): r"""\subsection{testbmp}
         \begin{table}[h!]
             \caption{test table title}
             \centering
@@ -333,8 +383,12 @@ def expected_latext_input():
             \centering
             \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
             \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure} \clearpage""" + '\n',
-        (False, True): r"""\subsection{testbmp}
+        \end{figure} \clearpage"""
+        + "\n",
+        (
+            False,
+            True,
+        ): r"""\subsection{testbmp}
         \begin{table}[h!]
             \caption{test table title}
             \centering
@@ -393,7 +447,8 @@ def expected_latext_input():
             \centering
             \includegraphics[scale=1.00]{testfigpath/scatterplot/metalstestbmpcarbondioxidescatter.pdf}
             \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
-        \end{figure} \clearpage""" + '\n'
+        \end{figure} \clearpage"""
+        + "\n",
     }
 
 
@@ -404,33 +459,32 @@ def cat_sum():
         (True, False),
         (True, True),
         (False, False),
-        (False, True)
+        (False, True),
     ]
     cs = summary.CategoricalSummary(
-        [mock_dataset(*inc) for inc in includes],
-        'Metals',
-        'basepath',
-        'testfigpath'
+        [mock_dataset(*inc) for inc in includes], "Metals", "basepath", "testfigpath"
     )
     return cs
 
 
 @pytest.fixture
 def expected_latex_report():
-    report = dedent("""\
+    report = dedent(
+        """\
         \\begin{document}test report title
         \\input{testpath.tex}
         \\end{document}
-    """)
+    """
+    )
     return report
 
 
 @pytest.fixture
 def temp_template():
     with TemporaryDirectory() as datadir:
-        filename = os.path.join(datadir, 'testtemplate.tex')
-        with open(filename, 'w') as f:
-            f.write('\\begin{document}__VARTITLE')
+        filename = os.path.join(datadir, "testtemplate.tex")
+        with open(filename, "w") as f:
+            f.write("\\begin{document}__VARTITLE")
 
         yield filename
 
@@ -444,7 +498,7 @@ def test_CategoricalSummary_datasets(cat_sum):
 
 def test_CategoricalSummary_paramgroup(cat_sum):
     assert isinstance(cat_sum.paramgroup, str)
-    assert cat_sum.paramgroup == 'Metals'
+    assert cat_sum.paramgroup == "Metals"
 
 
 def test_CategoricalSummary__make_input_file_IO(cat_sum, expected_latext_content):
@@ -455,33 +509,36 @@ def test_CategoricalSummary__make_input_file_IO(cat_sum, expected_latext_content
     helpers.assert_bigstring_equal(input_string, expected_latext_content)
 
 
-def test_CategoricalSummary__make_report_IO(cat_sum, expected_latex_report, temp_template):
-    with StringIO() as report, open(temp_template, 'r') as template:
-        cat_sum._make_report_IO(template, 'testpath.tex', report, 'test report title')
+def test_CategoricalSummary__make_report_IO(
+    cat_sum, expected_latex_report, temp_template
+):
+    with StringIO() as report, open(temp_template, "r") as template:
+        cat_sum._make_report_IO(template, "testpath.tex", report, "test report title")
         helpers.assert_bigstring_equal(report.getvalue(), expected_latex_report)
 
 
 def test_CategoricalSummary_makeReport(cat_sum, expected_latex_report, temp_template):
-    templatepath = get_tex_file('draft_template.tex')
-    inputpath = get_tex_file('inputs_{}.tex'.format(cat_sum.paramgroup.lower()))
+    templatepath = get_tex_file("draft_template.tex")
+    inputpath = get_tex_file("inputs_{}.tex".format(cat_sum.paramgroup.lower()))
     with TemporaryDirectory() as tmpdir:
-        reportpath = os.path.join(tmpdir, 'report_{}.tex'.format(cat_sum.paramgroup.lower()))
-        testpath = os.path.join(tmpdir, 'testpath.tex'.format(cat_sum.paramgroup.lower()))
+        reportpath = os.path.join(
+            tmpdir, "report_{}.tex".format(cat_sum.paramgroup.lower())
+        )
+        testpath = os.path.join(
+            tmpdir, "testpath.tex".format(cat_sum.paramgroup.lower())
+        )
         cat_sum.makeReport(
-            temp_template,
-            testpath,
-            reportpath,
-            'test report title',
-            regenfigs=False
+            temp_template, testpath, reportpath, "test report title", regenfigs=False
         )
 
-        with open(reportpath, 'r') as rp:
+        with open(reportpath, "r") as rp:
             helpers.assert_bigstring_equal(rp.read(), expected_latex_report)
 
 
 @pytest.fixture
 def expected_latext_content():
-    content = dedent(r"""        \section{Carbon Dioxide}
+    content = dedent(
+        r"""        \section{Carbon Dioxide}
         \subsection{testbmp}
                 \begin{table}[h!]
                     \caption{Statistics for Carbon Dioxide (mg/L) at testbmp BMPs}
@@ -665,5 +722,6 @@ def expected_latext_content():
                     \caption{Influent vs. Effluent Plots of Carbon Dioxide at testbmp BMPs}
                 \end{figure} \clearpage
         \clearpage
-    """)
+    """
+    )
     return content

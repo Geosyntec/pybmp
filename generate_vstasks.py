@@ -41,7 +41,7 @@ TEMPLATE = """\
 """
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dirname = ".vscode"
     filename = "tasks.json"
 
@@ -54,8 +54,8 @@ if __name__ == '__main__':
     else:
         name = sys.argv[1]
 
-    python = '/'.join(sys.executable.split(os.path.sep))
+    python = "/".join(sys.executable.split(os.path.sep))
     config = TEMPLATE.format(pyexec=python, modulename=name)
 
-    with open(filepath, 'w') as configfile:
+    with open(filepath, "w") as configfile:
         configfile.write(config)

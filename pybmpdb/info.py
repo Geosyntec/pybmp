@@ -5,34 +5,35 @@ from ._parameters import parameters
 from ._units import units
 
 
-__all__ = ['getUnits', 'getTexParam', 'getTexUnit',
-           'getNormalization', 'getConversion']
+__all__ = ["getUnits", "getTexParam", "getTexUnit", "getNormalization", "getConversion"]
 
 
-def _find_by_name(value_string, list_of_dicts, key='name'):
+def _find_by_name(value_string, list_of_dicts, key="name"):
     # get the parameter's entry in the lookup list of dicts
-    _entry = list(filter(
-        lambda x: x[key].strip().lower() == value_string.strip().lower(),
-        list_of_dicts
-    ))
+    _entry = list(
+        filter(
+            lambda x: x[key].strip().lower() == value_string.strip().lower(),
+            list_of_dicts,
+        )
+    )
 
     if len(_entry) != 1:
-        msg = 'Found ({}) entries found for {}. Expected 1.'
+        msg = "Found ({}) entries found for {}. Expected 1."
         raise ValueError(msg.format(len(_entry), value_string))
 
     return _entry[0]
 
 
-def getUnitsFromParam(paramname, attr='name'):
+def getUnitsFromParam(paramname, attr="name"):
     """
     Returns the standard units for a given parameter
     """
     p = _find_by_name(paramname, parameters)
-    u = _find_by_name(p['units'], units)
+    u = _find_by_name(p["units"], units)
     return u[attr]
 
 
-def getUnits(unitname, attr='name'):
+def getUnits(unitname, attr="name"):
     """
     Returns the standard units for a given parameter
     """
@@ -40,7 +41,7 @@ def getUnits(unitname, attr='name'):
     return u[attr]
 
 
-def getParam(paramname, attr='name'):
+def getParam(paramname, attr="name"):
     p = _find_by_name(paramname, parameters)
     return p[attr]
 
@@ -56,7 +57,7 @@ def getNormalization(unit):
     else:
         # get the unit's entry
         u = _find_by_name(unit, units)
-        _factor = u['factor']
+        _factor = u["factor"]
 
     return _factor
 
@@ -71,4 +72,4 @@ def getConversion(param):
     # get the parameter's entry in the lookup list of dicts
     p = _find_by_name(param, parameters)
 
-    return getNormalization(p['units'])
+    return getNormalization(p["units"])
