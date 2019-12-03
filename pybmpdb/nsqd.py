@@ -25,8 +25,8 @@ def load_data(datapath=None, as_dataframe=False, **dc_kwargs):
     nsqd : pandas.DataFrame or wqio.DataCollection
 
     """
-    datapath = Path(datapath or wqio.download('nsqd'))
-    nsqd = pandas.read_csv(datapath, encoding='utf-8')
+    datapath = Path(datapath or wqio.download("nsqd"))
+    nsqd = pandas.read_csv(datapath, encoding="utf-8")
     if as_dataframe:
         return nsqd
     return wqio.DataCollection(nsqd, **dc_kwargs)

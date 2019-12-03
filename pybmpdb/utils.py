@@ -50,22 +50,29 @@ def sanitizeTex(texstring):
     """
 
     newstring = (
-        texstring.replace(r'\\%', r'\%')
-                 .replace(r'\\', r'\tabularnewline')
-                 .replace('\$', '$')
-                 .replace('\_', '_')
-                 .replace('ug/L', '\si[per-mode=symbol]{\micro\gram\per\liter}')
-                 .replace(r'\textbackslashtimes', r'\times')
-                 .replace(r'\textbackslash', '')
-                 .replace(r'\textasciicircum', r'^')
-                 .replace('\{', '{')
-                 .replace('\}', '}')
+        texstring.replace(r"\\%", r"\%")
+        .replace(r"\\", r"\tabularnewline")
+        .replace("\$", "$")
+        .replace("\_", "_")
+        .replace("ug/L", "\si[per-mode=symbol]{\micro\gram\per\liter}")
+        .replace(r"\textbackslashtimes", r"\times")
+        .replace(r"\textbackslash", "")
+        .replace(r"\textasciicircum", r"^")
+        .replace("\{", "{")
+        .replace("\}", "}")
     )
     return newstring
 
 
-def csvToTex(csvpath, na_rep='--', float_format=_sig_figs, pcols=15,
-             addmidrules=None, replaceTBrules=True, replacestats=True):
+def csvToTex(
+    csvpath,
+    na_rep="--",
+    float_format=_sig_figs,
+    pcols=15,
+    addmidrules=None,
+    replaceTBrules=True,
+    replacestats=True,
+):
     """ Convert data in CSV format to a LaTeX table
 
     Parameters
@@ -103,16 +110,16 @@ def csvToTex(csvpath, na_rep='--', float_format=_sig_figs, pcols=15,
 
     if pcols > 0:
         lines = []
-        header, rest_of_file = latex.split('\n', maxsplit=1)
+        header, rest_of_file = latex.split("\n", maxsplit=1)
 
         # createa a bew header
-        header_sections = header.split('{')
+        header_sections = header.split("{")
         old_col_def = header_sections[-1][:-1]
-        new_col_def = ''
+        new_col_def = ""
         for n in range(len(old_col_def)):
             if n == 0:
-                new_col_def = new_col_def + 'l'
-            new_col_def = new_col_def + 'x{%smm}' % pcols
+                new_col_def = new_col_def + "l"
+            new_col_def = new_col_def + "x{%smm}" % pcols
 
         lines.append(header.replace(old_col_def, new_col_def))
 
@@ -134,18 +141,18 @@ def csvToTex(csvpath, na_rep='--', float_format=_sig_figs, pcols=15,
             rest_of_file = rest_of_file.replace("AluMin.um", "Aluminum")
 
         if addmidrules is not None:
-            if hasattr(addmidrules, 'append'):
+            if hasattr(addmidrules, "append"):
                 for amr in addmidrules:
-                    rest_of_file = rest_of_file.replace(amr, '\\midrule\n%s' % amr)
+                    rest_of_file = rest_of_file.replace(amr, "\\midrule\n%s" % amr)
             else:
-                rest_of_file = rest_of_file.replace(amr, '\\midrule\n%s' % addmidrules)
+                rest_of_file = rest_of_file.replace(amr, "\\midrule\n%s" % addmidrules)
 
         lines.append(rest_of_file)
 
-        return sanitizeTex('\n'.join(lines))
+        return sanitizeTex("\n".join(lines))
 
 
-def csvToXlsx(csvpath, xlsxpath, na_rep='--', float_format=None):
+def csvToXlsx(csvpath, xlsxpath, na_rep="--", float_format=None):
     """ Convert data in CSV format to an Excel workbook
 
     Parameters
@@ -172,8 +179,9 @@ def csvToXlsx(csvpath, xlsxpath, na_rep='--', float_format=None):
     data.to_excel(xlsxpath, float_format=float_format, na_rep=na_rep, index=False)
 
 
-def makeTexTable(tablefile, caption, sideways=False, footnotetext=None,
-                 clearpage=False, pos='h!'):
+def makeTexTable(
+    tablefile, caption, sideways=False, footnotetext=None, clearpage=False, pos="h!"
+):
     """ Creates a table block for a LaTeX document. Does not add it any
     file.
 
@@ -204,22 +212,24 @@ def makeTexTable(tablefile, caption, sideways=False, footnotetext=None,
 
     """
     if sideways:
-        tabletype = 'sidewaystable'
+        tabletype = "sidewaystable"
         clearpage = True
     else:
-        tabletype = 'table'
+        tabletype = "table"
 
     if clearpage:
-        clearpagetext = r'\clearpage'
+        clearpagetext = r"\clearpage"
     else:
-        clearpagetext = ''
+        clearpagetext = ""
 
     if footnotetext is None:
-        notes = ''
+        notes = ""
     else:
         notes = footnotetext
 
-    tablestring = dedent(r"""
+    tablestring = (
+        dedent(
+            r"""
     \begin{%s}[%s]
         \rowcolors{1}{CVCWhite}{CVCLightGrey}
         \caption{%s}
@@ -228,7 +238,10 @@ def makeTexTable(tablefile, caption, sideways=False, footnotetext=None,
     \end{%s}
     %s
     %s
-    """) % (tabletype, pos, caption, tablefile, tabletype, notes, clearpagetext)
+    """
+        )
+        % (tabletype, pos, caption, tablefile, tabletype, notes, clearpagetext)
+    )
     return tablestring
 
 
@@ -258,33 +271,35 @@ def makeLongLandscapeTexTable(df, caption, label, footnotetext=None, index=False
     """
 
     if footnotetext is None:
-        notes = ''
+        notes = ""
     else:
         notes = footnotetext
 
-    tabletexstring = df.to_latex(index=index, float_format=_sig_figs, na_rep='--')
-    valuelines = tabletexstring.split('\n')[4:-3]
-    valuestring = '\n'.join(valuelines)
+    tabletexstring = df.to_latex(index=index, float_format=_sig_figs, na_rep="--")
+    valuelines = tabletexstring.split("\n")[4:-3]
+    valuestring = "\n".join(valuelines)
 
     def _multicol_format(args):
         n, col = args
         if n == 0:
-            align = 'l'
+            align = "l"
         else:
-            align = 'p{16mm}'
+            align = "p{16mm}"
 
-        return r"\multicolumn{1}{%s}{%s}" % (align, col.replace('%', r'\%'))
+        return r"\multicolumn{1}{%s}{%s}" % (align, col.replace("%", r"\%"))
 
     dfcols = df.columns.tolist()
 
-    colalignlist = ['c'] * len(dfcols)
-    colalignlist[0] = 'l'
-    colalignment = ''.join(colalignlist)
+    colalignlist = ["c"] * len(dfcols)
+    colalignlist[0] = "l"
+    colalignment = "".join(colalignlist)
 
     col_enum = list(enumerate(dfcols))
-    columns = ' &\n        '.join(list(map(_multicol_format, col_enum)))
+    columns = " &\n        ".join(list(map(_multicol_format, col_enum)))
 
-    tablestring = dedent(r"""
+    tablestring = (
+        dedent(
+            r"""
     \begin{landscape}
         \centering
         \rowcolors{1}{CVCWhite}{CVCLightGrey}
@@ -317,12 +332,24 @@ def makeLongLandscapeTexTable(df, caption, label, footnotetext=None, index=False
     \end{landscape}
     %s
     \clearpage
-    """) % (colalignment, caption, label, columns, len(dfcols),
-            columns, len(dfcols), valuestring, notes)
+    """
+        )
+        % (
+            colalignment,
+            caption,
+            label,
+            columns,
+            len(dfcols),
+            columns,
+            len(dfcols),
+            valuestring,
+            notes,
+        )
+    )
     return tablestring
 
 
-def makeTexFigure(figFile, caption, pos='hb', clearpage=True):
+def makeTexFigure(figFile, caption, pos="hb", clearpage=True):
     """ Create the LaTeX for include a figure in a document. Does not
     actually add it to any document.
 
@@ -353,18 +380,23 @@ def makeTexFigure(figFile, caption, pos='hb', clearpage=True):
 
     """
     if clearpage:
-        clearpagetext = r'\clearpage'
+        clearpagetext = r"\clearpage"
     else:
-        clearpagetext = ''
+        clearpagetext = ""
 
-    figurestring = dedent(r'''
+    figurestring = (
+        dedent(
+            r"""
     \begin{figure}[%s]   %% FIGURE
         \centering
         \includegraphics[scale=1.00]{%s}
         \caption{%s}
     \end{figure}         %% FIGURE
     %s
-    ''') % (pos, figFile, caption, clearpagetext)
+    """
+        )
+        % (pos, figFile, caption, clearpagetext)
+    )
     return figurestring
 
 
@@ -389,52 +421,52 @@ def processFilename(filename):
 
     """
 
-    badchars = [' ', ',', '+', '$', '_', '{', '}', '/', '&']
+    badchars = [" ", ",", "+", "$", "_", "{", "}", "/", "&"]
     fn = filename
     for bc in badchars:
-        fn = fn.replace(bc, '')
+        fn = fn.replace(bc, "")
     return fn
 
 
 def setMPLStyle(serif=False):
     if serif:
-        fontfamily = 'serif'
+        fontfamily = "serif"
         preamble = [
-            r'\usepackage{siunitx}',
-            r'\sisetup{detect-all}',
-            r'\usepackage{fourier}'
+            r"\usepackage{siunitx}",
+            r"\sisetup{detect-all}",
+            r"\usepackage{fourier}",
         ]
     else:
-        fontfamily = 'sans-serif'
+        fontfamily = "sans-serif"
         preamble = [
-            r'\usepackage{siunitx}',
-            r'\sisetup{detect-all}',
-            r'\usepackage{helvet}',
-            r'\usepackage{sansmath}',
-            r'\sansmath'
+            r"\usepackage{siunitx}",
+            r"\sisetup{detect-all}",
+            r"\usepackage{helvet}",
+            r"\usepackage{sansmath}",
+            r"\sansmath",
         ]
     style_dict = {
-        'text.usetex': True,
-        'font.family': [fontfamily],
-        'font.serif': ['Utopia', 'Palantino'],
-        'font.sans-serif': ['Helvetica', 'Arial'],
-        'lines.linewidth': 0.5,
-        'patch.linewidth': 0.5,
-        'text.latex.preamble': preamble,
-        'axes.linewidth': 0.5,
-        'axes.grid': True,
-        'axes.titlesize': 12,
-        'axes.labelsize': 10,
-        'xtick.labelsize': 10,
-        'xtick.direction': 'out',
-        'ytick.labelsize': 10,
-        'ytick.direction': 'out',
-        'grid.linewidth': 0.5,
-        'legend.fancybox': True,
-        'legend.numpoints': 1,
-        'legend.fontsize': 8,
-        'figure.figsize': (6.5, 3.5),
-        'savefig.dpi': 300
+        "text.usetex": True,
+        "font.family": [fontfamily],
+        "font.serif": ["Utopia", "Palantino"],
+        "font.sans-serif": ["Helvetica", "Arial"],
+        "lines.linewidth": 0.5,
+        "patch.linewidth": 0.5,
+        "text.latex.preamble": preamble,
+        "axes.linewidth": 0.5,
+        "axes.grid": True,
+        "axes.titlesize": 12,
+        "axes.labelsize": 10,
+        "xtick.labelsize": 10,
+        "xtick.direction": "out",
+        "ytick.labelsize": 10,
+        "ytick.direction": "out",
+        "grid.linewidth": 0.5,
+        "legend.fancybox": True,
+        "legend.numpoints": 1,
+        "legend.fontsize": 8,
+        "figure.figsize": (6.5, 3.5),
+        "savefig.dpi": 300,
     }
     matplotlib.rcParams.update(style_dict)
 
@@ -488,15 +520,17 @@ class LaTeXDirectory(object):
 
         if helpers.checkdep_tex() is not None:
             # use ``pdflatex`` to compile the document
-            tex = subprocess.call(['pdflatex', texdoc, '--quiet'],
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  shell=False)
+            tex = subprocess.call(
+                ["pdflatex", texdoc, "--quiet"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=False,
+            )
 
             if clean:
-                extensions = ['aux', 'log', 'nav', 'out', 'snm', 'toc']
+                extensions = ["aux", "log", "nav", "out", "snm", "toc"]
                 for ext in extensions:
-                    junkfiles = glob.glob('*.{}'.format(ext))
+                    junkfiles = glob.glob("*.{}".format(ext))
                     for junk in junkfiles:
                         os.remove(junk)
 

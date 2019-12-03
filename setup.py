@@ -7,10 +7,7 @@ from setuptools import setup, find_packages
 
 
 def getDataFiles(folder):
-    files = [d for d in map(
-        lambda x: os.path.join(folder, x),
-        os.listdir(folder)
-    )]
+    files = [d for d in map(lambda x: os.path.join(folder, x), os.listdir(folder))]
     return files
 
 
@@ -31,14 +28,23 @@ CLASSIFIERS = [
     "Programming Language :: Python",
     "Intended Audience :: Science/Research",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
 ]
-INSTALL_REQUIRES = ['wqio', 'numpy', 'matplotlib', 'pandas', 'statsmodels', 'openpyxl', 'seaborn', 'engarde']
+INSTALL_REQUIRES = [
+    "wqio",
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "statsmodels",
+    "openpyxl",
+    "seaborn",
+    "engarde",
+]
 PACKAGE_DATA = {
-    'pybmpdb.data': ['*.csv', '*.sql'],
-    'pybmpdb.tests._data': ['bmpdata*'],
-    'pybmpdb.tex': ['*.tex'],
+    "pybmpdb.data": ["*.csv", "*.sql"],
+    "pybmpdb.tests._data": ["bmpdata*"],
+    "pybmpdb.tex": ["*.tex"],
 }
 
 
