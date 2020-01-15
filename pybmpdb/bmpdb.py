@@ -681,11 +681,11 @@ def load_data(
         return bmp
     return wqio.DataCollection(
         bmp,
-        rescol="res",
-        qualcol="qual",
-        ndval=["ND"],
-        stationcol="station",
-        paramcol="parameter",
+        rescol=rescol,
+        qualcol=qualcol,
+        ndval=ndval,
+        stationcol=stationcol,
+        paramcol=paramcol,
         othergroups=othergroups,
         pairgroups=pairgroups,
         **dc_kwargs
