@@ -72,6 +72,7 @@ pybmpdb/*/tests/*.xlsx
 pybmpdb.egg-info/*
 result_images/*
 .pytest_cache
+cov.xml
 
 # scratch files #
 #################
