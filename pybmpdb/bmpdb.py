@@ -453,9 +453,9 @@ def _clean_raw_data(raw_df, nd_correction=2):
         "units",
         "parameter",
         "fraction",
-        "initialscreen",
-        "wqscreen",
-        "catscreen",
+        "wq_initialscreen",
+        "ms_indivscreen",
+        "wq_catscreen",
         "bmptype",
         "ws_id",
         "site_id",
@@ -482,9 +482,9 @@ def _clean_raw_data(raw_df, nd_correction=2):
             * _handle_ND_factors(df, nd_correction=nd_correction)
         )
         .assign(qual=lambda df: _handle_ND_qualifiers(df))
-        .assign(initialscreen=lambda df: _process_screening(df, "initialscreen"))
-        .assign(wqscreen=lambda df: _process_screening(df, "wqscreen"))
-        .assign(catscreen=lambda df: _process_screening(df, "catscreen"))
+        .assign(wq_initialscreen=lambda df: _process_screening(df, "wq_initialscreen"))
+        .assign(ms_indivscreen=lambda df: _process_screening(df, "ms_indivscreen"))
+        .assign(wq_catscreen=lambda df: _process_screening(df, "wq_catscreen"))
         .assign(station=lambda df: df["station"].str.lower())
         .assign(sampletype=lambda df: _process_sampletype(df, "sampletype"))
         .assign(sampledatetime=lambda df: df.apply(wqio.utils.makeTimestamp, axis=1))
@@ -681,11 +681,11 @@ def load_data(
         return bmp
     return wqio.DataCollection(
         bmp,
-        rescol="res",
-        qualcol="qual",
-        ndval=["ND"],
-        stationcol="station",
-        paramcol="parameter",
+        rescol=rescol,
+        qualcol=qualcol,
+        ndval=ndval,
+        stationcol=stationcol,
+        paramcol=paramcol,
         othergroups=othergroups,
         pairgroups=pairgroups,
         **dc_kwargs
