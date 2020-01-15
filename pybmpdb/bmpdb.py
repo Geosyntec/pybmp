@@ -103,9 +103,9 @@ def _handle_ND_qualifiers(df, qualcol="qual", rescol="res", dlcol="DL", quals=No
     --------
     _handle_ND_factors
 
- , nd   Notes
+    Notes
     -----
-    Same basic premise as _handle_ND_factors, b, ndut different qualifiers count
+    Same basic premise as _handle_ND_factors, but different qualifiers count
     as ND compared to what we used to determine the ND-scaling factors.
 
     """
