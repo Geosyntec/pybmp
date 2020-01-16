@@ -11,7 +11,7 @@ The data are prepared for the BMP Database in the following ways:
 
 1. Fetch Site data from the DOT Sites endpoint (`/DOTSites`), rename columns(see column [mapping section](#site-data-column-map))
 1. Fetch BMP Category data from the BMP Code endpoint `(/vBMPCodes)`, rename columns (see column [mapping section](#bmp-codes-column-map))
-1. Fetch WQ data from the raw WQ Flat File endpoint (`/WQFlatFile`), rename columns (see column [mapping section](#wq-data-column-map))
+1. Fetch WQ data from the raw WQ Flat File endpoint (`/vWQRaw`), rename columns (see column [mapping section](#wq-data-column-map))
 1. Select only WQ Data where the 'webscreen' column is "y"
 1. Drop any rows with nulls in the "units" column (there should be 0 rows that meet this condition)
 1. Fill nulls in the 'epazone' column with -99, convert column to an integer type
