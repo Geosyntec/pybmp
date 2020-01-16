@@ -9,9 +9,9 @@
 
 The data are prepared for the BMP Database in the following ways:
 
-1. Fetch Site data from the DOT Sites endpoint (`/DOTSites`), rename columns (see column mapping section)
-1. Fetch BMP Category data from the BMP Code endpoint `(/vBMPCodes)`, rename columns (see column mapping section)
-1. Fetch WQ data from the raw WQ Flat File endpoint (`/WQFlatFile`), rename columns (see column mapping section)
+1. Fetch Site data from the DOT Sites endpoint (`/DOTSites`), rename columns(see column [mapping section](#site-data-column-map))
+1. Fetch BMP Category data from the BMP Code endpoint `(/vBMPCodes)`, rename columns (see column [mapping section](#bmp-codes-column-map))
+1. Fetch WQ data from the raw WQ Flat File endpoint (`/WQFlatFile`), rename columns (see column [mapping section](#wq-data-column-map))
 1. Select only WQ Data where the 'webscreen' column is "y"
 1. Drop any rows with nulls in the "units" column (there should be 0 rows that meet this condition)
 1. Fill nulls in the 'epazone' column with -99, convert column to an integer type
@@ -32,7 +32,7 @@ The data are prepared for the BMP Database in the following ways:
     1. Normalize all results to the "preferred units" for each parameter ![See here for more info](https://github.com/Geosyntec/pybmpdb/blob/master/pybmpdb/_parameters.py)
     1. Creates and fills a "fraction" column with either 'total' or 'dissolved'
     1. Filter out results where the "res" column is less than 0 (there should be 0 rows that meet this condition)
-    1. Checks that none of the "header" columns have null values (header columns together should uniquely define each observation and are listed below)
+    1. Checks that none of the "header" columns have null values (header columns together should uniquely define each observation and [are listed below](#wq-data-header-columns))
     1. Group the dataset by the "header" column, compute the mean of the "res" column, minimum of the "qual" column, and minimum of the "sampledatetime" column
     1. Confirm that each row has a unique combination of the header columns
 1. Pipe that dataframe to `pybmpdb._prepare_for_summary`, which does the following:
@@ -68,7 +68,7 @@ Prior to the analysis for the main WQ and DOT summary report, the following step
 
 ## Renaming column mappings
 
-### WQ Data
+### WQ Data Column Map
 
 <details>
 
@@ -112,7 +112,7 @@ Prior to the analysis for the main WQ and DOT summary report, the following step
 
 </details>
 
-### Site Data
+### Site Data Column Map
 
 <details>
 
@@ -123,7 +123,7 @@ Prior to the analysis for the main WQ and DOT summary report, the following step
 
 </details>
 
-### BMP Codes
+### BMP Codes Column Map
 
 <details>
 
@@ -134,7 +134,7 @@ Prior to the analysis for the main WQ and DOT summary report, the following step
 
 ## Header Columns
 
-### WQ Data
+### WQ Data Header Columns
 
 <details>
 
