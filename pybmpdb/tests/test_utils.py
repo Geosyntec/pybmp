@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 
 from unittest import mock
 import pytest
-import pandas.util.testing as pdtest
+import pandas.testing as pdtest
 from wqio.tests import helpers
 
 import numpy
@@ -26,9 +26,7 @@ def test__sig_figs_helper():
 
 def test_refresh_index():
     idx = pandas.MultiIndex.from_product([list("ABC"), list("ABC")], names=["A", "B"])
-    df = pandas.DataFrame(
-        index=idx, columns=list("abc"), data=numpy.arange(27).reshape(9, 3)
-    )
+    df = pandas.DataFrame(index=idx, columns=list("abc"), data=numpy.arange(27).reshape(9, 3))
     pdtest.assert_frame_equal(df, utils.refresh_index(df))
 
     dfr = df.reset_index()
@@ -36,9 +34,7 @@ def test_refresh_index():
 
 
 def test_get_level_position():
-    idx = pandas.MultiIndex.from_product(
-        [list("ABC"), ["cat", "dog", "fox", "deer"]], names=["forest", "animal"]
-    )
+    idx = pandas.MultiIndex.from_product([list("ABC"), ["cat", "dog", "fox", "deer"]], names=["forest", "animal"])
     df = pandas.DataFrame(index=idx, columns=list("abc"))
 
     assert utils.get_level_position(df, "animal") == 1
@@ -77,9 +73,7 @@ def test_csvToXlsx(inputpath):
     with mock.patch.object(pandas.DataFrame, "to_excel") as toxl:
         outputpath = resource_filename("pybmpdb.tests._data", "testtable_toXL.xlsx")
         utils.csvToXlsx(inputpath, outputpath)
-        toxl.assert_called_once_with(
-            outputpath, float_format=None, na_rep="--", index=False
-        )
+        toxl.assert_called_once_with(outputpath, float_format=None, na_rep="--", index=False)
 
 
 def test_makeTexTable_normal():
@@ -221,9 +215,7 @@ def test_makeLongLandscapeTexTable(footnote, long_landscape_tables):
         "Y": {"a": -1.3477794473987552, "b": -1.1939220296611821},
     }
     df = pandas.DataFrame.from_dict(dfdict)
-    result = utils.makeLongLandscapeTexTable(
-        df, "test caption", "label", footnotetext=footnote
-    )
+    result = utils.makeLongLandscapeTexTable(df, "test caption", "label", footnotetext=footnote)
     expected = long_landscape_tables[footnote]
     helpers.assert_bigstring_equal(result, expected)
 

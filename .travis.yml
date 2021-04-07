@@ -23,7 +23,7 @@ before_install:
 install:
   - conda create --name=test python=$TRAVIS_PYTHON_VERSION nomkl --channel=conda-forge --yes
   - source activate test
-  - conda install numpy scipy pandas matplotlib statsmodels seaborn mpl-probscale engarde pytest pytest-cov pytest-mpl pytest-pep8 coverage docopt requests pyyaml tqdm --channel=conda-forge --yes
+  - conda install numpy scipy pandas matplotlib statsmodels seaborn mpl-probscale bulwark pytest pytest-cov pytest-mpl pytest-pep8 coverage docopt requests pyyaml tqdm --channel=conda-forge --yes
   - pip install git+https://github.com/Geosyntec/wqio.git
   - pip install codecov
   - pip install . --no-deps

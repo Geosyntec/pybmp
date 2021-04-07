@@ -7,17 +7,13 @@ from tempfile import TemporaryDirectory
 
 from unittest import mock
 import pytest
-import numpy.testing as nptest
-import pandas.util.testing as pdtest
+
 from wqio.tests import helpers
 
 import numpy
 from matplotlib import pyplot
-import pandas
-from engarde import checks
 
-import wqio
-from pybmpdb import summary, utils, bmpdb
+from pybmpdb import summary
 
 
 mock_figure = mock.Mock(spec=pyplot.Figure)
@@ -201,9 +197,7 @@ def test_DatasetSummary__tex_table_row_advanced(dset_sum):
                 \toprule
                 Mean CI & NA & NA \\""",
     }
-    result_row = dset_sum._tex_table_row(
-        "Mean CI", "mean_conf_interval", rule="top", twoval=True, ci=True, sigfigs=2
-    )
+    result_row = dset_sum._tex_table_row("Mean CI", "mean_conf_interval", rule="top", twoval=True, ci=True, sigfigs=2)
     assert result_row == expected[dset_sum.ds.scenario]
 
 
@@ -461,9 +455,7 @@ def cat_sum():
         (False, False),
         (False, True),
     ]
-    cs = summary.CategoricalSummary(
-        [mock_dataset(*inc) for inc in includes], "Metals", "basepath", "testfigpath"
-    )
+    cs = summary.CategoricalSummary([mock_dataset(*inc) for inc in includes], "Metals", "basepath", "testfigpath")
     return cs
 
 
@@ -509,9 +501,7 @@ def test_CategoricalSummary__make_input_file_IO(cat_sum, expected_latext_content
     helpers.assert_bigstring_equal(input_string, expected_latext_content)
 
 
-def test_CategoricalSummary__make_report_IO(
-    cat_sum, expected_latex_report, temp_template
-):
+def test_CategoricalSummary__make_report_IO(cat_sum, expected_latex_report, temp_template):
     with StringIO() as report, open(temp_template, "r") as template:
         cat_sum._make_report_IO(template, "testpath.tex", report, "test report title")
         helpers.assert_bigstring_equal(report.getvalue(), expected_latex_report)
@@ -521,15 +511,9 @@ def test_CategoricalSummary_makeReport(cat_sum, expected_latex_report, temp_temp
     templatepath = get_tex_file("draft_template.tex")
     inputpath = get_tex_file("inputs_{}.tex".format(cat_sum.paramgroup.lower()))
     with TemporaryDirectory() as tmpdir:
-        reportpath = os.path.join(
-            tmpdir, "report_{}.tex".format(cat_sum.paramgroup.lower())
-        )
-        testpath = os.path.join(
-            tmpdir, "testpath.tex".format(cat_sum.paramgroup.lower())
-        )
-        cat_sum.makeReport(
-            temp_template, testpath, reportpath, "test report title", regenfigs=False
-        )
+        reportpath = os.path.join(tmpdir, "report_{}.tex".format(cat_sum.paramgroup.lower()))
+        testpath = os.path.join(tmpdir, "testpath.tex".format(cat_sum.paramgroup.lower()))
+        cat_sum.makeReport(temp_template, testpath, reportpath, "test report title", regenfigs=False)
 
         with open(reportpath, "r") as rp:
             helpers.assert_bigstring_equal(rp.read(), expected_latex_report)

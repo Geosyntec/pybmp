@@ -4,14 +4,9 @@ from pkg_resources import resource_filename
 from functools import partial
 from pathlib import Path
 
-try:
-    import pyodbc
-except ImportError:
-    pyodbc = None
-
 import numpy
 import pandas
-from engarde import checks
+from bulwark import checks
 
 from . import info, utils
 
@@ -25,10 +20,8 @@ _logger = logging.getLogger(__name__)
 
 
 @wqio.utils.log_df_shape(_logger)
-def _handle_ND_factors(
-    df, qualcol="qual", rescol="res", dlcol="DL", quals=None, nd_correction=2
-):
-    """ Determines the scaling factor to be applied to the water quality result
+def _handle_ND_factors(df, qualcol="qual", rescol="res", dlcol="DL", quals=None, nd_correction=2):
+    """Determines the scaling factor to be applied to the water quality result
     based on the result qualifiers in the BMP Database.
 
     Parameters
@@ -78,7 +71,7 @@ def _handle_ND_factors(
 
 @wqio.utils.log_df_shape(_logger)
 def _handle_ND_qualifiers(df, qualcol="qual", rescol="res", dlcol="DL", quals=None):
-    """ Determines final qualifier to be applied to the water quality result
+    """Determines final qualifier to be applied to the water quality result
     based on the result qualifiers in the BMP Database. Non-detects get "ND",
     detected values get "=".
 
@@ -114,9 +107,7 @@ def _handle_ND_qualifiers(df, qualcol="qual", rescol="res", dlcol="DL", quals=No
     if not quals:
         quals.extend(["U", "UA", "UI", "UC", "UK", "K"])
 
-    is_ND = df[qualcol].isin(quals) | (
-        (df[qualcol] == "UJ") & (df[rescol] <= df[dlcol])
-    )
+    is_ND = df[qualcol].isin(quals) | ((df[qualcol] == "UJ") & (df[rescol] <= df[dlcol]))
     return numpy.where(is_ND, "ND", "=")
 
 
@@ -131,8 +122,7 @@ def _process_screening(df, screencol):
 def _process_sampletype(df, sampletype):
     grab = [df[sampletype].str.lower().str.contains("grab"), "grab"]
     composite = [
-        df[sampletype].str.lower().str.contains("emc")
-        | df[sampletype].str.lower().str.contains("comp"),
+        df[sampletype].str.lower().str.contains("emc") | df[sampletype].str.lower().str.contains("comp"),
         "composite",
     ]
     return wqio.utils.selector("unknown", grab, composite)
@@ -167,7 +157,7 @@ def transform_parameters(
     indexMods=None,
     paramlevel="parameter",
 ):
-    """ Apply an arbitrary transformation to a parameter in the data
+    """Apply an arbitrary transformation to a parameter in the data
 
     Parameters
     ----------
@@ -215,14 +205,10 @@ def transform_parameters(
     # add the units into indexMod, apply all changes
     indexMods["units"] = newunits
     for levelname, value in indexMods.items():
-        transformed = wqio.utils.redefine_index_level(
-            transformed, levelname, value, criteria=None, dropold=True
-        )
+        transformed = wqio.utils.redefine_index_level(transformed, levelname, value, criteria=None, dropold=True)
 
     # return the *full* dataset (preserving original params)
-    result = pandas.concat(
-        [df.reset_index(), transformed.reset_index()], sort=False
-    ).set_index(index_name_cache)
+    result = pandas.concat([df.reset_index(), transformed.reset_index()], sort=False).set_index(index_name_cache)
     return result
 
 
@@ -291,14 +277,10 @@ def _pick_best_sampletype(df):
     orig_cols = df.columns
     xtab = df.pipe(utils.refresh_index).unstack(level="sampletype")
     for col in orig_cols:
-        grabvalues = numpy.where(
-            xtab[(col, "composite")].isnull(), xtab[(col, "grab")], numpy.nan
-        )
+        grabvalues = numpy.where(xtab[(col, "composite")].isnull(), xtab[(col, "grab")], numpy.nan)
         xtab = wqio.utils.assign_multilevel_column(xtab, grabvalues, col, "grab")
 
-    data = xtab.loc[:, xtab.columns.map(lambda c: c[1] != "unknown")].stack(
-        level=["sampletype"]
-    )
+    data = xtab.loc[:, xtab.columns.map(lambda c: c[1] != "unknown")].stack(level=["sampletype"])
     return data
 
 
@@ -331,9 +313,7 @@ def _filter_by_storm_count(df, minstorms):
 def _filter_by_BMP_count(df, minbmps):
     grouplevels = ["category", "parameter", "station"]
 
-    data = df.groupby(level=grouplevels).filter(
-        lambda g: g.index.get_level_values("bmp").unique().shape[0] >= minbmps
-    )
+    data = df.groupby(level=grouplevels).filter(lambda g: g.index.get_level_values("bmp").unique().shape[0] >= minbmps)
     return data
 
 
@@ -352,7 +332,7 @@ def _maybe_combine_WB_RP(df, combine_WB_RP, catlevel="category"):
             dropold=False,
             criteria=lambda row: row[level_pos] in wbrp_indiv,
         ).pipe(
-            checks.verify_any,
+            checks.custom_check,
             lambda df: df.index.get_level_values(catlevel) == wbrp_combo,
         )
     else:
@@ -376,9 +356,7 @@ def _maybe_combine_nox(
         ]
         nitro_combined = "Nitrogen, NOx as N"
 
-        picker = partial(
-            _pick_non_null, preferred=nitro_components[0], secondary=nitro_components[1]
-        )
+        picker = partial(_pick_non_null, preferred=nitro_components[0], secondary=nitro_components[1])
 
         return transform_parameters(
             df,
@@ -388,7 +366,7 @@ def _maybe_combine_nox(
             partial(picker, maincol=rescol),
             partial(picker, maincol=qualcol),
         ).pipe(
-            checks.verify_any,
+            checks.custom_check,
             lambda df: df.index.get_level_values(paramlevel) == nitro_combined,
         )
     else:
@@ -406,7 +384,7 @@ def _maybe_fix_PFCs(df, fix_PFCs, catlevel="category", typelevel="bmptype"):
             PFC,
             dropold=True,
             criteria=lambda row: row[type_level_pos] == "PF",
-        ).pipe(checks.verify_any, lambda df: df.index.get_level_values(catlevel) == PFC)
+        ).pipe(checks.custom_check, lambda df: df.index.get_level_values(catlevel) == PFC)
     else:
         return df
 
@@ -465,10 +443,7 @@ def _clean_raw_data(raw_df, nd_correction=2):
 
     units_norm = {u["unicode"]: info.getNormalization(u["name"]) for u in info.units}
 
-    target_units = {
-        p["name"].lower(): info.getUnitsFromParam(p["name"], attr="unicode")
-        for p in info.parameters
-    }
+    target_units = {p["name"].lower(): info.getUnitsFromParam(p["name"], attr="unicode") for p in info.parameters}
 
     expected_rows = raw_df.loc[:, "res"].groupby(lambda x: x > 0).count().loc[True]
 
@@ -477,10 +452,7 @@ def _clean_raw_data(raw_df, nd_correction=2):
         raw_df.fillna({"qual": "="})
         .dropna(subset=["res"])
         .assign(qual=lambda df: df["qual"].str.strip())
-        .assign(
-            res=lambda df: df["res"]
-            * _handle_ND_factors(df, nd_correction=nd_correction)
-        )
+        .assign(res=lambda df: df["res"] * _handle_ND_factors(df, nd_correction=nd_correction))
         .assign(qual=lambda df: _handle_ND_qualifiers(df))
         .assign(wq_initialscreen=lambda df: _process_screening(df, "wq_initialscreen"))
         .assign(ms_indivscreen=lambda df: _process_screening(df, "ms_indivscreen"))
@@ -488,15 +460,9 @@ def _clean_raw_data(raw_df, nd_correction=2):
         .assign(station=lambda df: df["station"].str.lower())
         .assign(sampletype=lambda df: _process_sampletype(df, "sampletype"))
         .assign(sampledatetime=lambda df: df.apply(wqio.utils.makeTimestamp, axis=1))
-        .assign(
-            units=lambda df: df["units"].map(lambda u: info.getUnits(u, attr="unicode"))
-        )
+        .assign(units=lambda df: df["units"].map(lambda u: info.getUnits(u, attr="unicode")))
         .assign(_parameter=lambda df: df["parameter"].str.lower().str.strip())
-        .assign(
-            fraction=lambda df: numpy.where(
-                df["_parameter"].str.contains("dissolved"), "dissolved", "total"
-            )
-        )
+        .assign(fraction=lambda df: numpy.where(df["_parameter"].str.contains("dissolved"), "dissolved", "total"))
         .pipe(
             wqio.utils.normalize_units,
             units_norm,
@@ -508,7 +474,13 @@ def _clean_raw_data(raw_df, nd_correction=2):
         )
         .drop(drop_columns, axis=1)
         .query("res > 0")
-        .pipe(checks.none_missing, columns=_row_headers)
+        .pipe(
+            checks.multi_check,
+            [
+                lambda df: checks.has_no_nans(df, columns=_row_headers),
+                lambda df: checks.has_no_nones(df, columns=_row_headers),
+            ],
+        )
         .groupby(by=_row_headers)
         .agg({"res": "mean", "qual": "min", "sampledatetime": "min"})
         .set_index("sampledatetime", append=True)
@@ -531,7 +503,7 @@ def _prepare_for_summary(
     excluded_bmps=None,
     excluded_params=None,
 ):
-    """ Prepare data for categorical summaries
+    """Prepare data for categorical summaries
 
     Parameter
     ---------
@@ -604,7 +576,7 @@ def load_data(
     as_dataframe=False,
     **dc_kwargs
 ):
-    """ Prepare data for categorical summaries
+    """Prepare data for categorical summaries
 
     Parameter
     ---------
@@ -652,9 +624,7 @@ def load_data(
 
     """
     othergroups = dc_kwargs.pop("othergroups", ["category", "units"])
-    pairgroups = dc_kwargs.pop(
-        "pairgroups", ["category", "units", "bmp_id", "site_id", "storm"]
-    )
+    pairgroups = dc_kwargs.pop("pairgroups", ["category", "units", "bmp_id", "site_id", "storm"])
     rescol = dc_kwargs.pop("rescol", "res")
     qualcol = dc_kwargs.pop("qualcol", "qual")
     ndval = dc_kwargs.pop("ndval", ["ND", "<"])
