@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 import pytest
 import numpy.testing as nptest
-import pandas.util.testing as pdtest
+import pandas.testing as pdtest
 
 import numpy
 import pandas
@@ -61,9 +61,7 @@ def test__process_screening():
 
 
 def test__process_sampletype():
-    df = pandas.DataFrame(
-        {"sampletype": ["SRL GraB asdf", "SeL cOMPositE df", "jeL LSDR as"]}
-    )
+    df = pandas.DataFrame({"sampletype": ["SRL GraB asdf", "SeL cOMPositE df", "jeL LSDR as"]})
     expected = numpy.array(["grab", "composite", "unknown"])
     result = bmpdb._process_sampletype(df, "sampletype")
     nptest.assert_array_equal(result, expected)
@@ -79,9 +77,7 @@ def test__check_levelnames():
 @patch.object(pandas, "read_csv")
 def test_load_data(read_csv):
     bmpdb.load_data("bmp.csv")
-    read_csv.assert_called_once_with(
-        Path("bmp.csv"), parse_dates=["sampledate"], encoding="utf-8"
-    )
+    read_csv.assert_called_once_with(Path("bmp.csv"), parse_dates=["sampledate"], encoding="utf-8")
 
 
 @pytest.mark.skipif(True, reason="test not ready")
@@ -160,9 +156,7 @@ def test_transform_parameters():
 )
 def test_summary_filter_functions(fxn, args, index_cols, infilename, outfilename):
     input_df = pandas.read_csv(get_data_file(infilename), index_col=index_cols)
-    expected_df = pandas.read_csv(
-        get_data_file(outfilename), index_col=index_cols
-    ).sort_index()
+    expected_df = pandas.read_csv(get_data_file(outfilename), index_col=index_cols).sort_index()
 
     test_df = fxn(input_df, *args).sort_index()
     pdtest.assert_frame_equal(expected_df.reset_index(), test_df.reset_index())
@@ -208,9 +202,7 @@ def test__maybe_filter_functions(fxn, doit, index_cols, infilename, outfilename)
     input_df = pandas.read_csv(get_data_file(infilename), index_col=index_cols)
     result = fxn(input_df, doit).sort_index()
     if doit:
-        expected = pandas.read_csv(
-            get_data_file(outfilename), index_col=index_cols
-        ).sort_index()
+        expected = pandas.read_csv(get_data_file(outfilename), index_col=index_cols).sort_index()
     else:
         expected = input_df.copy().sort_index()
     pdtest.assert_frame_equal(result, expected)
@@ -229,9 +221,7 @@ def test__pick_non_null():
 
 
 def test_paired_qual():
-    df = pandas.DataFrame(
-        {"in_qual": ["=", "=", "ND", "ND"], "out_qual": ["=", "ND", "=", "ND"]}
-    )
+    df = pandas.DataFrame({"in_qual": ["=", "=", "ND", "ND"], "out_qual": ["=", "ND", "=", "ND"]})
     expected = ["Pair", "Effluent ND", "Influent ND", "Both ND"]
     result = bmpdb.paired_qual(df, "in_qual", "out_qual")
     nptest.assert_array_equal(result, expected)

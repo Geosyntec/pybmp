@@ -39,7 +39,7 @@ INSTALL_REQUIRES = [
     "statsmodels",
     "openpyxl",
     "seaborn",
-    "engarde",
+    "bulwark",
 ]
 PACKAGE_DATA = {
     "pybmpdb.data": ["*.csv", "*.sql"],
